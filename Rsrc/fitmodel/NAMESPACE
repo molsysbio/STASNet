@@ -1,0 +1,3 @@
+useDynLib(fitmodel)
+exportPattern("^[^\\.]")
+import( Rcpp )

@@ -1,0 +1,21 @@
+Requires the following packages to be installed: 
+
+boost
+blas
+ginac
+cls
+gmp
+
+
+To install, use the standard autoconf-like build order:
+
+./configure 
+make
+make install 
+
+then install the R-package by:
+
+cd r_binding
+R CMD INSTALL fitmodel
+
+once installed, open R and execute example.R in r_binding, which will start to build a model and fit it to data.
