@@ -97,7 +97,6 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
 }
 
 // Computes the profile likelihood for one parameters
-// The code might be burried deeper into the C++ code in fitmodel_in_CPP
 // SHOULD we extend ot to all to allow minimum work in the R code
 SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000, const double step_size = 0.01) {
     if ( parameters.size() != model->nr_of_parameters() ) 
