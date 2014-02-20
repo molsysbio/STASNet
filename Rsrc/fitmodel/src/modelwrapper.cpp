@@ -103,41 +103,20 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
-        double param_value = parameters[target-1]
+        double param_value = parameters[target-1];
         double residual;
-        double_matrix prediction; // Ask Nils what it does
         std::vector<size_t> keep_constant(1, target-1); // -1 for R users
         std::vector<double> residual_track();
         std::vector<double> explored();
 
-        // Initial fit
-        ::fitmodel(parameters, &residual, prediction, model, &data);
-
-        // Thresholds
-        bool pointwise_thr = residual + boost::math::cdf( boost::math::chi_squared(1) );
-        bool simultaneous_thr = residual + boost::math::cdf( boost::math::chi_squared(parameters.size()) );
+        bool* n_identifiability = profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, total_steps, step_size);
         
-        double scanned_value = param_value - total_steps * step_size / 2;
-        bool struct_n_identifiability = true;
-        bool pract_n_identifiability = true;
-        for (unsigned int i=0 ; i < total_steps ; i++) {
-            parameters[target-1] = scanned_value;
-            scanned_value += step_size;
-
-            ::fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
-            explored.push_back(scanned_value);
-            residual_track.push_back(residual);
-
-            if (residual > pointwise_thr) struct_n_identifiability = false;
-            if (residual > simultaneous_thr) pract_n_identifiability = false;
-        }
-
         Rcpp::List ret;
         Rcpp::NumericVector track( residual_track.begin(), residual_track.end() );
         ret["residuals"] = residual_track;
         ret["scanned"] = explored;
-        ret["structural"] = struct_n_identifiability;
-        ret["practical"] = pract_n_identifiability;
+        ret["structural"] = n_identifiability[0];
+        ret["practical"] = n_identifiability[1];
 
         return ret;
 

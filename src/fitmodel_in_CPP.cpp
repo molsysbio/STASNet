@@ -9,6 +9,7 @@
 #include <fstream> 
 #include <boost/numeric/ublas/io.hpp>   
 #include <boost/bind.hpp>   
+#include <boost/math/distribution/chi_squared.hpp>
 #include <levmar-2.5/levmar.h>               // to include Marquardt-Levenberg fitting (lsqnonlin in matlab)(written for C)
 #include <float.h>                       // needed to declare the lower and upper bounds to plus and mimnus infinity DBL_MAX and -DBL_MAX
 //#include<cstring>    // include these two if you want to view some ginac expressions in matlab (mex)
@@ -236,3 +237,33 @@ void fitmodel( std::vector <double> &bestfit,
    }
 
 }
+
+bool* profile_likelihood(Data data, std::vector<double> parameters, const std::vector<size_t> keep_constant, std::vector<double> &residual_track, std::vector<double> &explored, const double param_value , const unsigned int total_steps = 10000, const double step_size = 0.01) {
+
+    double residual;
+    double_matrix prediction; // Ask Nils what it does
+
+    // Initial fit
+    fitmodel(parameters, &residual, prediction, model, &data);
+
+    // Thresholds
+    bool pointwise_thr = residual + boost::math::cdf( boost::math::chi_squared(1) );
+    bool simultaneous_thr = residual + boost::math::cdf( boost::math::chi_squared(parameters.size()) );
+    
+    double scanned_value = param_value - total_steps * step_size / 2;
+    bool* n_identifiability = [true, true];
+    for (unsigned int i=0 ; i < total_steps ; i++) {
+    <parameters[target-1] = scanned_value;
+    scanned_value += step_size;
+
+    fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
+    explored.push_back(scanned_value);
+    residual_track.push_back(residual);
+
+    if (residual > pointwise_thr) n_identifiability = false;
+    if (residual > simultaneous_thr) n_identifiability = false;
+    }
+
+    return n_identifiability;
+}
+
