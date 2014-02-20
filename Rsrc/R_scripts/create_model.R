@@ -2,7 +2,6 @@
 #--------------------------------------------------------------------------------------------------------
 ### This is a TEST FILE, used for debugging purposes and to try modifications, the stable file is in /home/dorel/bin/
 #--------------------------------------------------------------------------------------------------------
-source("~/network_reverse_engineering-1.0/r_binding/fitmodel/R/generate_model.R");
 
 # Global variable to have more outputs
 verbose = TRUE;
@@ -180,7 +179,7 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
     # Plot of the profile likelihood for each path
     paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     for (path in paramstmp) {
-        lprofile = model$profileLikelihood(data, path);
+        lprofile = model$profileLikelihood(data, paramstmp, path);
         pdf(paste(model.structure$names[ (link-1) %/% dim(adj)[1] +1 ], "->", model.structure$names[ (link-1) %% dim(adj)[1] +1 ], "profile_likelihood.pdf"));
         plot(lprofile$explored, lprofile$residuals, type="l");
         lines( lprofile$explored, rep(lprofile$structural, length(lprofile$explored)), lty=2, col="grey" );
