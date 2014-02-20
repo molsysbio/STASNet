@@ -106,10 +106,11 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
         double param_value = parameters[target-1];
         double residual;
         std::vector<size_t> keep_constant(1, target-1); // -1 for R users
-        std::vector<double> residual_track();
-        std::vector<double> explored();
+        std::vector<double> residual_track;
+        std::vector<double> explored;
+        bool n_identifiability[2] = {true, true};
 
-        bool* n_identifiability = profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, total_steps, step_size);
+        profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, n_identifiability, total_steps, step_size);
         
         Rcpp::List ret;
         Rcpp::NumericVector track( residual_track.begin(), residual_track.end() );
