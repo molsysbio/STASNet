@@ -1,0 +1,27 @@
+
+Copyright (c) Nils Blüthgen and Bertram Klinger, 2013-
+
+Gnu General Public Licence
+
+---
+
+The library contains the levmar-package (version 2.5) for optimization (c) by Manolis Lourakis
+(see src/levmar-2.5/README.txt)
+
+---
+
+This library can be used to model signalling perturbation data using models that are derived from
+Modular Response Analysis, in a way described in Klinger et al, 2013 using R. 
+
+To install it, first compile the library, install it, then install the R-package. 
+
+Have fun with it! 
+
+---
+
+If you use this program in publications, please cite our paper:
+
+Klinger, B., Sieber, A., Fritsche-Guenther, R., Witzel, F., Berry, L., Schumacher, D., Yan, Y., Durek, P., Merchant, M., Schäfer, R., Sers, C. and Blüthgen, N. 
+Network quantification of EGFR signaling unveils potential for targeted combination therapy. 
+Molecular Systems Biology, 9: 673, 2013
+ 

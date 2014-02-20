@@ -1,0 +1,5 @@
+1.11.2013
+ - Removed standalone programmes from the build system
+ - Removed dependence on several boost-libraries
+
+
