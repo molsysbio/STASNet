@@ -21,6 +21,7 @@ void profile_likelihood( const Data data,
             const double param_value,
 			const Model *model,
 			bool* n_identifiability,
+            std::vector<double> &thresholds,
 			const unsigned int total_steps,
 			const double step_size);
 

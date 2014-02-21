@@ -246,6 +246,7 @@ void profile_likelihood(const Data data,
 	const double param_value,
 	const Model *model,
 	bool* n_identifiability,
+    std::vector<double> &thresholds,
 	const unsigned int total_steps = 10000,
 	const double step_size = 0.01) {
 
@@ -256,8 +257,8 @@ void profile_likelihood(const Data data,
     fitmodel(parameters, &residual, prediction, model, &data);
 
     // Thresholds
-    bool pointwise_thr = residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 );
-    bool simultaneous_thr = residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), 0.95 );
+    thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 ));
+    thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), 0.95 ));
     
     double scanned_value = param_value - total_steps * step_size / 2;
     for (unsigned int i=0 ; i < total_steps ; i++) {
@@ -268,8 +269,8 @@ void profile_likelihood(const Data data,
         explored.push_back(scanned_value);
         residual_track.push_back(residual);
 
-        if (residual > pointwise_thr) n_identifiability[0] = false;
-        if (residual > simultaneous_thr) n_identifiability[1] = false;
+        if (residual > thresholds[0]) n_identifiability[0] = false;
+        if (residual > thresholds[1]) n_identifiability[1] = false;
     }
 
 }

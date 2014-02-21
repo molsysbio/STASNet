@@ -178,13 +178,18 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
 
     # Plot of the profile likelihood for each path
     paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
-    for (path in paramstmp) {
-        lprofile = model$profileLikelihood(data, paramstmp, path);
-        pdf(paste(model.structure$names[ (link-1) %/% dim(adj)[1] +1 ], "->", model.structure$names[ (link-1) %% dim(adj)[1] +1 ], "profile_likelihood.pdf"));
+    print(paste(length(paramstmp), "paths to evaluate"));
+    for (path in 1:length(paramstmp)) {
+        paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
+        lprofile = model$profileLikelihood(data, paramstmp, path, 1000, 0.01);
+        lprofile$residuals[lprofile$residuals >= 5 * initresidual] = NA;#2 * initresidual; # We do not display very high residual value, as they hide lower values perturbating the y-axis
+        pdf(paste("Path_", path, "_profile_likelihood.pdf", sep=""));
         plot(lprofile$explored, lprofile$residuals, type="l");
-        lines( lprofile$explored, rep(lprofile$structural, length(lprofile$explored)), lty=2, col="grey" );
-        lines( lprofile$explored, rep(lprofile$practical, length(lprofile$explored)), lty=2, col="grey" );
+        lines( lprofile$explored, rep(lprofile$thresholds[1], length(lprofile$explored)), lty=2, col="grey" );
+        lines( lprofile$explored, rep(lprofile$thresholds[2], length(lprofile$explored)), lty=2, col="grey" );
+        lines( rep(paramstmp[path], length(-5:100)), (1 + -5:100/100) * initresidual, col="red");
         dev.off()
+        print(paste("Path ", path, "profile likelihood plotted"));
     }
 
 ### SELECTION OF A MINIMAL MODEL

@@ -108,15 +108,17 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
         std::vector<double> residual_track;
         std::vector<double> explored;
         bool n_identifiability[2] = {true, true};
+        std::vector<double> thresholds;
 
-        profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, n_identifiability, total_steps, step_size);
+        ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, n_identifiability, thresholds, total_steps, step_size);
         
         Rcpp::List ret;
         Rcpp::NumericVector track( residual_track.begin(), residual_track.end() );
         ret["residuals"] = residual_track;
-        ret["scanned"] = explored;
+        ret["explored"] = explored;
         ret["structural"] = n_identifiability[0];
         ret["practical"] = n_identifiability[1];
+        ret["thresholds"] = thresholds;
 
         return ret;
 
@@ -175,6 +177,7 @@ RCPP_MODULE(ModelEx) {
     .method( "fitmodel", &ModelWrapper::fitmodel )
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
+    .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }
