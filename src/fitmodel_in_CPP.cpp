@@ -9,10 +9,7 @@
 #include <fstream> 
 #include <boost/numeric/ublas/io.hpp>   
 #include <boost/bind.hpp>   
-<<<<<<< HEAD
 #include <boost/math/distributions/chi_squared.hpp>
-=======
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 #include <levmar-2.5/levmar.h>               // to include Marquardt-Levenberg fitting (lsqnonlin in matlab)(written for C)
 #include <float.h>                       // needed to declare the lower and upper bounds to plus and mimnus infinity DBL_MAX and -DBL_MAX
 //#include<cstring>    // include these two if you want to view some ginac expressions in matlab (mex)
@@ -254,17 +251,42 @@ void profile_likelihood(const Data data,
 	const double step_size = 0.01) {
 
     double residual;
-    double_matrix prediction; // Ask Nils what it does
+    double_matrix prediction;
 
     // Initial fit
     fitmodel(parameters, &residual, prediction, model, &data);
+    double old_params = parameters[keep_constant[0]];
 
-    // Thresholds
+    // Thresholds, repeated twice
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 ));
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), 0.95 ));
     
-    double scanned_value = param_value - total_steps * step_size / 2;
-    for (unsigned int i=0 ; i < total_steps ; i++) {
+    // Upper and Lower scans are separated, to be sure to scan 
+    double scanned_value = param_value;
+    // Lower values scan
+	std::vector<double> dec_residual;
+	std::vector<double> dec_explored;
+    for (unsigned int i=1 ; i < total_steps / 2 ; i++) {
+        parameters[keep_constant[0]] = scanned_value;
+        scanned_value -= step_size;
+
+        fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
+        dec_explored.push_back(scanned_value);
+        dec_residual.push_back(residual);
+
+        if (residual > thresholds[0]) n_identifiability[2] = false;
+        if (residual > thresholds[1]) n_identifiability[3] = false;
+    }
+    // We reorder the scanned values in the final vector
+    int size = dec_explored.size();
+    for (int it=0 ; it <  size; it++) {
+        explored.push_back(dec_explored[size -1 -it]);
+        residual_track.push_back(dec_residual[size -1 -it]);
+    }
+
+    // Upper values scan
+    scanned_value = param_value;
+    for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
         scanned_value += step_size;
 

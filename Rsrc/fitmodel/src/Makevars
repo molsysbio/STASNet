@@ -1,9 +1,5 @@
 ## Use the R_HOME indirection to support installations of multiple R versionl
-<<<<<<< HEAD
 PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(BLAS_LIBS) $(LAPACK_LIBS)  -lginac -lcln -lfitmodel
-=======
-PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(BLAS_LIBS) $(LAPACK_LIBS)  -lginac -lcln -lfitmodel 
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 
 ## As an alternative, one can also add this code in a file 'configure'
 ##
