@@ -238,10 +238,11 @@ void fitmodel( std::vector <double> &bestfit,
 
 }
 
+// Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
 void profile_likelihood(const Data data,
 	std::vector<double> parameters,
 	const std::vector<size_t> keep_constant,
-	std::vector<double> &residual_track,
+	std::vector< std::vector<double> > &residual_track,
 	std::vector<double> &explored,
 	const double param_value,
 	const Model *model,
@@ -264,7 +265,10 @@ void profile_likelihood(const Data data,
     // Upper and Lower scans are separated, to be sure to scan 
     double scanned_value = param_value;
     // Lower values scan
-	std::vector<double> dec_residual;
+	std::vector< std::vector<double> > dec_residual;
+    for (int i=0 ; i < parameters.size() ; i++) {
+        dec_residual.push_back(std::vector<double>());
+    }
 	std::vector<double> dec_explored;
     for (unsigned int i=1 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
@@ -272,7 +276,12 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         dec_explored.push_back(scanned_value);
-        dec_residual.push_back(residual);
+        for (int j=0 ; j < parameters.size() ; j++) {
+            dec_residual[j].push_back(parameters[j]);
+        }
+        // In the row corresponding to the parameter's values, we put the residual
+        dec_residual[keep_constant].pop_back(residual);
+        dec_residual[keep_constant].push_back(residual);
 
         if (residual > thresholds[0]) n_identifiability[2] = false;
         if (residual > thresholds[1]) n_identifiability[3] = false;
