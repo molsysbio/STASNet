@@ -13,6 +13,7 @@ void fitmodel( std::vector<double> &bestfit,
 	       const Data * data,
 	       std::vector<size_t> keep_constant = std::vector<size_t>());
 
+<<<<<<< HEAD
 void profile_likelihood( const Data data,
 			std::vector<double> parameters,
             const std::vector<size_t> keep_constant,
@@ -25,6 +26,8 @@ void profile_likelihood( const Data data,
 			const unsigned int total_steps,
 			const double step_size);
 
+=======
+>>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 
 #endif // FITMODEL_IN_CPP_HPP
 

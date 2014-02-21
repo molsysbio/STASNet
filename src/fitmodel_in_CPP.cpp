@@ -9,7 +9,10 @@
 #include <fstream> 
 #include <boost/numeric/ublas/io.hpp>   
 #include <boost/bind.hpp>   
+<<<<<<< HEAD
 #include <boost/math/distributions/chi_squared.hpp>
+=======
+>>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 #include <levmar-2.5/levmar.h>               // to include Marquardt-Levenberg fitting (lsqnonlin in matlab)(written for C)
 #include <float.h>                       // needed to declare the lower and upper bounds to plus and mimnus infinity DBL_MAX and -DBL_MAX
 //#include<cstring>    // include these two if you want to view some ginac expressions in matlab (mex)
@@ -237,6 +240,7 @@ void fitmodel( std::vector <double> &bestfit,
    }
 
 }
+<<<<<<< HEAD
 
 void profile_likelihood(const Data data,
 	std::vector<double> parameters,
@@ -275,3 +279,5 @@ void profile_likelihood(const Data data,
 
 }
 
+=======
+>>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
