@@ -2,10 +2,6 @@
 #--------------------------------------------------------------------------------------------------------
 ### This is a TEST FILE, used for debugging purposes and to try modifications, the stable file is in /home/dorel/bin/
 #--------------------------------------------------------------------------------------------------------
-<<<<<<< HEAD
-=======
-source("~/network_reverse_engineering-1.0/r_binding/fitmodel/R/generate_model.R");
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 
 # Global variable to have more outputs
 verbose = TRUE;
@@ -182,7 +178,6 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
 
     # Plot of the profile likelihood for each path
     paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
-<<<<<<< HEAD
     print(paste(length(paramstmp), "paths to evaluate"));
     for (path in 1:length(paramstmp)) {
         paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
@@ -195,15 +190,6 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
         lines( rep(paramstmp[path], length(-5:100)), (1 + -5:100/100) * initresidual, col="red");
         dev.off()
         print(paste("Path ", path, "profile likelihood plotted"));
-=======
-    for (path in paramstmp) {
-        lprofile = model$profileLikelihood(data, path);
-        pdf(paste(model.structure$names[ (link-1) %/% dim(adj)[1] +1 ], "->", model.structure$names[ (link-1) %% dim(adj)[1] +1 ], "profile_likelihood.pdf"));
-        plot(lprofile$explored, lprofile$residuals, type="l");
-        lines( lprofile$explored, rep(lprofile$structural, length(lprofile$explored)), lty=2, col="grey" );
-        lines( lprofile$explored, rep(lprofile$practical, length(lprofile$explored)), lty=2, col="grey" );
-        dev.off()
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
     }
 
 ### SELECTION OF A MINIMAL MODEL

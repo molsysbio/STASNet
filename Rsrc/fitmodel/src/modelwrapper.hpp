@@ -32,11 +32,7 @@ public:
   SEXP getLocalResponse( std::vector<double> p );
 
   // Check that it is correct
-<<<<<<< HEAD
   SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps, const double step_size);
-=======
-  SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000, const double step_size = 0.01);
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 
