@@ -240,7 +240,6 @@ void fitmodel( std::vector <double> &bestfit,
    }
 
 }
-<<<<<<< HEAD
 
 void profile_likelihood(const Data data,
 	std::vector<double> parameters,
@@ -279,5 +278,3 @@ void profile_likelihood(const Data data,
 
 }
 
-=======
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96

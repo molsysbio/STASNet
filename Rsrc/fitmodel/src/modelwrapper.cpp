@@ -97,16 +97,11 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
 }
 
 // Computes the profile likelihood for one parameters
-<<<<<<< HEAD
-=======
-// The code might be burried deeper into the C++ code in fitmodel_in_CPP
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 // SHOULD we extend ot to all to allow minimum work in the R code
 SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000, const double step_size = 0.01) {
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
-<<<<<<< HEAD
         double param_value = parameters[target-1];
         double residual;
         std::vector<size_t> keep_constant(1, target-1); // -1 for R users
@@ -124,43 +119,6 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
         ret["structural"] = n_identifiability[0];
         ret["practical"] = n_identifiability[1];
         ret["thresholds"] = thresholds;
-=======
-        double param_value = parameters[target-1]
-        double residual;
-        double_matrix prediction; // Ask Nils what it does
-        std::vector<size_t> keep_constant(1, target-1); // -1 for R users
-        std::vector<double> residual_track();
-        std::vector<double> explored();
-
-        // Initial fit
-        ::fitmodel(parameters, &residual, prediction, model, &data);
-
-        // Thresholds
-        bool pointwise_thr = residual + boost::math::cdf( boost::math::chi_squared(1) );
-        bool simultaneous_thr = residual + boost::math::cdf( boost::math::chi_squared(parameters.size()) );
-        
-        double scanned_value = param_value - total_steps * step_size / 2;
-        bool struct_n_identifiability = true;
-        bool pract_n_identifiability = true;
-        for (unsigned int i=0 ; i < total_steps ; i++) {
-            parameters[target-1] = scanned_value;
-            scanned_value += step_size;
-
-            ::fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
-            explored.push_back(scanned_value);
-            residual_track.push_back(residual);
-
-            if (residual > pointwise_thr) struct_n_identifiability = false;
-            if (residual > simultaneous_thr) pract_n_identifiability = false;
-        }
-
-        Rcpp::List ret;
-        Rcpp::NumericVector track( residual_track.begin(), residual_track.end() );
-        ret["residuals"] = residual_track;
-        ret["scanned"] = explored;
-        ret["structural"] = struct_n_identifiability;
-        ret["practical"] = pract_n_identifiability;
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
 
         return ret;
 
@@ -219,10 +177,7 @@ RCPP_MODULE(ModelEx) {
     .method( "fitmodel", &ModelWrapper::fitmodel )
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
-<<<<<<< HEAD
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
-=======
->>>>>>> 1124d250dad246e89a90e9592a757f48ab8c0d96
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }
