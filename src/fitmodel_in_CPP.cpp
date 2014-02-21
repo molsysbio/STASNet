@@ -280,17 +280,19 @@ void profile_likelihood(const Data data,
             dec_residual[j].push_back(parameters[j]);
         }
         // In the row corresponding to the parameter's values, we put the residual
-        dec_residual[keep_constant].pop_back(residual);
-        dec_residual[keep_constant].push_back(residual);
+        dec_residual[keep_constant[0]].pop_back();
+        dec_residual[keep_constant[0]].push_back(residual);
 
         if (residual > thresholds[0]) n_identifiability[2] = false;
         if (residual > thresholds[1]) n_identifiability[3] = false;
     }
-    // We reorder the scanned values in the final vector
+    // We reorder the scanned values in the final vectors
     int size = dec_explored.size();
     for (int it=0 ; it <  size; it++) {
         explored.push_back(dec_explored[size -1 -it]);
-        residual_track.push_back(dec_residual[size -1 -it]);
+        for (int j=0 ; j < residual_track.size() ; j++) {
+            residual_track[j].push_back(dec_residual[j][size -1 -it]);
+        }
     }
 
     // Upper values scan
@@ -301,7 +303,12 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         explored.push_back(scanned_value);
-        residual_track.push_back(residual);
+        for (int j=0 ; j < parameters.size() ; j++) {
+            residual_track[j].push_back(parameters[j]);
+        }
+        // In the row corresponding to the parameter's values, we put the residual
+        residual_track[keep_constant[0]].pop_back();
+        residual_track[keep_constant[0]].push_back(residual);
 
         if (residual > thresholds[0]) n_identifiability[0] = false;
         if (residual > thresholds[1]) n_identifiability[1] = false;
