@@ -187,7 +187,16 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
 
         # Display the profile likelihood and thresholds
         pdf(paste("Path_", path, "_profile_likelihood.pdf", sep=""));
-        plot(rep(lprofile$explored, length(paramstmp)), lprofile$residuals, type="l");
+        par( ceiling(sqrt(length(paramstmp))), ceiling(sqrt(length(paramstmp))) );
+        for (i in 1:dim(lprofile$residuals)[1]) {
+            plot(lprofile$explored, lprofile$residuals[i,], type="l");
+            if (i == path) {
+                title(main = "Profile likelihood");
+            }
+            else {
+                title(main = paste("Parameter ", i, "with ", path));
+            }
+        }
         lines( lprofile$explored, rep(lprofile$thresholds[1], length(lprofile$explored)), lty=2, col="grey" );
         lines( lprofile$explored, rep(lprofile$thresholds[2], length(lprofile$explored)), lty=2, col="grey" );
         lines( rep(paramstmp[path], length(-5:100)), (1 + -5:100/100) * initresidual, col="red");
