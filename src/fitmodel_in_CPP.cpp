@@ -262,24 +262,26 @@ void profile_likelihood(const Data data,
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 ));
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), 0.95 ));
     
-    // Upper and Lower scans are separated, to be sure to scan 
-    double scanned_value = param_value;
+    // Upper and Lower scans are separated, to be sure to scan near the minimal each time 
     // Lower values scan
+    double scanned_value = param_value;
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
+        residual_track.push_back(std::vector<double>()); // Initialized meanwhile
     }
 	std::vector<double> dec_explored;
     for (unsigned int i=1 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
-        scanned_value -= step_size;
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         dec_explored.push_back(scanned_value);
+        scanned_value -= step_size;
+        // We write the other parameters new values
         for (int j=0 ; j < parameters.size() ; j++) {
             dec_residual[j].push_back(parameters[j]);
         }
-        // In the row corresponding to the parameter's values, we put the residual
+        // In the row corresponding to the scanned parameter's values, we put the residual
         dec_residual[keep_constant[0]].pop_back();
         dec_residual[keep_constant[0]].push_back(residual);
 
@@ -299,10 +301,11 @@ void profile_likelihood(const Data data,
     scanned_value = param_value;
     for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
-        scanned_value += step_size;
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         explored.push_back(scanned_value);
+        scanned_value += step_size;
+        // We write the other parameters new values
         for (int j=0 ; j < parameters.size() ; j++) {
             residual_track[j].push_back(parameters[j]);
         }

@@ -462,10 +462,10 @@ void Model::convert_original_parameter_into_identifiable( std::vector<double> &p
 
 void Model::convert_identifiables_to_original_parameter(std::vector<double> &p_new, const std::vector<double> &p_old) const
 {
-  p_new.resize(symbols_.size());
-  assert(p_old.size()==independent_parameters_.size() && p_new.size()==symbols_.size());
-  // check all rows i for occurances of original parameters k of which take the 1. which will be replaced by the product  
-for (size_t i=0; i<rank_; i++) {
+    p_new.resize(symbols_.size());
+    assert(p_old.size()==independent_parameters_.size() && p_new.size()==symbols_.size());
+    // check all rows i for occurances of original parameters k of which take the 1. which will be replaced by the product  
+    for (size_t i=0; i<rank_; i++) {
     std::vector<size_t> not_zero;
     for (size_t k=0;k<symbols_.size();k++){
       if (std::abs(parameter_dependency_matrix_[i][k])>0.000001) {not_zero.push_back(k);}

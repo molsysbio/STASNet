@@ -6,3 +6,4 @@
 *.lo
 *.la
 *.libs
+*.pdf

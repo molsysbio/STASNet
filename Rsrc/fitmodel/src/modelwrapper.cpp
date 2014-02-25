@@ -114,6 +114,7 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
         
         Rcpp::List ret;
         Rcpp::NumericMatrix track(parameters.size(), explored.size());
+        std::cout  << "ok" << std::endl;
         for (int i=0 ; i < parameters.size() ; i++) {
             for (int j=0 ; j < explored.size() ; j++) {
                 track(i,j) = residual_track[i][j];

@@ -157,7 +157,7 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
     print ("Initializing the model parameters…")
     params = c();
     residuals = c();
-    nb_samples = 100
+    nb_samples = 40;
 # Random initializations with Latin Hypercube Sample to find a global maximum fit
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
     for (i in 1:nb_samples) {
@@ -183,10 +183,11 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
         #paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
         #model$setModel (expdes, model.structure);
         lprofile = model$profileLikelihood(data, paramstmp, path, 1000, 0.01);
-        lprofile$residuals[lprofile$residuals >= 2 * initresidual] = 2*initresidual; # We do not display very high residual value, as they hide lower values perturbating the y-axis
+        lprofile$residuals[path, lprofile$residuals[path] >= 2 * initresidual] = 2*initresidual; # We do not display very high residual value, as they extend the y-axis which hides lower values
 
+        # Display the profile likelihood and thresholds
         pdf(paste("Path_", path, "_profile_likelihood.pdf", sep=""));
-        plot(lprofile$explored, lprofile$residuals, type="l");
+        plot(rep(lprofile$explored, length(paramstmp)), lprofile$residuals, type="l");
         lines( lprofile$explored, rep(lprofile$thresholds[1], length(lprofile$explored)), lty=2, col="grey" );
         lines( lprofile$explored, rep(lprofile$thresholds[2], length(lprofile$explored)), lty=2, col="grey" );
         lines( rep(paramstmp[path], length(-5:100)), (1 + -5:100/100) * initresidual, col="red");
