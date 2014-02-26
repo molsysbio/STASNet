@@ -96,8 +96,7 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
     return ret;
 }
 
-// Computes the profile likelihood for one parameters
-// SHOULD we extend ot to all to allow minimum work in the R code
+// Computes the profile likelihood of one parameter and the functionnal relationships of the others with this parameter
 SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000, const double step_size = 0.01) {
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -114,7 +113,6 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
         
         Rcpp::List ret;
         Rcpp::NumericMatrix track(parameters.size(), explored.size());
-        std::cout  << "ok" << std::endl;
         for (int i=0 ; i < parameters.size() ; i++) {
             for (int j=0 ; j < explored.size() ; j++) {
                 track(i,j) = residual_track[i][j];
@@ -133,14 +131,14 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
 
 SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {
   
-  if ( model == NULL ) 
-    throw std::logic_error("Model not initialized yet. use setModel() before");
-  if ( p.size() != model->nr_of_parameters() ) 
-    throw std::invalid_argument("length of parameter vector invalid");
-  
-  double_matrix fit_response_matrix; 
-  std::vector<double> fit_inh;
-  std::vector<double> p_new;
+    if ( model == NULL ) 
+        throw std::logic_error("Model not initialized yet. use setModel() before");
+    if ( p.size() != model->nr_of_parameters() ) 
+        throw std::invalid_argument("length of parameter vector invalid");
+
+    double_matrix fit_response_matrix; 
+    std::vector<double> fit_inh;
+    std::vector<double> p_new;
     {
       model->convert_identifiables_to_original_parameter( p_new, p );
       Model::convert_original_parameter_to_response_matrix( fit_response_matrix, fit_inh, p_new, adjacency_matrix );
@@ -169,6 +167,22 @@ std::vector<double> ModelWrapper::getParameterFromLocalResponse( const double_ma
   
 }
 
+// Gives the links combination for each identifiable response coefficient
+SEXP ModelWrapper::getParametersLinks() {
+
+    Rcpp::List ret;
+    std::vector<std::string> buf_string;
+
+    model->getParametersLinks(buf_string);
+    ret(0) = buf_string[0];
+    /*
+    for (int i=0 ; i < buf_string.size() ; i++) {
+        ret(i+1) = buf_string[i];
+    }
+    */
+   
+    return ret;
+}
 
 
 RCPP_MODULE(ModelEx) {
@@ -185,6 +199,7 @@ RCPP_MODULE(ModelEx) {
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
+    .method( "getParametersLinks", &ModelWrapper::getParametersLinks)
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }

@@ -31,12 +31,13 @@ public:
 
   SEXP getLocalResponse( std::vector<double> p );
 
-  // Check that it is correct
   SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps, const double step_size);
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 
   bool linear_approximation;
+  
+  SEXP getParametersLinks();
 
 private:
   GiNaC::matrix response_full_model; 

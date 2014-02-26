@@ -42,6 +42,8 @@ public:
 
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);
+  void getParametersLinks(std::vector<std::string> &description);
+
   int find_parameter(std::string name) ;
   // TODO Maps identifiable parameters to a set of possible original parameters
   void print_dot_file(std::ostream &os, const std::vector<double> &d, const int_matrix &origadj, const int_matrix &adj, const std::vector<std::string> &names);
@@ -79,7 +81,7 @@ public:
 
 
 protected:
-  // The equantions of the reduced model
+  // The equations of the reduced model
   equation_matrix model_eqns_;
   std::vector<MathTree::parameter::Ptr> parameters_;
   std::vector<size_t> independent_parameters_;
