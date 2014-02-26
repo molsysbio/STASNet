@@ -132,7 +132,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 }
 
 
-minimal_fit <- function(model_description=NULL, accuracy=0.95)
+draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
 {
 # Finds a minimal model that fits the data and gives its parameters
 # Requires the fitmodel package
@@ -175,8 +175,6 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
 
     # Plot of the profile likelihood for each path
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
-    #drawProfileLikelihood(model, init_params, TRUE);
-    #if(F){
     print(paste(length(init_params), "paths to evaluate"));
     #identifiables = model$getParametersLinks();
     #print(identifiables);
@@ -184,19 +182,23 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
         lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
         lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = 2*initresidual; # We do not display very high residual value, as they extend the y-axis which hides lower values
 
-        # Display the profile likelihood and thresholds
+        # Functionnal relations
         pdf(paste("Path_", path, "_profile_likelihood.pdf", sep=""));
-        par(2, 1);
-        title = c(0);
-        palette(rainbow(length(init_params)));
-        plot(0, 0, ylim=range(lprofile$residuals[-path,]), xlim=range(lprofile$explored)+ c(0, 0.2*(lprofile$explored[length(lprofile$explored)]-lprofile$explored[1])), bty="l");
-        for (i in 1:dim(lprofile$residuals)[1]) {
-            if (i != path) {
-                lines(lprofile$explored, lprofile$residuals[i,], type="l", col=i);
-                title = c(title, i);
+        if (trace_relation) {
+            par(2, 1);
+            title = c(0);
+            palette(rainbow(length(init_params)));
+            plot(0, 0, ylim=range(lprofile$residuals[-path,]), xlim=range(lprofile$explored)+ c(0, 0.2*(lprofile$explored[length(lprofile$explored)]-lprofile$explored[1])), bty="l");
+            for (i in 1:dim(lprofile$residuals)[1]) {
+                if (i != path) {
+                    lines(lprofile$explored, lprofile$residuals[i,], type="l", col=i);
+                    title = c(title, i);
+                }
             }
+            legend(range(lprofile$explored)[2], range(lprofile$residuals[-path,])[2], title, col=1:length(init_params), lty=1, xpd=T, bty="n");
         }
-        legend(range(lprofile$explored)[2], range(lprofile$residuals[-path,])[2], title, col=1:length(init_params), lty=1, xpd=T, bty="n");
+
+        # Profile likelihood and identifiability thresholds
         plot(lprofile$explored, lprofile$residuals[path,], type="l");
         lines( lprofile$explored, rep(lprofile$thresholds[1], length(lprofile$explored)), lty=2, col="grey" );
         lines( lprofile$explored, rep(lprofile$thresholds[2], length(lprofile$explored)), lty=2, col="grey" ); # Could be accelerated with two points instead of hundreds
@@ -205,124 +207,27 @@ minimal_fit <- function(model_description=NULL, accuracy=0.95)
         dev.off()
         print(paste("Path", path, "profile likelihood plotted, parameter value =", init_params[path] ));
         #return(0); # TESTING
-    }#}
-
-### SELECTION OF A MINIMAL MODEL
-    print("Performing model reduction…");
-    reduce=FALSE; # TEST OF THE PROFILE LIKELIHOOD
-    while (reduce) {
-
-        links.to.test=which(adj==1)
-        params=c();
-        residuals=c();
-        ranks=c();
-        newadj=adj;
-
-# Each link is removed and the best of those networks is compared to the previous model
-        newadj=adj; ##
-        for (i in links.to.test) {
-            newadj[i]=0;
-            model.structure$setAdjacencymatrix( newadj );
-            model$setModel ( expdes, model.structure );
-            paramstmp=model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
-            result=model$fitmodel( data,paramstmp)
-            response.matrix=model$getLocalResponseFromParameter( result$parameter )
-            residuals=c(residuals,result$residuals);   
-            params=cbind(params,c(response.matrix));
-            new_rank = model$modelRank();
-            ranks = c(ranks, new_rank);
-
-            if (verbose) {
-                dr = rank - new_rank;
-                print(paste("old :", rank, ", new : ", new_rank));
-                deltares = residuals[length(residuals)]-initresidual;
-                print(paste(model.structure$names[(i-1) %/% dim(adj)[1]+1], "->", model.structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ));
-            }
-
-            newadj[i]=1; ## Slightly accelerate the computation
-        }
-        
-        order.res=order(residuals);
-        new_rank = ranks[order.res[1]];
-# The loss of degree of freedom is equal to the difference in the ranks of the matrices
-        dr = rank - new_rank;
-        deltares = residuals[order.res[1]]-initresidual; # Use absolute value ?
-        if (deltares < qchisq(accuracy, df=rank-new_rank)) {
-            adj[links.to.test[order.res[1]]]=0;
-            rank = new_rank;
-            initial.response=params[,order.res[1]];
-            print(paste("remove",
-                      model.structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], # Line
-                      model.structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
-
-            print(paste( "residual = ", residuals[order.res[1]], ", Delta residual = ", residuals[order.res[1]]-initresidual, ",  p-value = ", pchisq(deltares, df=dr) ));
-            print("------------------------------------------------------------------------------------------------------");
-
-        } else {
-          reduce=FALSE;
-        }
     }
-    #print(adj)
-# We recover the final model
-    model.structure$setAdjacencymatrix(adj);
-    model$setModel(expdes, model.structure);
-
-    print("Parameters :");
-    parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths) rather than parameters
-    print(parameters);
-
-    print("Response matrix : ");
-    print(model.structure$names)
-    print(model.structure$adjacencymatrix);
-
-    local_response = model$getLocalResponseFromParameter(model$fitmodel(data, parameters)$parameter);
-    print("Local response : ");
-    print(local_response$local_response)
-    print("Inhibitors :");
-    print(local_response$inhibitors);
-
-}
-
-
-drawProfileLikelihood <- function (model, init_params, relation) {
-# Draw the profile likelihood of every parameters in a model    
-    print("ok");
     
-    identifiables = model$getParametersLinks();
-    for (path in 1:length(init_params)) {
-    print("ok");
-        lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
-    print("ok");
-        lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = 2*initresidual; # We do not display very high residual value, as they extend the y-axis which hides lower values
-        print("ok");
-        print("ok");
+    if (FALSE) { # Verbose ?
+        model.structure$setAdjacencymatrix(adj);
+        model$setModel(expdes, model.structure);
 
-        # Display the profile likelihood and thresholds
-        pdf(paste("Identifiable_", identifiables[path], "_profile_likelihood.pdf", sep=""));
-        print("ok");
-        par( ceiling(sqrt(length(init_params))), ceiling(sqrt(length(init_params))) );
-        if (relation) {
-            for (i in 1:dim(lprofile$residuals)[1]) {
-                plot(lprofile$explored, lprofile$residuals[i,], type="l");
-                if (i == path) {
-                    title(main = paste("Profile likelihood of", identifiables[path]));
-                }
-                else {
-                    title(main = paste(identifiables[i], "with", path));
-                }
-            }
-        } else {
-            plot(lprofile$explored, lprofile$residuals[path], type="l");
-            lines( lprofile$explored, rep(lprofile$thresholds[1], length(lprofile$explored)), lty=2, col="grey" );
-            lines( lprofile$explored, rep(lprofile$thresholds[2], length(lprofile$explored)), lty=2, col="grey" );
-            lines( rep(init_params[path], length(-5:100)), (1 + -5:100/100) * initresidual, col="red");
-            title(main = "Profile likelihood");
-        }
-        dev.off()
-        print(paste(identifiables[path], "profile likelihood plotted, parameter value =", init_params[path] ));
+        print("Parameters :");
+        parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
+        print(parameters);
+
+        print("Response matrix : ");
+        print(model.structure$names)
+        print(model.structure$adjacencymatrix);
+
+        local_response = model$getLocalResponseFromParameter(model$fitmodel(data, parameters)$parameter);
+        print("Local response : ");
+        print(local_response$local_response)
+        print("Inhibitors :");
+        print(local_response$inhibitors);
     }
 
 }
-
 
 
