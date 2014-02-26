@@ -256,7 +256,6 @@ void profile_likelihood(const Data data,
 
     // Initial fit
     fitmodel(parameters, &residual, prediction, model, &data);
-    double old_params = parameters[keep_constant[0]];
 
     // Thresholds, repeated twice
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 ));
@@ -265,6 +264,7 @@ void profile_likelihood(const Data data,
     // Upper and Lower scans are separated, to be sure to scan near the minimal each time 
     // Lower values scan
     double scanned_value = param_value;
+    std::vector<double> bestfit = parameters;
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
@@ -299,6 +299,7 @@ void profile_likelihood(const Data data,
 
     // Upper values scan
     scanned_value = param_value;
+    parameters = bestfit;
     for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 
