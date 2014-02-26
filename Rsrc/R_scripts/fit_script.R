@@ -11,5 +11,5 @@ source("./generate_model.R");
 #### Creates the model from network and basal files and fits a minimal model to the data
 model = create_model("example_data/network.tab", "example_data/msb201329_ht29.tab", "example_data/basal.dat");
 
-draw_profiles(model)
+draw_profiles(model, TRUE)
 

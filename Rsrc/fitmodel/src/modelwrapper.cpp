@@ -118,11 +118,14 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
                 track(i,j) = residual_track[i][j];
             }
         }
+        Rcpp::NumericVector identifiable(4);
+        for (int i=0 ; i < 4 ; i++) {
+            identifiable(i) = n_identifiability[i];
+        }
 
         ret["residuals"] = track;
         ret["explored"] = explored;
-        ret["structural"] = (n_identifiability[0] || n_identifiability[2]);
-        ret["practical"] = (n_identifiability[1] || n_identifiability[3]);
+        ret["identifiable"] = identifiable;
         ret["thresholds"] = thresholds;
 
         return ret;
@@ -170,16 +173,15 @@ std::vector<double> ModelWrapper::getParameterFromLocalResponse( const double_ma
 // Gives the links combination for each identifiable response coefficient
 SEXP ModelWrapper::getParametersLinks() {
 
-    Rcpp::List ret;
     std::vector<std::string> buf_string;
 
     model->getParametersLinks(buf_string);
-    ret(0) = buf_string[0];
-    /*
+    Rcpp::CharacterVector ret(buf_string.size());
     for (int i=0 ; i < buf_string.size() ; i++) {
-        ret(i+1) = buf_string[i];
+        ret(i) = buf_string[i];
+        std::cout << buf_string[i] << std::endl;
     }
-    */
+    std::cout << "done" << std::endl;
    
     return ret;
 }
