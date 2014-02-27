@@ -4,6 +4,7 @@
 #include <fitmodel/generate_response.hpp>
 #include <fitmodel/fitmodel_in_CPP.hpp>
 #include <Rcpp.h>
+//#include <thread>
 
 ModelWrapper::ModelWrapper() : model(NULL), linear_approximation(FALSE) { }
 
@@ -101,36 +102,100 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
-        double param_value = parameters[target-1];
-        double residual;
-        std::vector<size_t> keep_constant(1, target-1); // -1 for R users
-        std::vector< std::vector<double> > residual_track;
-        std::vector<double> explored;
-        bool n_identifiability[4] = {true};
-        std::vector<double> thresholds;
+    double param_value = parameters[target-1];
+    std::vector<size_t> keep_constant(1, target-1); // -1 for R users
+    std::vector< std::vector<double> > residual_track;
+    std::vector<double> explored;
+    bool identifiability[4] = {false};
+    std::vector<double> thresholds;
 
-        ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, n_identifiability, thresholds, total_steps, step_size);
-        
-        Rcpp::List ret;
-        Rcpp::NumericMatrix track(parameters.size(), explored.size());
-        for (int i=0 ; i < parameters.size() ; i++) {
-            for (int j=0 ; j < explored.size() ; j++) {
-                track(i,j) = residual_track[i][j];
-            }
+    ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, identifiability, thresholds, total_steps, step_size);
+    
+    Rcpp::List ret;
+    Rcpp::NumericMatrix track(parameters.size(), explored.size());
+    for (int i=0 ; i < parameters.size() ; i++) {
+        for (int j=0 ; j < explored.size() ; j++) {
+            track(i,j) = residual_track[i][j];
         }
-        Rcpp::NumericVector identifiable(4);
-        for (int i=0 ; i < 4 ; i++) {
-            identifiable(i) = n_identifiability[i];
-        }
+    }
+    std::vector<std::string> paths;
+    model->getParametersLinks(paths);
 
-        ret["residuals"] = track;
-        ret["explored"] = explored;
-        ret["identifiable"] = identifiable;
-        ret["thresholds"] = thresholds;
+    ret["residuals"] = track;
+    ret["explored"] = explored;
+    ret["lowt_upper"] = identifiability[2];
+    ret["lowt_lower"] = identifiability[0];
+    ret["hight_upper"] = identifiability[3];
+    ret["hight_lower"] = identifiability[1];
+    ret["thresholds"] = thresholds;
+    ret["path"] = paths[target-1];
+    ret["pathid"] = target;
+    ret["value"] = param_value;
 
-        return ret;
+    return ret;
 
 }
+
+/* COMMENTED BECAUSE IT NEEDS C++11 LIBRARY thread
+ * IF YOU UNCOMMENT THIS, UNCOMMENT THE HEADERS AS WELL
+// Returns the profile likelihood and functionnal relationship for all parameters, does the computation in parallel
+SEXP ModelWrapper::parallelPL(Data data, std::vector<double> parameters, const unsigned int total_steps = 10000, const double step_size = 0.01) {
+    if ( parameters.size() != model->nr_of_parameters() ) 
+        throw std::invalid_argument("length of parameter vector invalid");
+
+    Rcpp::List *returned;
+
+    std::vector< std::vector<size_t> > keep_constant;
+    std::vector< std::vector< std::vector<double> > > residual_track;
+    std::vector< std::vector<double> > explored;
+    std::vector< bool* > identifiability;
+    std::vector< std::vector<double> > thresholds;
+    std::vector<size_t> target;
+
+    // Creation of the threads
+    std:vector<std::thread> threads;
+    for (int i=0 ; i<parameters.size() ; i++) {
+        keep_constant.push_back(std::vector<size_t>(1, i));
+        residual_track.push_back(std::vector< std::vector<double> >);
+        explored.push_back(std::vector<double>);
+        identifiability.push_back(new bool[4]);
+        thresholds.push_back(std::vector<double>);
+        target.push_back(i);
+
+        // Create a new thread for each parameter
+        threads.push_back(std::thread(::profile_likelihood, data, parameters, keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i], total_steps, step_size));
+        Rcpp::NumericMatrix track(parameters.size(), explored.size());
+        for (int k=0 ; k < parameters.size() ; k++) {
+            for (int j=0 ; j < explored.size() ; j++) {
+                track[i](k, j) = residual_track[i][k][j];
+            }
+        }
+        Rcpp::CharacterVector paths = getParametersLinks();
+
+        returned[i]["residuals"] = track[i];
+        returned[i]["explored"] = explored[i];
+        returned[i]["lowt_upper"] = identifiability[i][2];
+        returned[i]["lowt_lower"] = identifiability[i][0];
+        returned[i]["hight_upper"] = identifiability[i][3];
+        returned[i]["hight_lower"] = identifiability[i][1];
+        returned[i]["thresholds"] = thresholds[i];
+        ret["pathid"] = target[i];
+
+        delete[] identifiability[i];
+
+    }
+
+    Rcpp::List ret(parameters.size());
+    for (int i=0 ; i<parameters.size() ; i++) {
+        threads[i].join();
+        ret[i] = returned[i];
+    }
+
+    return ret;
+
+}
+*/
+
 
 SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {
   
@@ -179,9 +244,7 @@ SEXP ModelWrapper::getParametersLinks() {
     Rcpp::CharacterVector ret(buf_string.size());
     for (int i=0 ; i < buf_string.size() ; i++) {
         ret(i) = buf_string[i];
-        std::cout << buf_string[i] << std::endl;
     }
-    std::cout << "done" << std::endl;
    
     return ret;
 }
@@ -201,6 +264,7 @@ RCPP_MODULE(ModelEx) {
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
+    //.method( "parallelPL", &parallelPL )
     .method( "getParametersLinks", &ModelWrapper::getParametersLinks)
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;

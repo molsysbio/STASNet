@@ -173,14 +173,16 @@ draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
     adj = model.structure$adjacencymatrix
     rank = model$modelRank()
 
+    test = T;
+    if(!test) {
     # Plot of the profile likelihood for each path
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     print(paste(length(init_params), "paths to evaluate"));
     identifiables = model$getParametersLinks();
-    #print(identifiables);
     for (path in 1:length(init_params)) {
         lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
-        lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = 2*initresidual; # We do not display very high residual value, as they extend the y-axis which hides lower values
+        # We do not display very high residual value, as they extend the y-axis which hides lower values
+        lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = 2*initresidual;
 
         # Functionnal relations
         pdf(paste("Path_", path, "_profile_likelihood.pdf", sep=""));
@@ -208,7 +210,34 @@ draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
 
         print(paste("Path", identifiables[path], "profile likelihood plotted, parameter value =", init_params[path] ));
     }
+    }
+
+    if(test){# As long as the code is not complete
+    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
+    print(paste(length(init_params), "paths to evaluate"));
+    identifiables = model$getParametersLinks();
+    # Collection of the non identifiables parameters
+    ni_profiles = list()
+    i_profiles = list();
+    for (path in 1:length(init_params)) {
+        lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
+        lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = NA;
+        print(paste("Parameter", path, "decided"));
+        
+        # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
+        if (lprofile$lowt_upper && lprofile$lowt_lower) {
+            i_profiles[[length(i_profiles)+1]] <- lprofile;
+        }
+        else {
+            ni_profiles[[length(ni_profiles)+1]] <- lprofile;
+        }
+    }
+
+    sorted_profiles = list(i_profiles, ni_profiles);
+    print("Profiles extracted and sorted.");
     
+    return(sorted_profiles);
+
     if (FALSE) { # Verbose ?
         model.structure$setAdjacencymatrix(adj);
         model$setModel(expdes, model.structure);
@@ -226,6 +255,34 @@ draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
         print(local_response$local_response)
         print("Inhibitors :");
         print(local_response$inhibitors);
+    }
+
+}
+
+# Plots the functionnal relation between each non identifiable parameter and their profile likelihood
+ni_pf_plot <- function(sorted_profiles, initresidual=0) {
+    i_profiles = sorted_profiles[[1]];
+    ni_profiles = sorted_profiles[[2]];
+
+    nbni = length(ni_profiles);
+    print(paste(nbni, "non identifiable paths"));
+    if (nbni > 0) {
+        par(mfcol=c(nbni, nbni), mar=rep(0, 4));
+        for (ni in 1:nbni) {
+            for (j in nbni) {
+                plot(ni_profiles[[j]]$explored, ni_profiles[[ni]]$residuals[j,], xlab="", ylab="", type="l");
+                # Print labels on the right and bottom
+                if (ni == 1) { title(ylab=ni_profiles[[j]]$path); }
+                if (j == dim(ni_profiles[[ni]]$residuals)[1]) { title(xlab=ni_profiles[[j]]$path); }
+                if (j == ni) {
+                    # Could be accelerated with two points instead of hundreds
+                    lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[1], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" );
+                    lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[2], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" );
+                    if (initresidual != 0) { lines( rep(ni_profiles[[ni]]$value, length(-5:100)), (1 + -5:100/100) * initresidual, col="red"); }
+                }
+            }
+            print(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"));
+        }
     }
 
 }

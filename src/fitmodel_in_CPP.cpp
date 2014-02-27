@@ -246,11 +246,14 @@ void profile_likelihood(const Data data,
 	std::vector<double> &explored,
 	const double param_value,
 	const Model *model,
-	bool* n_identifiability,
+	bool* identifiability,
     std::vector<double> &thresholds,
 	const unsigned int total_steps = 10000,
 	const double step_size = 0.01) {
 
+    for (int i=0 ; i<4 ; i++) {
+        identifiability[i] = false;
+    }
     double residual;
     double_matrix prediction;
 
@@ -268,7 +271,7 @@ void profile_likelihood(const Data data,
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
-        residual_track.push_back(std::vector<double>()); // Initialized meanwhile
+        residual_track.push_back(std::vector<double>());
     }
 	std::vector<double> dec_explored;
     for (unsigned int i=1 ; i < total_steps / 2 ; i++) {
@@ -285,8 +288,8 @@ void profile_likelihood(const Data data,
         dec_residual[keep_constant[0]].pop_back();
         dec_residual[keep_constant[0]].push_back(residual);
 
-        if (residual > thresholds[0]) n_identifiability[2] = false;
-        if (residual > thresholds[1]) n_identifiability[3] = false;
+        if (residual > thresholds[0]) identifiability[2] = true;
+        if (residual > thresholds[1]) identifiability[3] = true;
     }
     // We reorder the scanned values in the final vectors
     int size = dec_explored.size();
@@ -314,8 +317,8 @@ void profile_likelihood(const Data data,
         residual_track[keep_constant[0]].pop_back();
         residual_track[keep_constant[0]].push_back(residual);
 
-        if (residual > thresholds[0]) n_identifiability[0] = false;
-        if (residual > thresholds[1]) n_identifiability[1] = false;
+        if (residual > thresholds[0]) identifiability[0] = true;
+        if (residual > thresholds[1]) identifiability[1] = true;
     }
 
 }
