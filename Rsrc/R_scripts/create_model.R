@@ -1,7 +1,7 @@
 ## Two functions that simplify data parsing and model creation and fitting
 
 # Global variable to have more outputs
-verbose = TRUE;
+verbose = FALSE;
 debug = TRUE;
 
 create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat")
@@ -9,7 +9,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
 # model.links should be an adjacency list file representing the network
-# Experiment file data.simulation syntax should be as follows, with one line per replicate
+# Experiment file data.stimulation syntax should be as follows, with one line per replicate
 #          stimulator                |          inhibitor                |                 	    type                       | [one column per measured nodes]
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------
 # stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
@@ -127,12 +127,13 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model_description$design = expdes;
     model_description$structure = model.structure;
     model_description$data = data;
+    model_description$fileName = data.stimulation;
 
     return(model_description);
 }
 
 
-draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
+profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
 {
 # Finds a minimal model that fits the data and gives its parameters
 # Requires the fitmodel package
@@ -171,7 +172,7 @@ draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
     initresidual = residuals[order(residuals)[1]]
     initial.response = model$getLocalResponseFromParameter( initparams )
     adj = model.structure$adjacencymatrix
-    rank = model$modelRank()
+    rank = model$modelRank();
 
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     print(paste(length(init_params), "paths to evaluate"));
@@ -220,15 +221,16 @@ draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
 }
 
 # Plots the functionnal relation between each non identifiable parameter and their profile likelihood
-ni_pf_plot <- function(sorted_profiles, initresidual=0) {
+ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
     i_profiles = sorted_profiles[[1]];
     ni_profiles = sorted_profiles[[2]];
 
     nbni = length(ni_profiles);
     print(paste(nbni, "non identifiable paths"));
+    pdf(paste("NIplot_", data_name, ".pdf", sep=""), height=2*nbni+1, width=2*nbni+1);
     #limx = i_profiles[[1]]$
     if (nbni > 0) {
-        margin = rep(0, 4);
+        margin = c(2, 2, 0.5, 0.5);
         par(mfcol=c(nbni, nbni), mar=margin, lab=c(3, 3, 4));
         for (ni in 1:nbni) {
             # Set the y margins
@@ -255,6 +257,7 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0) {
             print(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"));
         }
     }
+    dev.off();
 
 }
 

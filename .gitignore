@@ -7,3 +7,5 @@
 *.la
 *.libs
 *.pdf
+4cell_lines/
+.RData*

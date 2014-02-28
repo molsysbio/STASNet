@@ -4,7 +4,7 @@
 #include <fitmodel/generate_response.hpp>
 #include <fitmodel/fitmodel_in_CPP.hpp>
 #include <Rcpp.h>
-//#include <thread>
+//#include <boost/thread>
 
 ModelWrapper::ModelWrapper() : model(NULL), linear_approximation(FALSE) { }
 
