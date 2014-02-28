@@ -173,46 +173,6 @@ draw_profiles <- function(model_description=NULL, trace_relation=FALSE)
     adj = model.structure$adjacencymatrix
     rank = model$modelRank()
 
-    test = T;
-    if(!test) {
-    # Plot of the profile likelihood for each path
-    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
-    print(paste(length(init_params), "paths to evaluate"));
-    identifiables = model$getParametersLinks();
-    for (path in 1:length(init_params)) {
-        lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
-        # We do not display very high residual value, as they extend the y-axis which hides lower values
-        lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = 2*initresidual;
-
-        # Functionnal relations
-        pdf(paste("Path_", path, "_profile_likelihood.pdf", sep=""));
-        if (trace_relation) {
-            par(2, 1);
-            title = c(0);
-            palette(rainbow(length(init_params)));
-            plot(0, 0, ylim=range(lprofile$residuals[-path,]), xlim=range(lprofile$explored)+ c(0, 0.2*(lprofile$explored[length(lprofile$explored)]-lprofile$explored[1])), bty="l");
-            for (i in 1:dim(lprofile$residuals)[1]) {
-                if (i != path) {
-                    lines(lprofile$explored, lprofile$residuals[i,], type="l", col=i);
-                    title = c(title, identifiables[i]);
-                }
-            }
-            legend(range(lprofile$explored)[2], range(lprofile$residuals[-path,])[2], title, col=1:length(init_params), lty=1, xpd=T, bty="n");
-        }
-
-        # Profile likelihood and identifiability thresholds
-        plot(lprofile$explored, lprofile$residuals[path,], type="l");
-        lines( lprofile$explored, rep(lprofile$thresholds[1], length(lprofile$explored)), lty=2, col="grey" );
-        lines( lprofile$explored, rep(lprofile$thresholds[2], length(lprofile$explored)), lty=2, col="grey" ); # Could be accelerated with two points instead of hundreds
-        lines( rep(init_params[path], length(-5:100)), (1 + -5:100/100) * initresidual, col="red");
-        title(main = paste("Profile likelihood of", path));
-        dev.off()
-
-        print(paste("Path", identifiables[path], "profile likelihood plotted, parameter value =", init_params[path] ));
-    }
-    }
-
-    if(test){# As long as the code is not complete
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     print(paste(length(init_params), "paths to evaluate"));
     identifiables = model$getParametersLinks();
@@ -266,14 +226,25 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0) {
 
     nbni = length(ni_profiles);
     print(paste(nbni, "non identifiable paths"));
+    #limx = i_profiles[[1]]$
     if (nbni > 0) {
-        par(mfcol=c(nbni, nbni), mar=rep(0, 4));
+        margin = rep(0, 4);
+        par(mfcol=c(nbni, nbni), mar=margin, lab=c(3, 3, 4));
         for (ni in 1:nbni) {
-            for (j in nbni) {
-                plot(ni_profiles[[j]]$explored, ni_profiles[[ni]]$residuals[j,], xlab="", ylab="", type="l");
+            # Set the y margins
+            if (ni == 1) {margin[2]=4;}
+            else {margin[2]=2;}
+
+            for (j in 1:nbni) {
+                # Set the x margins
+                if (j == nbni) {margin[1]=4;}
+                else {margin[1]=2;}
+
+                par(mar=margin);
+                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1);
                 # Print labels on the right and bottom
-                if (ni == 1) { title(ylab=ni_profiles[[j]]$path); }
-                if (j == dim(ni_profiles[[ni]]$residuals)[1]) { title(xlab=ni_profiles[[j]]$path); }
+                if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }
+                if (j == nbni) { title(xlab=ni_profiles[[ni]]$path); }
                 if (j == ni) {
                     # Could be accelerated with two points instead of hundreds
                     lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[1], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" );
