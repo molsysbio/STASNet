@@ -24,6 +24,9 @@ do
     sed -i s/LY294002/PI3K/g $new_file
     sed -i s/None//g $new_file
     sed -i s/SB216763/GSK3AB/g $new_file
+    sed -i s/LY\ 294002/PI3K/g $new_file
+    sed -i s/MEK_0.1/MEK/g $new_file
+    sed -i s/SB\ 216763/GSK3AB/g $new_file
 
     # Protein alias, standardizes the notations
     sed -i s/[Ii][Gg][Ff]-*IR/IGFR/g $new_file

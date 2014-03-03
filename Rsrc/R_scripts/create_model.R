@@ -133,11 +133,10 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 }
 
 
-profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
-{
 # Finds a minimal model that fits the data and gives its parameters
 # Requires the fitmodel package
-
+profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
+{
 ### MODEL SETUP
     expdes = model_description$design;
     model.structure = model_description$structure;
@@ -174,7 +173,7 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     adj = model.structure$adjacencymatrix
     rank = model$modelRank();
 
-    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
+    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);# Useless
     print(paste(length(init_params), "paths to evaluate"));
     identifiables = model$getParametersLinks();
     # Collection of the non identifiables parameters
@@ -196,29 +195,24 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
 
     sorted_profiles = list(i_profiles, ni_profiles);
     print("Profiles extracted and sorted.");
-    
+
+    print("Parameters :");
+    parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
+    print(parameters);
+
+    print("Response matrix : ");
+    print(model.structure$names)
+    print(model.structure$adjacencymatrix);
+
+    local_response = model$getLocalResponseFromParameter(model$fitmodel(data, parameters)$parameter);
+    print("Local response : ");
+    print(local_response$local_response)
+    print("Inhibitors :");
+    print(local_response$inhibitors);
+
     return(sorted_profiles);
-
-    if (FALSE) { # Verbose ?
-        model.structure$setAdjacencymatrix(adj);
-        model$setModel(expdes, model.structure);
-
-        print("Parameters :");
-        parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
-        print(parameters);
-
-        print("Response matrix : ");
-        print(model.structure$names)
-        print(model.structure$adjacencymatrix);
-
-        local_response = model$getLocalResponseFromParameter(model$fitmodel(data, parameters)$parameter);
-        print("Local response : ");
-        print(local_response$local_response)
-        print("Inhibitors :");
-        print(local_response$inhibitors);
-    }
-
 }
+
 
 # Plots the functionnal relation between each non identifiable parameter and their profile likelihood
 ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
