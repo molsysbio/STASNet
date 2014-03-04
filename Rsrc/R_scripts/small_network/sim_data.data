@@ -1,0 +1,5 @@
+stimulator	inhibitor	type	B	D
+		blank	0.1	0.1
+BSA	DMSO	c	1	2
+A	DMSO	t	1.4	4.1
+B	DMSO	t	0.5	4.1

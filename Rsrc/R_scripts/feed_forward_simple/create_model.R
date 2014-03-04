@@ -176,7 +176,7 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     rank = model$modelRank();
 
     print("Model simulation :")
-    print(model$simulate(data, initparams)$prediction);
+    print(model$simulate(data, initparams)$prediction)
 
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);# Useless
     print(paste(length(init_params), "paths to evaluate"));
@@ -261,22 +261,18 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
 # Identifiables
     nbid = length(i_profiles);
     print(paste(nbid, "identifiable paths"));
-    par( mfcol=c(1, 2), mar=c(4, 2, 2, 2), oma=c(0, 0, 2, 0) );
+    par(mfcol=c(1, 2), mar=rep(5, 4));
     if (nbid > 0) {
         for (id in 1:nbid) {
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"));
-            lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
-            lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
-            if (initresidual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * initresidual, col="red"); }
 
-            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) );
+            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T), );
             #print(range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T));
             for (i in 1:dim(i_profiles[[id]]$residuals)[1]) {
-                if (i != i_profiles[[id]]$pathid) {
-                    lines(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i, ], sub="Functionnal relation", col=i);
+                if (i != id) {
+                    lines(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i, ], sub="Functionnal relation");
                 }
             }
-            title (main=i_profiles[[id]]$path, outer=T);
             print(paste("Identifiable path", i_profiles[[id]]$path, "plotted") );
         }
     }
