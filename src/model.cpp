@@ -52,8 +52,8 @@ void Model::do_init () {
  
 
     // Perform identifiability analysis
-    // parameter_dependency_matrix has the follwoing structure:
-    // ( A | B ) with A is parameters.size x symbols.size und B is parameters.size * parameters_size
+    // parameter_dependency_matrix has the following structure:
+    // ( A | B ) with A is parameters.size x symbols.size and B is parameters.size * parameters_size
     // B( rank(A) .. end : 1..end ) informs us about which parameters have to be identified.
     identifiability_analysis( model_eqns_,
                     parameters_,
@@ -139,25 +139,26 @@ void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
     if (GiNaC::is_a<GiNaC::power>(e)) {
         if (e.nops()==2) {
             if (e.op(1)==-1) {
-    if (GiNaC::is_a<GiNaC::add>(e.op(0))) {
-        for (size_t i=0; i<e.op(0).nops(); ++i) {
-            if (GiNaC::is_a<GiNaC::numeric>(e.op(0).op(i))) {
-                if (GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double()!=-1) {
-        std::cout << "Was soll das?" << 
-            GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double() << std::endl;
-        exit(-1);
+                if (GiNaC::is_a<GiNaC::add>(e.op(0))) {
+                    for (size_t i=0; i<e.op(0).nops(); ++i) {
+                        if (GiNaC::is_a<GiNaC::numeric>(e.op(0).op(i))) {
+                            if (GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double()!=-1) {
+                    std::cout << "Was soll das?" << 
+                        GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double() << std::endl;
+                    exit(-1);
+                            }
+                            
+                        }
+                    }
+
+                    std::vector<GiNaC::ex>::iterator iter=set.begin();
+                    while ( !((iter==set.end()) || ((*iter) == e.op(0)))) {
+                        iter++;
+                    }
+                    if (iter==set.end()) {
+                        set.push_back(e.op(0));
+                    }
                 }
-                
-            }
-        }
-        std::vector<GiNaC::ex>::iterator iter=set.begin();
-        while ( !((iter==set.end()) || ((*iter) == e.op(0)))) {
-            iter++;
-        }
-        if (iter==set.end()) {
-            set.push_back(e.op(0));
-        }
-    }
 
             }
         } else {
@@ -272,7 +273,7 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
  
 
     double penelty=getPeneltyForConstraints(p);
-    if (penelty>0) {
+    if (penelty>1) {
         //      std::cerr << "P:" << penelty << " " ;
         for (unsigned int i=0; i<cols;i++) { 
             for (unsigned int j=0; j<rows;j++) {
@@ -381,6 +382,23 @@ void Model::getParametersLinks(std::vector<std::string> &description) {
             }
         }
     }
+}
+
+// Displays the parameter dependency matrix G reduced
+void Model::showParameterDependencyMatrix() {
+    std::string output="";
+
+    for (size_t i=0 ; i < symbols_.size() ; i++) {
+        output += symbols_[i].get_name() + "\t";
+    }
+    output += "\n";
+    for (size_t i=0 ; i < parameter_dependency_matrix_.shape()[0] ; i++) {
+        for (size_t j=0 ; j < parameter_dependency_matrix_.shape()[1] ; j++) {
+            output += to_string(parameter_dependency_matrix_[i][j]) + "\t";
+        }
+        output += "\n";
+    }
+    std::cout << output << std::endl;
 }
 
 // Global function, only used here, dirty hack part II

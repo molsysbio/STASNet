@@ -6,7 +6,7 @@
 // Matrix traits: This describes how a matrix is accessed. By
 // externalizing this information into a traits class, the same code
 // can be used both with native arrays and matrix classes. To use the
-// dfault implementation of the traits class, a matrix type has to
+// default implementation of the traits class, a matrix type has to
 // provide the following definitions as members:
 //
 // * typedef ... index_type;
@@ -53,7 +53,7 @@ template<typename MatrixType> struct matrix_traits
 template<typename T, std::size_t rows, std::size_t columns>
  struct matrix_traits<T[rows][columns]>
 {
-  typedef std::size_t index_type;
+  typedef std::size_t index_type; // ?? Built in type, std not necessary
   typedef T value_type;
   static index_type min_row(T const (&)[rows][columns])
   { return 0; }
@@ -140,7 +140,7 @@ template<typename MatrixType>
   matrix_traits<MatrixType> mt;
   typedef typename matrix_traits<MatrixType>::index_type index_type;
  
-  index_type lead = mt.min_row(A);
+  index_type lead = mt.min_row(A); // Shouldn't it be column ??
  
   for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
   {

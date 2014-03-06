@@ -42,7 +42,9 @@ public:
 
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);
+
   void getParametersLinks(std::vector<std::string> &description);
+  void showParameterDependencyMatrix();
 
   int find_parameter(std::string name) ;
   // TODO Maps identifiable parameters to a set of possible original parameters
@@ -98,7 +100,7 @@ protected:
   void do_init();
 
   // ----------
-  // Contains the constraints to avoid bifurkations
+  // Contains the constraints to avoid bifurcations
 
   parameterlist param_constraints_;
   std::vector<MathTree::math_item::Ptr> constraints_;

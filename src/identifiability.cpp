@@ -14,13 +14,13 @@
 
 
 boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(GiNaC::ex e) {
-  // If expression e has allready been assined to a parameter, return that.
+  // If expression e has already been assigned to a parameter, return that.
   for (iterator iter=begin(); iter!=end(); iter++) {
     if (iter->second==e) 
       return iter->first;
   }
 
-  // otherwise generate a new parameter
+  // otherwise generate a new parameter, which counter is one more than the previous one
   MathTree::parameter::Ptr par(new MathTree::parameter());
   par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
   push_back(std::make_pair(par,e));
@@ -53,17 +53,17 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
     
     for (size_t i=0; i<e.nops(); ++i) 
       {
-	// This is the place where parameter reduction is happening:
-	// All multiplies which are symbolic will be reduced to one...
-	if (reduce_products) {
-	  if (!GiNaC::is_a<GiNaC::symbol>(e.op(i))) {
-	    boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-	  } else {
-	    multiplier*=e.op(i);
-	  }
-	} else {
-	  boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-	}
+        // This is the place where parameter reduction is happening:
+        // All multiplies which are symbolic will be reduced to one...
+        if (reduce_products) {
+          if (!GiNaC::is_a<GiNaC::symbol>(e.op(i))) {
+            boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+          } else {
+            multiplier*=e.op(i);
+          }
+        } else {
+          boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+        }
       }
     
     if (multiplier!=1) {
@@ -114,9 +114,9 @@ template<class T> struct index_cmp {
   const T arr;
 };
 
-//resorts the parameter_dependency_matrix and the parameterlist
+//resorts the parameter_dependency_matrix_unreduced and the parameterlist
 void sort ( int_matrix &old_pdmu,
-	    parameterlist &param) {
+        parameterlist &param) {
 
   //get the number of variables
   size_t i=0,j=0,vars;  
@@ -154,16 +154,16 @@ void sort ( int_matrix &old_pdmu,
 }
 
 
-// Performs identifiabiliy analysis on the GiNaC matrix input_matrix
-void identifiability_analysis(	 equation_matrix &output_matrix, 
-				 std::vector<MathTree::parameter::Ptr> &parameters,
-				 double_matrix &parameter_dependency_matrix,
-				 int_matrix &parameter_dependency_matrix_unreduced,
-				 const symbolic_matrix &input_matrix, 
-				 const std::vector<GiNaC::symbol> & vars) {
+// Performs identifiability analysis on the GiNaC matrix input_matrix
+void identifiability_analysis(   equation_matrix &output_matrix, 
+                 std::vector<MathTree::parameter::Ptr> &parameters,
+                 double_matrix &parameter_dependency_matrix,
+                 int_matrix &parameter_dependency_matrix_unreduced,
+                 const symbolic_matrix &input_matrix, 
+                 const std::vector<GiNaC::symbol> & vars) {
 
 
-  // Gernerate new parameterisation
+  // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
   parameterlist param;
 
@@ -171,46 +171,46 @@ void identifiability_analysis(	 equation_matrix &output_matrix,
     for (size_t j=0; j<input_matrix.cols(); j++) 
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
   // Write parameter dependencies into matrix (this is the matrix which will 
-  // be put into Row Echelon form.
-  // Each row represnets one new parameter, the first colums are the old parameters, then the 
+  // be put into Row Echelon form).
+  // Each row represents one new parameter, the first colums are the old parameters, then the 
   // new ones.
   // It has form A|B where B is -unity matrix and A has the exponents of the products.
 
   parameter_dependency_matrix_unreduced.resize(boost::extents[param.size()][param.size()+vars.size()]);
   size_t x=0, y=0;
   for (parameterlist::iterator iter=param.begin(); iter!=param.end(); ++iter) {
-    y=0;
-    assert(GiNaC::is_a<GiNaC::mul>(iter->second) || GiNaC::is_a<GiNaC::symbol>(iter->second) );
-    if (GiNaC::is_a<GiNaC::mul>(iter->second)) {
-      GiNaC::mul m=GiNaC::ex_to<GiNaC::mul>(iter->second);
-      for (std::vector<GiNaC::symbol>::const_iterator iter2=vars.begin(); iter2!=vars.end(); ++iter2) {
-	parameter_dependency_matrix_unreduced[x][y++]=(int)round(m.degree(*iter2));
-      }
-    } else if (GiNaC::is_a<GiNaC::symbol>(iter->second)) {
-      for (std::vector<GiNaC::symbol>::const_iterator iter2=vars.begin(); iter2!=vars.end(); ++iter2) {
-	if (*iter2 == iter->second)
-	  parameter_dependency_matrix_unreduced[x][y++] = 1;
-	else 
-	  parameter_dependency_matrix_unreduced[x][y++] = 0;
-      }
-    }
-    parameter_dependency_matrix_unreduced[x][vars.size()+x]=-1;
-    x++;
+        y=0;
+        assert(GiNaC::is_a<GiNaC::mul>(iter->second) || GiNaC::is_a<GiNaC::symbol>(iter->second) );
+        if (GiNaC::is_a<GiNaC::mul>(iter->second)) {
+          GiNaC::mul m=GiNaC::ex_to<GiNaC::mul>(iter->second);
+          for (std::vector<GiNaC::symbol>::const_iterator iter2=vars.begin(); iter2!=vars.end(); ++iter2) {
+            parameter_dependency_matrix_unreduced[x][y++]=(int)round(m.degree(*iter2));
+          }
+        } else if (GiNaC::is_a<GiNaC::symbol>(iter->second)) {
+            for (std::vector<GiNaC::symbol>::const_iterator iter2=vars.begin(); iter2!=vars.end(); ++iter2) {
+                if (*iter2 == iter->second)
+                  parameter_dependency_matrix_unreduced[x][y++] = 1;
+                else 
+                  parameter_dependency_matrix_unreduced[x][y++] = 0;
+            }
+        }
+        parameter_dependency_matrix_unreduced[x][vars.size()+x]=-1;
+        x++;
   }
 
-  //sort the parameter dependency matrix
+  //sort the parameter dependency matrix to facilitate reduction
   sort (parameter_dependency_matrix_unreduced,param);
 
   parameter_dependency_matrix.resize(boost::extents[param.size()][param.size()+vars.size()]);
   //  bring into reduced row echelon form
   rational_matrix rational_matrix_for_rref;
   convert_int_to_rational_matrix(parameter_dependency_matrix_unreduced,
-				 rational_matrix_for_rref);
+                 rational_matrix_for_rref);
 
   to_reduced_row_echelon_form(rational_matrix_for_rref);
 
   convert_rational_to_double_matrix(rational_matrix_for_rref, 
-				    parameter_dependency_matrix);
+                    parameter_dependency_matrix);
   
     
 

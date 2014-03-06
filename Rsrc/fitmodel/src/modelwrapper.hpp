@@ -40,6 +40,8 @@ public:
   bool linear_approximation;
   
   SEXP getParametersLinks();
+  
+  void showParameterDependencyMatrix();
 
 private:
   GiNaC::matrix response_full_model; 

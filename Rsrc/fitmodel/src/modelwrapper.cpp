@@ -50,7 +50,8 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
 
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
   model_design_consistent(exp,mod);
-  
+
+  std::cout << mod; // DEBUGGING  
   generate_response(response_full_model,  
 		      symbols_full_model,
 		      mod.getAdjacencyMatrix(),
@@ -137,7 +138,7 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
 }
 
 /* COMMENTED BECAUSE IT NEEDS C++11 LIBRARY thread
- * IF YOU UNCOMMENT THIS, UNCOMMENT THE HEADERS AS WELL
+ * IF YOU UNCOMMENT THIS, UNCOMMENT THE THREAD HEADERS AS WELL
 // Returns the profile likelihood and functionnal relationship for all parameters, does the computation in parallel
 SEXP ModelWrapper::parallelPL(Data data, std::vector<double> parameters, const unsigned int total_steps = 10000, const double step_size = 0.01) {
     if ( parameters.size() != model->nr_of_parameters() ) 
@@ -249,6 +250,11 @@ SEXP ModelWrapper::getParametersLinks() {
     return ret;
 }
 
+// Show the parameter dependency matrix G reduced
+void ModelWrapper::showParameterDependencyMatrix() {
+    model->showParameterDependencyMatrix();
+}
+
 
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
@@ -265,7 +271,8 @@ RCPP_MODULE(ModelEx) {
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
     //.method( "parallelPL", &parallelPL )
-    .method( "getParametersLinks", &ModelWrapper::getParametersLinks)
+    .method( "getParametersLinks", &ModelWrapper::getParametersLinks )
+    .method( "showParameterDependencyMatrix", &ModelWrapper::showParameterDependencyMatrix )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }

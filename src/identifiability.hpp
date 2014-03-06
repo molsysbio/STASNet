@@ -28,7 +28,7 @@ void identifiability_analysis(
 
   int_matrix &parameter_dependency_matrix_unreduced,
   // Input: Matrix of expression
-  const symbolic_matrix &m, 
+  const symbolic_matrix &input_matrix, 
   // Input: vector of symbols which are the parameters in the input-matrix
   const std::vector<GiNaC::symbol> & vars);
 

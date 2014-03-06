@@ -19,7 +19,7 @@ public:
 
   void setAdjacencyMatrix(const int_matrix &adj);
 
-
+  friend std::ostream& operator<<(std::ostream &os, const ModelStructure &mod);
     
  private:
     std::vector<std::string> names;

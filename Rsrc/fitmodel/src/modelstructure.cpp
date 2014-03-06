@@ -42,8 +42,21 @@ void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string
       size_t index2 = std::distance(names.begin(), iter2);
       adjacencymatrix[index2][index1]=1;
     }
-    
 } 
+
+std::ostream& operator<<(std::ostream &os, const ModelStructure &mod) {
+    for (size_t i=0 ; i < mod.adjacencymatrix.shape()[0] ; i++) {
+        os << mod.names[i] << "\t";
+    }
+    os << std::endl;
+    for (size_t i=0 ; i < mod.adjacencymatrix.shape()[0] ; i++) {
+        for (size_t j=0 ; j < mod.adjacencymatrix.shape()[1] ; j++) {
+            os << mod.adjacencymatrix[i][j] << "\t";
+        }
+        os << std::endl;
+    }
+    return os;
+}
   
   
 

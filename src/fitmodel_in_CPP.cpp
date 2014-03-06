@@ -118,22 +118,20 @@ void levmar_wrapper(double *p,double *datax,int m, int n, void *pass_data_tmp) {
 double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_measurements, double *param, std::vector<size_t> keep_constant, const Data * data) {
 
   double info[LM_INFO_SZ]; // returns some information about the actual fitting process (info[1])=sumsq
-  double opts[LM_OPTS_SZ]; // some options to determine initial  \mu (opts[0]), stopping thresholds for some functions (opts[1-3]) and difference approxiamtion to Jacobian)
+  double opts[LM_OPTS_SZ]; // some options to determine initial  \mu (opts[0]), stopping thresholds for some functions (opts[1-3]) and difference approximation to Jacobian)
   opts[0]=LM_INIT_MU*10.0;
   opts[1]=1E-10;
   opts[2]=1E-10;
   opts[3]=1E-15; 
   opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used  
 
- 
-
   std::vector<double> parameters_fixed;
-
   if (keep_constant.size()>0) {
     parameters_fixed.resize(model->nr_of_parameters());
     for (size_t i=0; i<model->nr_of_parameters(); i++) 
       parameters_fixed[i]=param[i];
   }
+
   levmar_pass_info lpi(model, keep_constant, parameters_fixed, data);
   double parameters[model->nr_of_parameters()];
   if (keep_constant.size()>0) {
@@ -237,6 +235,7 @@ void fitmodel( std::vector <double> &bestfit,
    }
 
 }
+
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
 void profile_likelihood(const Data data,

@@ -147,9 +147,8 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
     if (debug) { # Debug only
-        print(model.structure$names);
-        print("Adjacency matrix :");
-        print(model.structure$adjacencymatrix);
+        print("Parameter dependency matrix G after reduction :");
+        model$showParameterDependencyMatrix();
     }
 
 ### INITIAL FIT
