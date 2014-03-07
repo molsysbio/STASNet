@@ -12,6 +12,7 @@
 #include "mathtree.hpp"
 #include "rref.hpp"
 
+extern bool debug=false;
 
 boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(GiNaC::ex e) {
   // If expression e has already been assigned to a parameter, return that.
@@ -24,6 +25,7 @@ boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(
   MathTree::parameter::Ptr par(new MathTree::parameter());
   par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
   push_back(std::make_pair(par,e));
+  if (debug) { std::cout << e << " added" << std::endl;}
   return par;
 }
 
@@ -43,67 +45,65 @@ std::ostream &operator<<(std::ostream &os, parameterlist &a){
 // If reduce_products is true, products of symbols will be assigned to one parameter.
 // Parameters are stored in parameterlist param
 MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &param, bool reduce_products) {
-  
-  MathTree::math_item::Ptr item;
+    
+    MathTree::math_item::Ptr item;
 
-  if (GiNaC::is_a<GiNaC::mul>(e)) {
-    
-    item = MathTree::mul::Ptr(new MathTree::mul());
-    GiNaC::ex multiplier=1;
-    
-    for (size_t i=0; i<e.nops(); ++i) 
-      {
-        // This is the place where parameter reduction is happening:
-        // All multiplies which are symbolic will be reduced to one...
-        if (reduce_products) {
-          if (!GiNaC::is_a<GiNaC::symbol>(e.op(i))) {
-            boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-          } else {
-            multiplier*=e.op(i);
-          }
-        } else {
-          boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+    if (GiNaC::is_a<GiNaC::mul>(e)) {
+        
+        item = MathTree::mul::Ptr(new MathTree::mul());
+        GiNaC::ex multiplier=1;
+        
+        for (size_t i=0; i<e.nops(); ++i) 
+        {
+            // This is the place where parameter reduction is happening:
+            // All multiplies which are symbolic will be reduced to one...
+            if (reduce_products) {
+                if (!GiNaC::is_a<GiNaC::symbol>(e.op(i))) {
+                    boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+                    // Wouldn't it be faster to directly call getParameterForExpression ?
+                    // Wouldn't mul be more accurate than container ?
+                } else {
+                    multiplier*=e.op(i);
+                }
+            } else {
+                boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+            }
         }
-      }
-    
-    if (multiplier!=1) {
-      MathTree::parameter::Ptr item2=param.getParameterForExpression(multiplier);
-      boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(item2);
+        
+        if (multiplier!=1) {
+            MathTree::parameter::Ptr item2=param.getParameterForExpression(multiplier);
+            boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(item2);
+        }
+
+    } else if (GiNaC::is_a<GiNaC::add>(e)) {
+        item = MathTree::add::Ptr(new MathTree::add());
+        for (size_t i=0; i<e.nops(); ++i) 
+            boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+
+    } else if (GiNaC::is_a<GiNaC::power>(e)) {
+
+        item = MathTree::pow::Ptr(new MathTree::pow());
+        for (size_t i=0; i<e.nops(); ++i) 
+            boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+
+    } else if (GiNaC::is_a<GiNaC::symbol>(e)) {
+        item = param.getParameterForExpression(e);
+
+    } else if (GiNaC::is_a<GiNaC::numeric>(e)) {
+        item = MathTree::numeric::Ptr(new MathTree::numeric());
+        boost::dynamic_pointer_cast<MathTree::numeric>(item)->set_numeric(GiNaC::ex_to<GiNaC::numeric>(e).to_double());
+
+    } else if (GiNaC::is_a<GiNaC::function>(e)) {
+        item = MathTree::pow::Ptr(new MathTree::exp());
+        for (size_t i=0; i<e.nops(); ++i) 
+            boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
+
+    } else {
+        std::cerr << "UNKNOWN TYPE: " << e;
+        exit(-1);
     }
 
-  } else if (GiNaC::is_a<GiNaC::add>(e)) {
-
-    item = MathTree::add::Ptr(new MathTree::add());
-    for (size_t i=0; i<e.nops(); ++i) 
-      boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-
-  } else if (GiNaC::is_a<GiNaC::power>(e)) {
-
-    item = MathTree::pow::Ptr(new MathTree::pow());
-    for (size_t i=0; i<e.nops(); ++i) 
-      boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-
-  } else if (GiNaC::is_a<GiNaC::symbol>(e)) {
-
-    item = param.getParameterForExpression(e);
-
-  } else if (GiNaC::is_a<GiNaC::numeric>(e)) {
-
-    item = MathTree::numeric::Ptr(new MathTree::numeric());
-    boost::dynamic_pointer_cast<MathTree::numeric>(item)->set_numeric(GiNaC::ex_to<GiNaC::numeric>(e).to_double());
-
-  } else if (GiNaC::is_a<GiNaC::function>(e)) {
-    item = MathTree::pow::Ptr(new MathTree::exp());
-    for (size_t i=0; i<e.nops(); ++i) 
-      boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-
-  } else {
-
-    std::cerr << "UNKNOWN TYPE: " << e;
-    exit(-1);
-  }
-
-  return item;
+    return item;
 
 }
 
@@ -168,8 +168,11 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   parameterlist param;
 
   for (size_t i=0; i<input_matrix.rows(); i++) 
-    for (size_t j=0; j<input_matrix.cols(); j++) 
+    for (size_t j=0; j<input_matrix.cols(); j++) {
+      if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t";}
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
+    }
+    if(debug) {std::cout << std::endl;}
   // Write parameter dependencies into matrix (this is the matrix which will 
   // be put into Row Echelon form).
   // Each row represents one new parameter, the first colums are the old parameters, then the 
@@ -180,9 +183,10 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   size_t x=0, y=0;
   for (parameterlist::iterator iter=param.begin(); iter!=param.end(); ++iter) {
         y=0;
+        if(debug) {std::cout << "Path " << x << " : " << iter->second << std::endl;} // DEBUGGING
         assert(GiNaC::is_a<GiNaC::mul>(iter->second) || GiNaC::is_a<GiNaC::symbol>(iter->second) );
         if (GiNaC::is_a<GiNaC::mul>(iter->second)) {
-          GiNaC::mul m=GiNaC::ex_to<GiNaC::mul>(iter->second);
+          GiNaC::mul m=GiNaC::ex_to<GiNaC::mul>(iter->second); // Isn't is already a mul ?
           for (std::vector<GiNaC::symbol>::const_iterator iter2=vars.begin(); iter2!=vars.end(); ++iter2) {
             parameter_dependency_matrix_unreduced[x][y++]=(int)round(m.degree(*iter2));
           }
@@ -197,6 +201,23 @@ void identifiability_analysis(   equation_matrix &output_matrix,
         parameter_dependency_matrix_unreduced[x][vars.size()+x]=-1;
         x++;
   }
+
+    // DEBUGGING 
+    if (debug) {
+        std::cout << "Before sorting or reduction" << std::endl;
+        for (size_t i=0 ; i < vars.size() ; i++) {
+            std::cout << vars[i].get_name() << "\t";
+        }
+        std::cout << "\n";
+        for (size_t i=0 ; i < parameter_dependency_matrix_unreduced.shape()[0] ; i++) {
+            for (size_t j=0 ; j < parameter_dependency_matrix_unreduced.shape()[1] ; j++) {
+                std::cout << parameter_dependency_matrix_unreduced[i][j] << "\t";
+            }
+            std::cout << "\n";
+        }
+        std::cout << std::endl;
+    }
+    //
 
   //sort the parameter dependency matrix to facilitate reduction
   sort (parameter_dependency_matrix_unreduced,param);

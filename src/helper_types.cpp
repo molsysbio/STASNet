@@ -60,7 +60,6 @@ std::ostream &operator<<(std::ostream &os, const int_matrix &a) {
 }
 
 // Helper function to read in parametermap
-
 std::istream &operator>>(std::istream &is, std::map<std::string,double> &p) {
   while (is.good()) {
     std::string paramname;

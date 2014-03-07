@@ -47,7 +47,7 @@ void generate_response( GiNaC::matrix &response,
     inh_idx[i]=c++;
   }
 
-  //  (III) -Create the global response matrix "R": R=-inv(r)-1
+  //  (III) -Create the global response matrix "R": R = -1 * inv(r)
   GiNaC::matrix R=GiNaC::ex_to<GiNaC::matrix>(r.inverse()).mul_scalar(-1);
 
 
@@ -104,7 +104,7 @@ void generate_response( GiNaC::matrix &response,
 	          remove_activity=true;
 	          for (size_t stim=0; stim<exp_design.stimuli.shape()[1]; stim++) {
 	            if (exp_design.stimuli[j][stim] == 1) 
-	              if (adm[m][exp_design.stim_nodes[stim]]!=0) {
+	              if (adm[m][exp_design.stim_nodes[stim]]!=0) { // if node m is stimulated
 		            remove_activity=false;
 	              }
 	          }

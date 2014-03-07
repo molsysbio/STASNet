@@ -147,11 +147,10 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
     if (debug) { # Debug only
-        print(model.structure$names);
-        print("Adjacency matrix :");
-        print(model.structure$adjacencymatrix);
-        print("Parameter dependency matrix G after reduction :");
-        model$showParameterDependencyMatrix();
+        #print("Parameter dependency matrix G before reduction :");
+        #model$showParameterDependencyMatrix();
+        #print("Parameter dependency matrix G after reduction :");
+        #model$showParameterDependencyMatrix();
     }
 
 ### INITIAL FIT
@@ -263,7 +262,7 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
 # Identifiables
     nbid = length(i_profiles);
     print(paste(nbid, "identifiable paths"));
-    par( mfcol=c(1, 2), mar=c(4, 2, 2, 2), oma=c(0, 0, 2, 0) );
+    par( mfcol=c(1, 2), mar=c(4, 2, 0, 0), oma=c(0, 0, 2, 0) );
     if (nbid > 0) {
         for (id in 1:nbid) {
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"));

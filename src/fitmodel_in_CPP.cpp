@@ -263,7 +263,7 @@ void profile_likelihood(const Data data,
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 ));
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), 0.95 ));
     
-    // Upper and Lower scans are separated, to be sure to scan near the minimal each time 
+    // Upper and Lower scans are separated, to be sure to scan near the optimum each time 
     // Lower values scan
     double scanned_value = param_value;
     std::vector<double> bestfit = parameters;
@@ -278,7 +278,21 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         dec_explored.push_back(scanned_value);
+        if (scanned_value == 0) {
+            std::cout << "Simulationfor value 0" << std::endl;
+            double_matrix simulation;
+            model->predict(&(parameters[0]), simulation, &data);
+            for (unsigned int row=0 ; row < data.unstim_data.shape()[0] ; row++) {
+            std::cout << model->exp_design().stim_nodes[row] << " " << model->exp_design().inhib_nodes[row];
+                for (unsigned int col=0 ; col < data.unstim_data.shape()[1] ; col++) {
+                    std::cout << " " << simulation[row][col];
+                }
+                std::cout << std::endl;
+            }
+        }
+        
         scanned_value -= step_size;
+        if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
         for (int j=0 ; j < parameters.size() ; j++) {
             dec_residual[j].push_back(parameters[j]);
@@ -307,7 +321,21 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         explored.push_back(scanned_value);
+        if (scanned_value == 0) {
+            std::cout << "Simulation for value 0" << std::endl;
+            double_matrix simulation;
+            model->predict(&(parameters[0]), simulation, &data);
+            for (unsigned int row=0 ; row < data.unstim_data.shape()[0] ; row++) {
+            std::cout << model->exp_design().stim_nodes[row] << " " << model->exp_design().inhib_nodes[row];
+                for (unsigned int col=0 ; col < data.unstim_data.shape()[1] ; col++) {
+                    std::cout << " " << simulation[row][col];
+                }
+                std::cout << std::endl;
+            }
+        }
+
         scanned_value += step_size;
+        if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
         for (int j=0 ; j < parameters.size() ; j++) {
             residual_track[j].push_back(parameters[j]);

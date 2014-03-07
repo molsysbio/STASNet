@@ -31,7 +31,7 @@ void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string
     adjacencymatrix.resize(boost::extents[names.size()][names.size()]);
     for (size_t i=0; i<names.size(); i++) {
       for (size_t j=0; j<names.size(); j++) {
-	adjacencymatrix[i][j]=0;
+	    adjacencymatrix[i][j]=0;
       }
     }
       

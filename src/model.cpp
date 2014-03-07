@@ -55,6 +55,7 @@ void Model::do_init () {
     // parameter_dependency_matrix has the following structure:
     // ( A | B ) with A is parameters.size x symbols.size and B is parameters.size * parameters_size
     // B( rank(A) .. end : 1..end ) informs us about which parameters have to be identified.
+
     identifiability_analysis( model_eqns_,
                     parameters_,
                     parameter_dependency_matrix_,
@@ -225,14 +226,13 @@ void Model::predict(const double *p, double_matrix &datax, const Data *data ) co
     
     for (size_t i=0; i< nr_of_parameters(); i++ ) {
         parameters_[independent_parameters_[i]]->set_parameter(p[i]);
-
     }
     for (unsigned int i=0; i<cols;i++) { 
         for (unsigned int j=0; j<rows;j++) {
             if (linear_approximation_) {
-    datax[j][i]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i]);
+                datax[j][i]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i]);
             } else {
-    datax[j][i]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()));
+                datax[j][i]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()));
             }
         }
     }
@@ -395,6 +395,23 @@ void Model::showParameterDependencyMatrix() {
     for (size_t i=0 ; i < parameter_dependency_matrix_.shape()[0] ; i++) {
         for (size_t j=0 ; j < parameter_dependency_matrix_.shape()[1] ; j++) {
             output += to_string(parameter_dependency_matrix_[i][j]) + "\t";
+        }
+        output += "\n";
+    }
+    std::cout << output << std::endl;
+}
+
+// Displays G before the reduction pb because it is modified directly by the reduction
+void Model::showGUnreduced() {
+    std::string output="";
+
+    for (size_t i=0 ; i < symbols_.size() ; i++) {
+        output += symbols_[i].get_name() + "\t";
+    }
+    output += "\n";
+    for (size_t i=0 ; i < parameter_dependency_matrix_unreduced_.shape()[0] ; i++) {
+        for (size_t j=0 ; j < parameter_dependency_matrix_unreduced_.shape()[1] ; j++) {
+            output += to_string(parameter_dependency_matrix_unreduced_[i][j]) + "\t";
         }
         output += "\n";
     }

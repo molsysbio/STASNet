@@ -6,6 +6,8 @@
 #include <Rcpp.h>
 //#include <boost/thread>
 
+extern int debug;
+
 ModelWrapper::ModelWrapper() : model(NULL), linear_approximation(FALSE) { }
 
 ModelWrapper::~ModelWrapper() {
@@ -51,7 +53,7 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
   model_design_consistent(exp,mod);
 
-  std::cout << mod; // DEBUGGING  
+  if(debug) {std::cout << mod;} // DEBUGGING  
   generate_response(response_full_model,  
 		      symbols_full_model,
 		      mod.getAdjacencyMatrix(),
@@ -250,9 +252,13 @@ SEXP ModelWrapper::getParametersLinks() {
     return ret;
 }
 
-// Show the parameter dependency matrix G reduced
+// Show the parameter dependency matrix G before and after reduction
 void ModelWrapper::showParameterDependencyMatrix() {
     model->showParameterDependencyMatrix();
+}
+
+void ModelWrapper::showGUnreduced() {
+    model->showGUnreduced();
 }
 
 
