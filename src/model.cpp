@@ -214,7 +214,7 @@ void Model::getConstraints( parameterlist &params, std::vector<MathTree::math_it
     }
 }
 
-void Model::predict(const double *p, double_matrix &datax, const Data *data ) const {
+void Model::predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const {
 
 
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];

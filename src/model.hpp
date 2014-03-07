@@ -28,7 +28,7 @@ public:
 
 public:
 
-  void predict(const double *p, double_matrix &datax, const Data *data ) const;
+  void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;
   void eval(const double *p, double *datax, const Data *data) const;
 
   //  evaluates the model with parameters p  and returns datax.

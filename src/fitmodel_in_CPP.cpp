@@ -279,11 +279,10 @@ void profile_likelihood(const Data data,
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         dec_explored.push_back(scanned_value);
         if (scanned_value == 0) {
-            std::cout << "Simulationfor value 0" << std::endl;
+            std::cout << "Simulation for value 0, residuals = " << residual << std::endl;
             double_matrix simulation;
-            model->predict(&(parameters[0]), simulation, &data);
+            model->predict(parameters, simulation, &data);
             for (unsigned int row=0 ; row < data.unstim_data.shape()[0] ; row++) {
-            std::cout << model->exp_design().stim_nodes[row] << " " << model->exp_design().inhib_nodes[row];
                 for (unsigned int col=0 ; col < data.unstim_data.shape()[1] ; col++) {
                     std::cout << " " << simulation[row][col];
                 }
@@ -322,11 +321,10 @@ void profile_likelihood(const Data data,
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         explored.push_back(scanned_value);
         if (scanned_value == 0) {
-            std::cout << "Simulation for value 0" << std::endl;
+            std::cout << "Simulation for value 0, residuals = " << residual << std::endl;
             double_matrix simulation;
-            model->predict(&(parameters[0]), simulation, &data);
+            model->predict(parameters, simulation, &data);
             for (unsigned int row=0 ; row < data.unstim_data.shape()[0] ; row++) {
-            std::cout << model->exp_design().stim_nodes[row] << " " << model->exp_design().inhib_nodes[row];
                 for (unsigned int col=0 ; col < data.unstim_data.shape()[1] ; col++) {
                     std::cout << " " << simulation[row][col];
                 }
