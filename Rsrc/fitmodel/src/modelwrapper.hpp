@@ -43,6 +43,7 @@ public:
   
   void showParameterDependencyMatrix();
   void showGUnreduced();
+  SEXP getParametersNames();
 
 private:
   GiNaC::matrix response_full_model; 

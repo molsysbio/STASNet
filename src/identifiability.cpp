@@ -114,7 +114,7 @@ template<class T> struct index_cmp {
   const T arr;
 };
 
-//resorts the parameter_dependency_matrix_unreduced and the parameterlist
+// Resorts the parameter_dependency_matrix_unreduced and the parameterlist on rows
 void sort ( int_matrix &old_pdmu,
         parameterlist &param) {
 
@@ -165,8 +165,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
   // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
-  parameterlist param;
-
+  parameterlist param; // List of correspondance (mathtree (index inside), GiNaC expression)
   for (size_t i=0; i<input_matrix.rows(); i++) 
     for (size_t j=0; j<input_matrix.cols(); j++) {
       if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t";}
@@ -179,6 +178,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   // new ones.
   // It has form A|B where B is -unity matrix and A has the exponents of the products.
 
+  // Fills the matrix A|B with the coefficients of the paths
   parameter_dependency_matrix_unreduced.resize(boost::extents[param.size()][param.size()+vars.size()]);
   size_t x=0, y=0;
   for (parameterlist::iterator iter=param.begin(); iter!=param.end(); ++iter) {
@@ -202,7 +202,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
         x++;
   }
 
-    // DEBUGGING 
+    // DEBUGGING prints the matrix before reduction
     if (debug) {
         std::cout << "Before sorting or reduction" << std::endl;
         for (size_t i=0 ; i < vars.size() ; i++) {
@@ -220,7 +220,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
     //
 
   //sort the parameter dependency matrix to facilitate reduction
-  sort (parameter_dependency_matrix_unreduced,param);
+  sort (parameter_dependency_matrix_unreduced, param);
 
   parameter_dependency_matrix.resize(boost::extents[param.size()][param.size()+vars.size()]);
   //  bring into reduced row echelon form

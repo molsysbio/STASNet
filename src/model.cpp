@@ -78,23 +78,22 @@ void Model::do_init () {
 
     size_t j=0;
     for ( size_t i=rank_; i< parameters_.size() ; ++i ) {
-        while (j<parameters_.size())
-            { 
-    if (std::abs(parameter_dependency_matrix_[i][j+symbols_.size()])>eps) 
-        break;
-    j++;
-            }
+        while (j<parameters_.size()) { 
+            if (std::abs(parameter_dependency_matrix_[i][j+symbols_.size()])>eps) 
+                break;
+            j++;
+        }
         if (j<parameters_.size()) {
             std::pair < MathTree::math_item::Ptr, MathTree::math_item::Ptr > replace_rule;
             replace_rule.first=parameters_[j];
             MathTree::mul::Ptr tmp2(new MathTree::mul );
             for (size_t k=j+1; k<parameters_.size() ; k++ ) {
-    if (std::abs(parameter_dependency_matrix_[i][k+symbols_.size()])>eps) {
-        MathTree::pow::Ptr tmp3(new MathTree::pow );
-        tmp3->add_item(parameters_[k]);
-        tmp3->add_item(new MathTree::numeric(-parameter_dependency_matrix_[i][k+symbols_.size()]));
-        tmp2->add_item(tmp3);
-    }
+                if (std::abs(parameter_dependency_matrix_[i][k+symbols_.size()])>eps) {
+                    MathTree::pow::Ptr tmp3(new MathTree::pow );
+                    tmp3->add_item(parameters_[k]);
+                    tmp3->add_item(new MathTree::numeric(-parameter_dependency_matrix_[i][k+symbols_.size()]));
+                    tmp2->add_item(tmp3);
+                }
             }
             replace_rule.second=tmp2;
         
@@ -106,12 +105,10 @@ void Model::do_init () {
     for (size_t i=0; i<parameters_.size(); ++i) {
         bool replaced=false;
         for (size_t j=0; j<replace_vector.size(); ++j) {
-            
             if (parameters_[i]==replace_vector[j].first) {
-    replaced=true;
+                replaced=true;
             }
         }
-        
         if (!replaced) {
             independent_parameters_.push_back(i);
         }
@@ -253,9 +250,9 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
     for (unsigned int i=0; i<cols;i++) { 
         for (unsigned int j=0; j<rows;j++) {
             if (linear_approximation_) {
-    datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
+                datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
             } else {
-    datax[i*rows+j]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
+                datax[i*rows+j]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
             }
 
             if (std::isnan(data->error[j][i])) {

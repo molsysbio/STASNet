@@ -15,7 +15,6 @@ ModelWrapper::~ModelWrapper() {
 }
 
 void ModelWrapper::printResponse() {
-
     if (model == NULL) throw(std::logic_error("Model not set"));
     model-> printResponse();
 } 
@@ -78,7 +77,7 @@ SEXP ModelWrapper::simulate(Data data, std::vector<double> parameters) {
     throw std::invalid_argument("length of parameter vector invalid");
 
   double_matrix datax;
-  model->predict(&(parameters[0]), datax, &data);
+  model->predict(parameters, datax, &data);
   Rcpp::List ret;
   ret["prediction"]=datax;
 
@@ -261,6 +260,15 @@ void ModelWrapper::showGUnreduced() {
     model->showGUnreduced();
 }
 
+SEXP ModelWrapper::getParametersNames() {
+    std::vector<std::string> tmp;
+    model->getParametersLinks(tmp);
+    Rcpp::List ret;
+    ret["names"]=tmp;
+
+    return ret;
+}
+
 
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
@@ -279,6 +287,7 @@ RCPP_MODULE(ModelEx) {
     //.method( "parallelPL", &parallelPL )
     .method( "getParametersLinks", &ModelWrapper::getParametersLinks )
     .method( "showParameterDependencyMatrix", &ModelWrapper::showParameterDependencyMatrix )
+    .method( "getParametersNames", &ModelWrapper::getParametersNames )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }

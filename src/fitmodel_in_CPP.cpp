@@ -187,9 +187,12 @@ void fitmodel( std::vector <double> &bestfit,
   
   // starting parameter value
   if (bestfit.size()==number_of_parameters) {
-    if (verbosity>1) std::cerr << "Use existing parameter vector: " ;
-    for (size_t tmp=0; tmp<number_of_parameters; tmp++) { p[tmp]=bestfit[tmp]; if (verbosity>1) std::cerr << p[tmp] << ", "; }
-    if (verbosity>1) std::cerr << std::endl;
+    if (verbosity>10) std::cerr << "Use existing parameter vector: ";
+    for (size_t tmp=0; tmp<number_of_parameters; tmp++) {
+        p[tmp]=bestfit[tmp];
+        if (verbosity>10) std::cerr << p[tmp] << ", ";
+    }
+    if (verbosity>10) std::cerr << std::endl;
   } else {
     for (size_t tmp=0; tmp<number_of_parameters; tmp++) p[tmp]=0.39;            
   }
@@ -202,14 +205,15 @@ void fitmodel( std::vector <double> &bestfit,
   for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
     for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
       if (std::isnan(data->error[j][i])) {
-	datax[i*data->stim_data.shape()[0]+j]=0;
+	    datax[i*data->stim_data.shape()[0]+j]=0;
       } else {
-	datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
+	    datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
       }
     }
   }
   assert(data->stim_data.shape()[1]*data->stim_data.shape()[0] == (size_t)number_of_measurements);
 
+  // Can't fit if the system is non identifiable
   if (model->modelRank()!=model->nr_of_parameters()) {
     *bestresid=1000000000000000.0;
     return;
@@ -284,7 +288,7 @@ void profile_likelihood(const Data data,
             model->predict(parameters, simulation, &data);
             for (unsigned int row=0 ; row < data.unstim_data.shape()[0] ; row++) {
                 for (unsigned int col=0 ; col < data.unstim_data.shape()[1] ; col++) {
-                    std::cout << " " << simulation[row][col];
+                    std::cout << "\t" << simulation[row][col];
                 }
                 std::cout << std::endl;
             }
@@ -326,7 +330,7 @@ void profile_likelihood(const Data data,
             model->predict(parameters, simulation, &data);
             for (unsigned int row=0 ; row < data.unstim_data.shape()[0] ; row++) {
                 for (unsigned int col=0 ; col < data.unstim_data.shape()[1] ; col++) {
-                    std::cout << " " << simulation[row][col];
+                    std::cout << "\t" << simulation[row][col];
                 }
                 std::cout << std::endl;
             }

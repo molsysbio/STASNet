@@ -147,11 +147,8 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
     if (debug) { # Debug only
-        print(model.structure$names);
-        print("Adjacency matrix :");
-        print(model.structure$adjacencymatrix);
-        print("Parameter dependency matrix G after reduction :");
-        model$showParameterDependencyMatrix();
+        #print("Parameter dependency matrix G after reduction :");
+        #model$showParameterDependencyMatrix();
     }
 
 ### INITIAL FIT
@@ -180,30 +177,24 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     print("Model simulation :")
     print(model$simulate(data, initparams)$prediction);
 
-    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);# Useless
+    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);# Kept by lazyness
     print(paste(length(init_params), "paths to evaluate"));
     identifiables = model$getParametersLinks();
-    # Collection of the non identifiables parameters
-    ni_profiles = list()
-    i_profiles = list();
+
+    profile_list = list();
     for (path in 1:length(init_params)) {
         lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
-        lprofile$residuals[path, lprofile$residuals[path,] >= 2*initresidual] = NA;
+        lprofile$residuals[path, lprofile$residuals[path,] > lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
         print(paste("Parameter", path, "decided"));
-        
-        # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
-        if (lprofile$lowt_upper && lprofile$lowt_lower) {
-            i_profiles[[length(i_profiles)+1]] <- lprofile;
-        }
-        else {
-            ni_profiles[[length(ni_profiles)+1]] <- lprofile;
-        }
+
+        profile_list[[path]] = lprofile;
     }
 
-    sorted_profiles = list(i_profiles, ni_profiles);
+    sorted_profiles = classify_profiles(profile_list);
     print("Profiles extracted and sorted.");
 
     print("Parameters :");
+    print(model$getParametersNames()$names);
     parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
     print(parameters);
 
@@ -220,8 +211,24 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     return(sorted_profiles);
 }
 
+# Separates the profiles whether they are identifiables or not
+classify_profiles <- function (pl_collection) {
+    ni_profiles = list()
+    i_profiles = list();
 
-# Plots the functionnal relation between each non identifiable parameter and their profile likelihood
+    for (lprofile in pl_collection) {
+        # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
+        if (lprofile$lowt_upper && lprofile$lowt_lower) {
+            i_profiles[[length(i_profiles)+1]] <- lprofile;
+        }
+        else {
+            ni_profiles[[length(ni_profiles)+1]] <- lprofile;
+        }
+    }
+    sorted_profiles = list(i_profiles, ni_profiles);
+}
+
+# Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
 ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
     i_profiles = sorted_profiles[[1]];
     ni_profiles = sorted_profiles[[2]];
@@ -263,7 +270,7 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
 # Identifiables
     nbid = length(i_profiles);
     print(paste(nbid, "identifiable paths"));
-    par( mfcol=c(1, 2), mar=c(4, 2, 2, 2), oma=c(0, 0, 2, 0) );
+    par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) );
     if (nbid > 0) {
         for (id in 1:nbid) {
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"));
