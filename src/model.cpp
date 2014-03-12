@@ -75,7 +75,6 @@ void Model::do_init () {
     std::vector < std::pair < MathTree::math_item::Ptr, MathTree::math_item::Ptr > > replace_vector;
     
     // Use the right hand side of the matrix, rows below rank, to replace redundant parameters 
-
     size_t j=0;
     for ( size_t i=rank_; i< parameters_.size() ; ++i ) {
         while (j<parameters_.size()) { 
@@ -118,12 +117,12 @@ void Model::do_init () {
     
     for (unsigned int i=0; i<model_eqns_.shape()[0];i++) { 
         for (unsigned int j=0; j<model_eqns_.shape()[1];j++) {
-            if (boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j]).get()!=0) 
-    for (size_t k=0; k<replace_vector.size(); k++) {
-        boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j])
-            ->replace_subitem(replace_vector[k].first,replace_vector[k].second);
-        
-    }
+            if (boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j]).get()!=0) {
+                for (size_t k=0; k<replace_vector.size(); k++) {
+                    boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j])
+                        ->replace_subitem(replace_vector[k].first,replace_vector[k].second);
+                }
+            }
         }
 
     }

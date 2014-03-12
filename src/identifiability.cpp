@@ -12,7 +12,7 @@
 #include "mathtree.hpp"
 #include "rref.hpp"
 
-extern bool debug=false;
+extern bool debug=true;
 
 boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(GiNaC::ex e) {
   // If expression e has already been assigned to a parameter, return that.
@@ -165,7 +165,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
   // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
-  parameterlist param; // List of correspondance (mathtree (index inside), GiNaC expression)
+  parameterlist param; // List of correspondance (mathtree, GiNaC expression)
   for (size_t i=0; i<input_matrix.rows(); i++) 
     for (size_t j=0; j<input_matrix.cols(); j++) {
       if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t";}
@@ -218,9 +218,20 @@ void identifiability_analysis(   equation_matrix &output_matrix,
         std::cout << std::endl;
     }
     //
+    if (debug) {
+        for (int i=0 ; i < param.size() ; i++) {
+            std::cout << "Path " << i << " : " << param[i].second << std::endl;
+        }
+    }
 
   //sort the parameter dependency matrix to facilitate reduction
   sort (parameter_dependency_matrix_unreduced, param);
+    if (debug) {
+        std::cout << "After sort " << std::endl;
+        for (int i=0 ; i < param.size() ; i++) {
+            std::cout << "Path " << i << " : " << param[i].second << std::endl;
+        }
+    }
 
   parameter_dependency_matrix.resize(boost::extents[param.size()][param.size()+vars.size()]);
   //  bring into reduced row echelon form
@@ -235,7 +246,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   
     
 
-  // Store parameters
+  // Store parameters with mathtree format
   parameters.resize(param.size());
   for (size_t i=0; i<param.size(); i++){ 
     parameters[i]=param[i].first;
