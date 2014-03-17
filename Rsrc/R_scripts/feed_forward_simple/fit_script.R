@@ -9,8 +9,8 @@ source("./randomLHS.r");
 
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
- 
-data_name = "sim_data.data"
+
+data_name = "sim_data.data" 
 data = data_name
 network = "small_network.tab"
 basal_nodes = "basal.dat"

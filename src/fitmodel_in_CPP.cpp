@@ -282,7 +282,7 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         dec_explored.push_back(scanned_value);
-        if (scanned_value == 0) {
+        if (scanned_value == 0 && verbose > 5) {
             std::cout << "Simulation for value 0, residuals = " << residual << std::endl;
             double_matrix simulation;
             model->predict(parameters, simulation, &data);
@@ -324,7 +324,7 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         explored.push_back(scanned_value);
-        if (scanned_value == 0) {
+        if (scanned_value == 0 && verbose > 5) {
             std::cout << "Simulation for value 0, residuals = " << residual << std::endl;
             double_matrix simulation;
             model->predict(parameters, simulation, &data);

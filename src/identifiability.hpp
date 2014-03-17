@@ -21,6 +21,7 @@ void identifiability_analysis(
   //    flattend (row by row).
   equation_matrix &output_matrix, 
   // Output: Vector containing all new parameters
+  std::vector<GiNaC::ex> &paths,
   std::vector<MathTree::parameter::Ptr> &parameters,
   // Output: Dependency of new parameters on old parameters (and vice versa...)
   double_matrix &parameter_dependency_matrix,

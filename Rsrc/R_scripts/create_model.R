@@ -179,13 +179,12 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
 
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);# Kept by lazyness
     print(paste(length(init_params), "paths to evaluate"));
-    identifiables = model$getParametersLinks();
 
     profile_list = list();
     for (path in 1:length(init_params)) {
         lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
         lprofile$residuals[path, lprofile$residuals[path,] > lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
-        print(paste("Parameter", path, "decided"));
+        print(paste("Parameter", lprofile$path, "decided"));
 
         profile_list[[path]] = lprofile;
     }

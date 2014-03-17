@@ -12,7 +12,7 @@
 #include "mathtree.hpp"
 #include "rref.hpp"
 
-extern bool debug=true;
+extern bool debug;
 
 boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(GiNaC::ex e) {
   // If expression e has already been assigned to a parameter, return that.
@@ -156,6 +156,7 @@ void sort ( int_matrix &old_pdmu,
 
 // Performs identifiability analysis on the GiNaC matrix input_matrix
 void identifiability_analysis(   equation_matrix &output_matrix, 
+                 std::vector<GiNaC::ex> &paths,
                  std::vector<MathTree::parameter::Ptr> &parameters,
                  double_matrix &parameter_dependency_matrix,
                  int_matrix &parameter_dependency_matrix_unreduced,
@@ -168,7 +169,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   parameterlist param; // List of correspondance (mathtree, GiNaC expression)
   for (size_t i=0; i<input_matrix.rows(); i++) 
     for (size_t j=0; j<input_matrix.cols(); j++) {
-      if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t";}
+      if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t" << std::endl;}
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
     }
     if(debug) {std::cout << std::endl;}
@@ -226,12 +227,6 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
   //sort the parameter dependency matrix to facilitate reduction
   sort (parameter_dependency_matrix_unreduced, param);
-    if (debug) {
-        std::cout << "After sort " << std::endl;
-        for (int i=0 ; i < param.size() ; i++) {
-            std::cout << "Path " << i << " : " << param[i].second << std::endl;
-        }
-    }
 
   parameter_dependency_matrix.resize(boost::extents[param.size()][param.size()+vars.size()]);
   //  bring into reduced row echelon form
@@ -244,12 +239,28 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   convert_rational_to_double_matrix(rational_matrix_for_rref, 
                     parameter_dependency_matrix);
   
+    if (debug) {
+        std::cout << "After reduction" << std::endl;
+        for (size_t i=0 ; i < vars.size() ; i++) {
+            std::cout << vars[i].get_name() << "\t";
+        }
+        std::cout << "\n";
+        for (size_t i=0 ; i < parameter_dependency_matrix.shape()[0] ; i++) {
+            for (size_t j=0 ; j < parameter_dependency_matrix.shape()[1] ; j++) {
+                std::cout << parameter_dependency_matrix[i][j] << "\t";
+            }
+            std::cout << "\n";
+        }
+        std::cout << std::endl;
+    }
     
 
   // Store parameters with mathtree format
   parameters.resize(param.size());
+  paths.resize(param.size());
   for (size_t i=0; i<param.size(); i++){ 
     parameters[i]=param[i].first;
+    paths[i]=param[i].second;
   }
 
 

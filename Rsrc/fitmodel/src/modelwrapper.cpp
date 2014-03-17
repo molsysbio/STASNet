@@ -4,7 +4,7 @@
 #include <fitmodel/generate_response.hpp>
 #include <fitmodel/fitmodel_in_CPP.hpp>
 #include <Rcpp.h>
-//#include <boost/thread>
+#include <boost/thread.hpp>
 
 extern int debug;
 
@@ -153,9 +153,10 @@ SEXP ModelWrapper::parallelPL(Data data, std::vector<double> parameters, const u
     std::vector< bool* > identifiability;
     std::vector< std::vector<double> > thresholds;
     std::vector<size_t> target;
+    std::vector< std::vector<double> > params;
 
     // Creation of the threads
-    std:vector<std::thread> threads;
+    std:vector<boost::thread*> threads;
     for (int i=0 ; i<parameters.size() ; i++) {
         keep_constant.push_back(std::vector<size_t>(1, i));
         residual_track.push_back(std::vector< std::vector<double> >);
@@ -163,16 +164,24 @@ SEXP ModelWrapper::parallelPL(Data data, std::vector<double> parameters, const u
         identifiability.push_back(new bool[4]);
         thresholds.push_back(std::vector<double>);
         target.push_back(i);
+        params.push_back(parameters);
 
         // Create a new thread for each parameter
-        threads.push_back(std::thread(::profile_likelihood, data, parameters, keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i], total_steps, step_size));
+        threads.push_back(new boost::thread(::profile_likelihood, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i], total_steps, step_size));
+    }
+
+    Rcpp::List ret(parameters.size());
+    for (int i=0 ; i<parameters.size() ; i++) {
+        threads[i]->join();
+
+        std::vector <std::string> paths;
+        getParametersLinks(paths);
         Rcpp::NumericMatrix track(parameters.size(), explored.size());
         for (int k=0 ; k < parameters.size() ; k++) {
             for (int j=0 ; j < explored.size() ; j++) {
                 track[i](k, j) = residual_track[i][k][j];
             }
         }
-        Rcpp::CharacterVector paths = getParametersLinks();
 
         returned[i]["residuals"] = track[i];
         returned[i]["explored"] = explored[i];
@@ -181,20 +190,15 @@ SEXP ModelWrapper::parallelPL(Data data, std::vector<double> parameters, const u
         returned[i]["hight_upper"] = identifiability[i][3];
         returned[i]["hight_lower"] = identifiability[i][1];
         returned[i]["thresholds"] = thresholds[i];
+        returned["path"] = paths[i];
         ret["pathid"] = target[i];
 
-        delete[] identifiability[i];
-
-    }
-
-    Rcpp::List ret(parameters.size());
-    for (int i=0 ; i<parameters.size() ; i++) {
-        threads[i].join();
         ret[i] = returned[i];
+
+        delete[] identifiability[i];
     }
 
     return ret;
-
 }
 */
 
@@ -293,3 +297,4 @@ RCPP_MODULE(ModelEx) {
 }
 
 int verbosity=0;
+bool debug=false;

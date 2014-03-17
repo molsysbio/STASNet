@@ -88,6 +88,7 @@ protected:
   equation_matrix model_eqns_;
   std::vector<MathTree::parameter::Ptr> parameters_;
   std::vector<size_t> independent_parameters_;
+  std::vector<GiNaC::ex> paths_;
   
   // 
   ExperimentalDesign exp_design_;

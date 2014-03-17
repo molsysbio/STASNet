@@ -26,7 +26,7 @@ Model::Model(const GiNaC::matrix &response,
     exp_design_(expdesign), symbols_(symbols), response_(response), rank_(0), linear_approximation_(linear_approximation)
 
 {
-     do_init();
+    do_init();
 } 
 
 
@@ -39,6 +39,7 @@ Model & Model::operator =(const Model &model) {
     copy_matrix(model.model_eqns_,model_eqns_);
     parameters_=model.parameters_;
     independent_parameters_=model.independent_parameters_;
+    paths_=model.paths_;
 
     copy_matrix(model.parameter_dependency_matrix_,parameter_dependency_matrix_);
     copy_matrix(model.parameter_dependency_matrix_unreduced_,parameter_dependency_matrix_unreduced_);
@@ -50,13 +51,13 @@ Model & Model::operator =(const Model &model) {
 
 void Model::do_init () {
  
-
     // Perform identifiability analysis
     // parameter_dependency_matrix has the following structure:
     // ( A | B ) with A is parameters.size x symbols.size and B is parameters.size * parameters_size
     // B( rank(A) .. end : 1..end ) informs us about which parameters have to be identified.
 
     identifiability_analysis( model_eqns_,
+                    paths_,
                     parameters_,
                     parameter_dependency_matrix_,
                     parameter_dependency_matrix_unreduced_,
@@ -355,28 +356,15 @@ void Model::print_parameter_report(std::ostream &os, const std::vector<double> &
 }
 
 // Put the litteral description of the identifiable parameters in a vector of strings
-std::string to_string(double a); // Dirty hack
+//std::string to_string(const GiNaC::ex &a); // Dirty hack
+//std::string to_string(const double &a); // Dirty hack
+template <typename T>
+std::string to_string(const T &a); // Dirty hack
 void Model::getParametersLinks(std::vector<std::string> &description) {
-    
-    double eps = 0.000000001;
-    for (size_t i=0; i<rank_; ++i) {
-        description.push_back(std::string(""));
-        bool first=true;
-        for (size_t j=0; j<symbols_.size(); ++j) {
-            if (std::abs(parameter_dependency_matrix_[i][j])>eps) {
-                if (first) {
-                    first=false;
-                }
-                else {
-                    description[i] = description[i] + "*";
-                }
-                description[i] = description[i] + symbols_[j].get_name();
-                if (std::abs(parameter_dependency_matrix_[i][j]-1)>eps) {
-                    description[i] = description[i] + "^";
-                    description[i] = description[i] + to_string(-std::abs(parameter_dependency_matrix_[i][j]));
-                }
-            }
-        }
+    description = std::vector<std::string>();
+    for (size_t j=0; j<independent_parameters_.size(); ++j) {
+        description.push_back(to_string(paths_[independent_parameters_[j]]));
+        //if (debug) { std::cout << paths_[independent_parameters_[j]] << std::endl; }
     }
 }
 
@@ -415,7 +403,8 @@ void Model::showGUnreduced() {
 }
 
 // Global function, only used here, dirty hack part II
-std::string to_string(double a) {
+template <typename T>
+std::string to_string(const T &a) {
     std::ostringstream oss;
     oss << a;
     return oss.str();

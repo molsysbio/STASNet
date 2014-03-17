@@ -16,9 +16,9 @@ network = "example_data/network.tab"
 basal_nodes = "example_data/basal.dat"
 
 if (length(commandArgs()) >= 8) {
+    network = paste(getwd(), "/", commandArgs()[6], sep="")
     data_name = commandArgs()[7]
     data = paste(getwd(), "/", data_name, sep="")
-    network = paste(getwd(), "/", commandArgs()[6], sep="")
     basal_nodes = paste(getwd(), "/", commandArgs()[8], sep="")
     print(data)
 }
