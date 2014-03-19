@@ -242,7 +242,7 @@ void fitmodel( std::vector <double> &bestfit,
 
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
-void profile_likelihood(const Data data,
+void profile_likelihood(const Data &data,
 	std::vector<double> parameters,
 	const std::vector<size_t> keep_constant,
 	std::vector< std::vector<double> > &residual_track,
@@ -251,8 +251,7 @@ void profile_likelihood(const Data data,
 	const Model *model,
 	bool* identifiability,
     std::vector<double> &thresholds,
-	const unsigned int total_steps = 10000,
-	const double step_size = 0.01) {
+	const unsigned int total_steps = 10000) {
 
     for (int i=0 ; i<4 ; i++) {
         identifiability[i] = false;
@@ -262,15 +261,53 @@ void profile_likelihood(const Data data,
 
     // Initial fit
     fitmodel(parameters, &residual, prediction, model, &data);
+    double previous_residual = residual;
+    std::vector<double> bestfit = parameters;
+
 
     // Thresholds, repeated twice
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), 0.95 ));
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), 0.95 ));
     
+
+    // Test to find a step size that changes the residual, to overcome the problem of small steps with the fitting algorithm
+    double step_size = 0.001;
+    while (residual <= previous_residual && step_size < 100) {
+        step_size *= 10;
+        // Fit for small step
+        for (int i=0 ; i < 10 ; i++) {
+            // We don't want to hit 0, which is a special case
+            if (param_value > 0) {
+                parameters[keep_constant[0]] += step_size;
+            }
+            else {
+                parameters[keep_constant[0]] -= step_size;
+            }
+            fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
+        }
+        previous_residual = residual;
+
+        // Fit for big step
+        parameters[keep_constant[0]] = param_value + 10 * step_size;
+        fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
+    }
+    /*
+    // If we reach big step size, it might be that the parameter is not identifiable and we limit the step size
+    if (step_size >= 1000) {
+        step_size = 100
+    if (verbosity > 4) { std::cout << "Default step_size" << std::endl; }
+        if (step_size < 0.01) {
+            step_size = 0.01; // Minimum step_size
+        }
+    }*/
+    if (verbosity > 4) { std::cout << "STEP SIZE : " << step_size << std::endl; }
+    // Restore the parameters
+    parameters = bestfit;
+
+
     // Upper and Lower scans are separated, to be sure to scan near the optimum each time 
     // Lower values scan
     double scanned_value = param_value;
-    std::vector<double> bestfit = parameters;
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
@@ -282,7 +319,7 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         dec_explored.push_back(scanned_value);
-        if (scanned_value == 0 && verbose > 5) {
+        if (scanned_value == 0 && verbosity > 7) {
             std::cout << "Simulation for value 0, residuals = " << residual << std::endl;
             double_matrix simulation;
             model->predict(parameters, simulation, &data);
@@ -324,7 +361,7 @@ void profile_likelihood(const Data data,
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
         explored.push_back(scanned_value);
-        if (scanned_value == 0 && verbose > 5) {
+        if (scanned_value == 0 && verbosity > 7) {
             std::cout << "Simulation for value 0, residuals = " << residual << std::endl;
             double_matrix simulation;
             model->predict(parameters, simulation, &data);
@@ -351,4 +388,14 @@ void profile_likelihood(const Data data,
     }
 
 }
+
+/*
+// Determine how large the step should for the profile likelihood
+double choose_step_size(const Data &data, std::vector<double> parameters, const std::vector<size_t> keep_constant, const Model &model, const double threshold) {
+
+    double initial_step = parameters[keep_constant[0]] * 0.1;
+    double chi2_diff = boost::math::chi_squared(1) - 0.95;
+
+}
+*/
 

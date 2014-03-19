@@ -5,11 +5,13 @@
 
 if [ $# -lt 1 ]
 then
-    echo "You need to give at least one file that has to be corrected"
+    echo -e "You need to give at least one file that has to be corrected\n"
     exit -1
 fi
 
+echo -e "yes man\n"
 while [[ -e $1 ]]
+    echo -e "no man \n"
 do
     new_file=$1.corrected
     touch $new_file
@@ -21,12 +23,14 @@ do
     sed -i s/TGFa/TGFA/g $new_file
     sed -i s/U0126/MEK/g $new_file
     sed -i s/AZD\ 6244/MEK/g $new_file
+    sed -i s/AZD6244/MEK/g $new_file
     sed -i s/LY294002/PI3K/g $new_file
-    sed -i s/None//g $new_file
-    sed -i s/SB216763/GSK3AB/g $new_file
     sed -i s/LY\ 294002/PI3K/g $new_file
+    sed -i s/None//g $new_file
     sed -i s/MEK_0.1/MEK/g $new_file
-    sed -i s/SB\ 216763/GSK3AB/g $new_file
+    sed -i s/SB216763/GSK3AB/g $new_file
+    sed -i s/SB\\\\ 216763/GSK3AB/g $new_file
+    echo -e "s/SB\\\\ 216763/GSK3AB/g"
 
     # Protein alias, standardizes the notations
     sed -i s/[Ii][Gg][Ff]-*IR/IGFR/g $new_file

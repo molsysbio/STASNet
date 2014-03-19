@@ -29,6 +29,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
 	unstim.values = colMeans(data.values[data.file$type=="c",])
 	blank.values = colMeans(data.values[data.file$type=="blank",])
+    blank.values[is.nan(blank.values)] = 0; # For sample without blank values
 
 	# Calculates the mean and standard deviation for each condition 
 	mean.values = aggregate(as.list(data.values),by=data.file[,1:3],mean);
@@ -146,10 +147,6 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
 
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
-    if (debug) { # Debug only
-        #print("Parameter dependency matrix G after reduction :");
-        #model$showParameterDependencyMatrix();
-    }
 
 ### INITIAL FIT
     print ("Initializing the model parameters…")
@@ -195,7 +192,10 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     print("Parameters :");
     print(model$getParametersNames()$names);
     parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
-    print(parameters);
+    paths = model$getParametersLinks()
+    for (i in 1:length(paths)) {
+        print(paste( paths[i], "=", parameters[i]));
+    }
 
     print("Response matrix : ");
     print(model.structure$names)
@@ -251,7 +251,7 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
                 else {margin[1]=2;}
 
                 par(mar=margin);
-                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1);
+                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1)#, ylim=c(0, ni_profiles$thresholds[2]*1.1));
                 # Print labels on the right and bottom
                 if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }
                 if (j == nbni) { title(xlab=ni_profiles[[ni]]$path); }

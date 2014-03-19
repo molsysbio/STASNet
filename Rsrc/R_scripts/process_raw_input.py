@@ -29,11 +29,12 @@ for id in range(1, len(sys.argv)):
 # Display the file content to check if everything went fine
 		new = open(nname, "r")
 		for line in new:
-			print(line)
+			print(line, end="")
 		new.close()
 
 #Deletes the bash output and the copied input
 	os.system("rm " + name + ".corrected")
-	os.system("rm " + sys.argv[id])
+	if (not name == sys.argv[id]):
+		os.system("rm " + sys.argv[id])
 
 
