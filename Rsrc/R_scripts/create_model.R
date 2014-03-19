@@ -235,7 +235,15 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
 # Non identifiables
     nbni = length(ni_profiles);
     print(paste(nbni, "non identifiable paths"));
-    pdf(paste("NIplot_", data_name, ".pdf", sep=""), height=2*nbni+1, width=2*nbni+1);
+    # Compute the dimension, special case if there are no non identifiables
+    if (nbni > 0) {
+        dimension = 2 * nbni + 1;
+    }
+    else {
+        dimension = 7;
+    }
+
+    pdf(paste("NIplot_", data_name, ".pdf", sep=""), height=dimension, width=dimension);
     #limx = i_profiles[[1]]$
     if (nbni > 0) {
         margin = c(2, 2, 0.5, 0.5);

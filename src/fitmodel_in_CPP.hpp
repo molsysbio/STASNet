@@ -24,6 +24,14 @@ void profile_likelihood( const Data &data,
             std::vector<double> &thresholds,
 			const unsigned int total_steps);
 
+double choose_step_size(const Data &data,
+                        const std::vector<double> parameters,
+                        const std::vector<size_t> keep_constant,
+                        const Model *model,
+                        const double threshold,
+                        const double init_residual,
+                        double step);
+
 #endif // FITMODEL_IN_CPP_HPP
 
 
