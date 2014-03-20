@@ -367,15 +367,50 @@ double choose_step_size(const Data &data,
                         const double init_residual,
                         double previous_step) {
     
-    double step = previous_step;
     // To avoid getting stuck on 0
+    double step = previous_step;
     if (parameters[keep_constant[0]] == 0) {
         return step;
     }
+    double residual = init_residual;
+    double previous_residual = init_residual;
+    double_matrix prediction;
+    std::vector<double> param = parameters;
+    double step_size;
+    if (previous_step > 0) { step_size = 0.001; }
+    else { step_size = -0.001; }
 
+    while (residual <= previous_residual && step_size < 100) {
+        step_size *= 10;
+        // Fit for small step
+        for (int i=0 ; i < 10 ; i++) {
+            param[keep_constant[0]] += step_size;
+            fitmodel(param, &residual, prediction, model, &data, keep_constant);
+        }
+        previous_residual = residual;
+
+        // Fit for big step
+        param = parameters;
+        param[keep_constant[0]] = param_value + 10 * step_size;
+        fitmodel(param, &residual, prediction, model, &data, keep_constant);
+    }
+    // If we reach big step size, it might be that the parameter is not identifiable and we limit the step size
+    if (abs(step_size) >= 100) {
+        if (previous_step > 0) { step_size = 1; }
+        else { step_size = -1; }
+    }
+    else if (abs(step_size) < 0.01) { // Minimum step_size
+        if (previous_step > 0) { step_size = 0.01; }
+        else { step_size = -0.01; }
+    }
+    if (verbosity > 4) { std::cout << "Default step_size" << std::endl; }
+
+    return step_size;
+
+    /*
     const double relative_increase = 0.1;
     const static int VARIATION = 10; // Small variation are more precise but take more time
-    // The max step should be bigger for big parameters but not too small for the small ones
+    // The max step should be bigger for big parameters and not too small for the small ones
     int MAX_STEP = std::abs(param_value) / 10;
     if (MAX_STEP < 100) { MAX_STEP = 100; }
 
@@ -411,6 +446,7 @@ double choose_step_size(const Data &data,
         //else { return step / VARIATION; }
         return step / VARIATION;
     }
+    */
 
 }
 
