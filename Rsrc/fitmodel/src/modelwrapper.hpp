@@ -31,9 +31,9 @@ public:
 
   SEXP getLocalResponse( std::vector<double> p );
 
-  SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps, const double step_size);
+  SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps);
 
-  SEXP parallelPL(Data data, std::vector<double> parameters, const unsigned int total_steps, const double step_size);
+  SEXP parallelPL(Data data, std::vector<double> parameters, const unsigned int total_steps);
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 

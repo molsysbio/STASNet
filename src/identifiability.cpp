@@ -110,7 +110,10 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
 template<class T> struct index_cmp {
   index_cmp(const T arr) : arr(arr) {}
   bool operator()(const size_t a, const size_t b) const
-  { return arr[a] > arr[b]; }
+  {
+      return arr[a] > arr[b]; // Normal sort
+      //return arr[b] > arr[a]; // Reverted sort
+  }
   const T arr;
 };
 
@@ -226,6 +229,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
     }
 
   //sort the parameter dependency matrix to facilitate reduction
+  // modified to sort for small parameters names
   sort (parameter_dependency_matrix_unreduced, param);
 
   parameter_dependency_matrix.resize(boost::extents[param.size()][param.size()+vars.size()]);

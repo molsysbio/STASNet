@@ -29,6 +29,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
 	unstim.values = colMeans(data.values[data.file$type=="c",])
 	blank.values = colMeans(data.values[data.file$type=="blank",])
+    blank.values[is.nan(blank.values)] = 0; # For sample without blank values
 
 	# Calculates the mean and standard deviation for each condition 
 	mean.values = aggregate(as.list(data.values),by=data.file[,1:3],mean);
@@ -146,10 +147,6 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
 
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
-    if (debug) { # Debug only
-        #print("Parameter dependency matrix G after reduction :");
-        #model$showParameterDependencyMatrix();
-    }
 
 ### INITIAL FIT
     print ("Initializing the model parameters…")
@@ -195,7 +192,10 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     print("Parameters :");
     print(model$getParametersNames()$names);
     parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
-    print(parameters);
+    paths = model$getParametersLinks()
+    for (i in 1:length(paths)) {
+        print(paste( paths[i], "=", parameters[i]));
+    }
 
     print("Response matrix : ");
     print(model.structure$names)
@@ -235,7 +235,15 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
 # Non identifiables
     nbni = length(ni_profiles);
     print(paste(nbni, "non identifiable paths"));
-    pdf(paste("NIplot_", data_name, ".pdf", sep=""), height=2*nbni+1, width=2*nbni+1);
+    # Compute the dimension, special case if there are no non identifiables
+    if (nbni > 0) {
+        dimension = 2 * nbni + 1;
+    }
+    else {
+        dimension = 7;
+    }
+
+    pdf(paste("NIplot_", data_name, ".pdf", sep=""), height=dimension, width=dimension);
     #limx = i_profiles[[1]]$
     if (nbni > 0) {
         margin = c(2, 2, 0.5, 0.5);
@@ -251,7 +259,13 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
                 else {margin[1]=2;}
 
                 par(mar=margin);
-                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1);
+                if (j == ni) {
+                    limy = c( range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,])[1], ni_profiles[[ni]]$thresholds[2] * 1.1);
+                }
+                else {
+                    limy = range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,])
+                }
+                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1, ylim = limy);
                 # Print labels on the right and bottom
                 if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }
                 if (j == nbni) { title(xlab=ni_profiles[[ni]]$path); }
@@ -272,13 +286,14 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
     par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) );
     if (nbid > 0) {
         for (id in 1:nbid) {
+            # Plot the profile likelihood
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"));
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
             if (initresidual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * initresidual, col="red"); }
 
-            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) );
-            #print(range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T));
+            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) );
+            # Plot the functionnal relation
             for (i in 1:dim(i_profiles[[id]]$residuals)[1]) {
                 if (i != i_profiles[[id]]$pathid) {
                     lines(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i, ], sub="Functionnal relation", col=i);

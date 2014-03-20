@@ -26,7 +26,6 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 	data.values = data.file[,colnames(data.file) %in% model.structure$names]
 
 	# Means of basal activity of the network and of the blank fixation of the antibodies
-
 	unstim.values = colMeans(data.values[data.file$type=="c",])
 	blank.values = colMeans(data.values[data.file$type=="blank",])
     blank.values[is.nan(blank.values)] = 0; # For sample without blank values
@@ -174,13 +173,36 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     print("Model simulation :")
     print(model$simulate(data, initparams)$prediction);
 
-    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);# Kept by lazyness
+    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     print(paste(length(init_params), "paths to evaluate"));
 
     profile_list = list();
     for (path in 1:length(init_params)) {
-        lprofile = model$profileLikelihood(data, init_params, path, 1000, 0.01);
-        lprofile$residuals[path, lprofile$residuals[path,] > lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
+        lprofile = model$profileLikelihood(data, init_params, path, 1000);
+# Values bigger than the simultaneous threshold are useless and would perturb x and y axis
+        lprofile$residuals[path, lprofile$residuals[path,] > 1.1 * lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
+# Collapse the abscisse of the big residual to the closest valid abscisse
+        last_correct = 0; to_correct = c();
+        for (entry in 1:length(lprofile$residuals[path,])) {
+            if (lprofile$residuals[path, entry] >= 1.1 * lprofile$thresholds[2]) {
+        # Collapsing flat zones does not work for some reason, the flat zones are identified but not collapsed
+        #for (entry in 1:(length(lprofile$residuals[path,])-1) ) {
+          #  if (abs(lprofile$residuals[path, entry] - lprofile$residuals[path, entry+1]) < 0.001) {
+                if (last_correct != 0) {
+                    lprofile$explored[entry] = lprofile$explored[last_correct];
+                } else {
+                    to_correct = c(to_correct, entry); # the abscisse can't be corrected as long as no valid abscisse has been encountered
+                }
+            } else {
+                if (last_correct == 0) {
+                    for (i in to_correct) {
+                        lprofile$explored[i] = lprofile$explored[entry];
+                    }
+                }
+                last_correct = entry;
+            }
+        }
+
         print(paste("Parameter", lprofile$path, "decided"));
 
         profile_list[[path]] = lprofile;
@@ -259,7 +281,13 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
                 else {margin[1]=2;}
 
                 par(mar=margin);
-                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1)#, ylim=c(0, ni_profiles$thresholds[2]*1.1));
+                if (j == ni) {
+                    limy = c( range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,])[1], ni_profiles[[ni]]$thresholds[2] * 1.1);
+                }
+                else {
+                    limy = range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,])
+                }
+                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1, ylim = limy);
                 # Print labels on the right and bottom
                 if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }
                 if (j == nbni) { title(xlab=ni_profiles[[ni]]$path); }
@@ -280,13 +308,14 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
     par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) );
     if (nbid > 0) {
         for (id in 1:nbid) {
+            # Plot the profile likelihood
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"));
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
             if (initresidual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * initresidual, col="red"); }
 
-            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) );
-            #print(range(i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T));
+            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) );
+            # Plot the functionnal relation
             for (i in 1:dim(i_profiles[[id]]$residuals)[1]) {
                 if (i != i_profiles[[id]]$pathid) {
                     lines(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i, ], sub="Functionnal relation", col=i);

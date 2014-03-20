@@ -121,8 +121,8 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
   double opts[LM_OPTS_SZ]; // some options to determine initial  \mu (opts[0]), stopping thresholds for some functions (opts[1-3]) and difference approximation to Jacobian)
   opts[0]=LM_INIT_MU*10.0;
   opts[1]=1E-10;
-  opts[2]=1E-10;
-  opts[3]=1E-15; 
+  opts[2]=1E-10; // Parameters variation
+  opts[3]=1E-15; // residual variation
   opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used  
 
   std::vector<double> parameters_fixed;
@@ -264,7 +264,6 @@ void profile_likelihood(const Data &data,
     double previous_residual = residual;
     std::vector<double> bestfit = parameters;
 
-
     // Thresholds, repeated twice
     double decision = 0.95;
     thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), decision ));
@@ -273,7 +272,7 @@ void profile_likelihood(const Data &data,
     // Upper and Lower scans are separated, to be sure to scan near the optimum each time 
     // Lower values scan
     double scanned_value = param_value;
-    double step_size = -parameters[keep_constant[0]] * 0.1;
+    double step_size = std::max(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01); // By default, we explore 1.5 times the parameter
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
@@ -297,7 +296,7 @@ void profile_likelihood(const Data &data,
             }
         }
         
-        step_size = choose_step_size(data, parameters, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
+        step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
         scanned_value += step_size;
         if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
@@ -323,7 +322,7 @@ void profile_likelihood(const Data &data,
     // Upper values scan
     scanned_value = param_value;
     parameters = bestfit;
-    step_size = parameters[keep_constant[0]] * 0.1;
+    step_size = std::max(std::abs(parameters[keep_constant[0]]) * 3 / total_steps, 0.01); // By default, we explore 1.5 times the parameter
     for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 
@@ -341,7 +340,7 @@ void profile_likelihood(const Data &data,
             }
         }
 
-        step_size = choose_step_size(data, parameters, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
+        step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
         scanned_value += step_size;
         if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
@@ -361,19 +360,24 @@ void profile_likelihood(const Data &data,
 // Determine how large the step should be for the profile likelihood
 double choose_step_size(const Data &data,
                         const std::vector<double> parameters,
+                        const double param_value,
                         const std::vector<size_t> keep_constant,
                         const Model *model,
                         const double threshold,
                         const double init_residual,
-                        double step) {
+                        double previous_step) {
     
+    double step = previous_step;
     // To avoid getting stuck on 0
     if (parameters[keep_constant[0]] == 0) {
         return step;
     }
 
     const double relative_increase = 0.1;
-    const int VARIATION = 2; // Small variation are more precise but take more time
+    const static int VARIATION = 10; // Small variation are more precise but take more time
+    // The max step should be bigger for big parameters but not too small for the small ones
+    int MAX_STEP = std::abs(param_value) / 10;
+    if (MAX_STEP < 100) { MAX_STEP = 100; }
 
     double residual = init_residual;
     double_matrix prediction;
@@ -384,7 +388,7 @@ double choose_step_size(const Data &data,
 
     // Decrease the step size if it changes to much the residual, but maximise it
     if (res_dif > threshold * relative_increase) {
-        while (res_dif > threshold * relative_increase && step > 0.01) {
+        while (res_dif > threshold * relative_increase && std::abs(step) > 0.01) {
             step /= VARIATION;
             params = parameters;
             params[keep_constant[0]] += step;
@@ -395,7 +399,7 @@ double choose_step_size(const Data &data,
         return step;
     }
     else {
-        while (res_dif < threshold * relative_increase && step < 100) {
+        while (res_dif < threshold * relative_increase && std::abs(step) < MAX_STEP) {
             step *= VARIATION;
             params = parameters;
             params[keep_constant[0]] += step;
@@ -403,6 +407,8 @@ double choose_step_size(const Data &data,
             fitmodel(params, &residual, prediction, model, &data, keep_constant);
             res_dif = std::abs(residual - init_residual);
         }
+        //if (std::abs(step) >= MAX_STEP) { return previous_step; } // Avoid huge steps for non identifiable parameters
+        //else { return step / VARIATION; }
         return step / VARIATION;
     }
 

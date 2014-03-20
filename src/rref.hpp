@@ -144,7 +144,7 @@ template<typename MatrixType>
  
   for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
   {
-    if (lead > mt.max_column(A))
+    if (lead > mt.max_column(A)) // Useless ?
       return;
     index_type i = row;
     while (mt.element(A, i, lead) == 0)
@@ -165,6 +165,7 @@ template<typename MatrixType>
       if (i != row)
         add_multiple_row(A, i, row, -mt.element(A, i, lead));
     }
+    // lead++; ?
   }
 }
  

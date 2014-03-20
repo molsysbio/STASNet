@@ -26,6 +26,7 @@ void profile_likelihood( const Data &data,
 
 double choose_step_size(const Data &data,
                         const std::vector<double> parameters,
+                        const double param_value,
                         const std::vector<size_t> keep_constant,
                         const Model *model,
                         const double threshold,
