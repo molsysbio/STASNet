@@ -272,7 +272,8 @@ void profile_likelihood(const Data &data,
     // Upper and Lower scans are separated, to be sure to scan near the optimum each time 
     // Lower values scan
     double scanned_value = param_value;
-    double step_size = std::max(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01); // By default, we explore 1.5 times the parameter
+    double step_size = std::min(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01); // By default, we explore 1.5 times the parameter
+    step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
@@ -296,7 +297,6 @@ void profile_likelihood(const Data &data,
             }
         }
         
-        step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
         scanned_value += step_size;
         if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
@@ -323,6 +323,7 @@ void profile_likelihood(const Data &data,
     scanned_value = param_value;
     parameters = bestfit;
     step_size = std::max(std::abs(parameters[keep_constant[0]]) * 3 / total_steps, 0.01); // By default, we explore 1.5 times the parameter
+    step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
     for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 
@@ -340,7 +341,6 @@ void profile_likelihood(const Data &data,
             }
         }
 
-        step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
         scanned_value += step_size;
         if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
@@ -366,53 +366,18 @@ double choose_step_size(const Data &data,
                         const double threshold,
                         const double init_residual,
                         double previous_step) {
-    
+
+    const int VARIATION = 10; // Small variation are more precise but take more time
     // To avoid getting stuck on 0
     double step = previous_step;
     if (parameters[keep_constant[0]] == 0) {
         return step;
     }
-    double residual = init_residual;
-    double previous_residual = init_residual;
-    double_matrix prediction;
-    std::vector<double> param = parameters;
-    double step_size;
-    if (previous_step > 0) { step_size = 0.001; }
-    else { step_size = -0.001; }
 
-    while (residual <= previous_residual && step_size < 100) {
-        step_size *= 10;
-        // Fit for small step
-        for (int i=0 ; i < 10 ; i++) {
-            param[keep_constant[0]] += step_size;
-            fitmodel(param, &residual, prediction, model, &data, keep_constant);
-        }
-        previous_residual = residual;
-
-        // Fit for big step
-        param = parameters;
-        param[keep_constant[0]] = param_value + 10 * step_size;
-        fitmodel(param, &residual, prediction, model, &data, keep_constant);
-    }
-    // If we reach big step size, it might be that the parameter is not identifiable and we limit the step size
-    if (abs(step_size) >= 100) {
-        if (previous_step > 0) { step_size = 1; }
-        else { step_size = -1; }
-    }
-    else if (abs(step_size) < 0.01) { // Minimum step_size
-        if (previous_step > 0) { step_size = 0.01; }
-        else { step_size = -0.01; }
-    }
-    if (verbosity > 4) { std::cout << "Default step_size" << std::endl; }
-
-    return step_size;
-
-    /*
     const double relative_increase = 0.1;
-    const static int VARIATION = 10; // Small variation are more precise but take more time
     // The max step should be bigger for big parameters and not too small for the small ones
     int MAX_STEP = std::abs(param_value) / 10;
-    if (MAX_STEP < 100) { MAX_STEP = 100; }
+    if (MAX_STEP < 10) { MAX_STEP = 10; }
 
     double residual = init_residual;
     double_matrix prediction;
@@ -442,10 +407,47 @@ double choose_step_size(const Data &data,
             fitmodel(params, &residual, prediction, model, &data, keep_constant);
             res_dif = std::abs(residual - init_residual);
         }
-        //if (std::abs(step) >= MAX_STEP) { return previous_step; } // Avoid huge steps for non identifiable parameters
-        //else { return step / VARIATION; }
+        if (std::abs(step) >= MAX_STEP) { return previous_step; } // Avoid huge steps for non identifiable parameters
+        else { return step / VARIATION; }
         return step / VARIATION;
     }
+
+    /*
+    
+    double residual = init_residual;
+    double previous_residual = init_residual;
+    double_matrix prediction;
+    std::vector<double> param = parameters;
+    double step_size;
+    if (previous_step > 0) { step_size = 0.001; }
+    else { step_size = -0.001; }
+
+    while (residual <= previous_residual && step_size < 100) {
+        step_size *= VARIATION;
+        // Fit for small step
+        for (int i=0 ; i < VARIATION ; i++) {
+            param[keep_constant[0]] += step_size;
+            fitmodel(param, &residual, prediction, model, &data, keep_constant);
+        }
+        previous_residual = residual;
+
+        // Fit for big step
+        param = parameters;
+        param[keep_constant[0]] = param_value + VARIATION * step_size;
+        fitmodel(param, &residual, prediction, model, &data, keep_constant);
+    }
+    // If we reach big step size, it might be that the parameter is not identifiable and we limit the step size
+    if (abs(step_size) >= 100) {
+        if (previous_step > 0) { step_size = 1; }
+        else { step_size = -1; }
+    }
+    else if (abs(step_size) < 0.01) { // Minimum step_size
+        if (previous_step > 0) { step_size = 0.01; }
+        else { step_size = -0.01; }
+    }
+    if (verbosity > 4) { std::cout << "Default step_size" << std::endl; }
+
+    return step_size;
     */
 
 }

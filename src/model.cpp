@@ -78,15 +78,17 @@ void Model::do_init () {
     // Use the right hand side of the matrix, rows below rank, to replace redundant parameters 
     size_t j=0;
     for ( size_t i=rank_; i< parameters_.size() ; ++i ) {
-        while (j<parameters_.size()) { 
+        // The first path will be replaced by the combination of the others
+        while (j<parameters_.size()) {
             if (std::abs(parameter_dependency_matrix_[i][j+symbols_.size()])>eps) 
                 break;
             j++;
         }
         if (j<parameters_.size()) {
             std::pair < MathTree::math_item::Ptr, MathTree::math_item::Ptr > replace_rule;
-            replace_rule.first=parameters_[j];
+            replace_rule.first=parameters_[j]; // The power is always 1 for the first parameter on each row because the matrix is in row echelon form
             MathTree::mul::Ptr tmp2(new MathTree::mul );
+            // Find the combination
             for (size_t k=j+1; k<parameters_.size() ; k++ ) {
                 if (std::abs(parameter_dependency_matrix_[i][k+symbols_.size()])>eps) {
                     MathTree::pow::Ptr tmp3(new MathTree::pow );
@@ -101,7 +103,7 @@ void Model::do_init () {
         }
     }
         
-
+    // Collect the independent parameters
     for (size_t i=0; i<parameters_.size(); ++i) {
         bool replaced=false;
         for (size_t j=0; j<replace_vector.size(); ++j) {
@@ -113,9 +115,10 @@ void Model::do_init () {
             independent_parameters_.push_back(i);
         }
     }
-    
 
+    simplify_independent_parameters(replace_vector, 0);
     
+    // Replacement of the dependent paths into combination of independent ones
     for (unsigned int i=0; i<model_eqns_.shape()[0];i++) { 
         for (unsigned int j=0; j<model_eqns_.shape()[1];j++) {
             if (boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j]).get()!=0) {
@@ -130,6 +133,71 @@ void Model::do_init () {
 
     getConstraints(param_constraints_, constraints_);
     
+}
+
+// If singletons are present, it simplifies the paths that contain them, to make it easy to interpret. Other singletons might appear, that were not there because their first node is not perturbed so we do it recursively. Links to or from non-measured nodes will always appear in combination and won't be simplified.
+void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector, size_t start_singleton) {
+
+    // Indentify the singletons
+    parameterlist singletons;
+    size_t ipi;
+    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
+        ipi = independent_parameters_[i];
+        if ( GiNaC::is_a<GiNaC::symbol>(paths_[ipi]) ) {
+            singletons.push_back(std::make_pair(parameters_[ipi], paths_[ipi]));
+            std::cout << " singleton " << paths_[ipi] << " identified" << std::endl;
+        }
+    }
+    bool one_reduction = false;
+    start_singleton = independent_parameters_.size(); // The singletons before will be reduced now
+    // Reduce the multiplications involving the singletons
+    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
+        ipi = independent_parameters_[i];
+        if ( GiNaC::is_a<GiNaC::mul>(paths_[ipi]) ) {
+            GiNaC::ex reduced_mul = 1;
+            bool reduced = false;
+            // Check if the parameter has singletons
+            MathTree::mul::Ptr tmp2 (new MathTree::mul);
+            MathTree::parameter::Ptr tmp;
+            for (size_t j=0 ; j < paths_[ipi].nops() ; j++) {
+                bool singleton = false;
+                for (size_t k=0 ; k < singletons.size() ; k++) {
+                    if (paths_[ipi].op(j) == singletons[k].second) {
+                        reduced = true;
+                        singleton = true;
+                        tmp = parameters_[ipi];
+                        tmp2->add_item( singletons[k].first );
+                    }
+                }
+                if (!singleton) { // The parameter is multiplied only if it is not a singleton
+                    reduced_mul *= paths_[ipi].op(j);
+                    std::cout << "Reduced_mul =  " << reduced_mul << std::endl;
+                }
+            }
+            if (reduced) {
+                std::cout << "Parameter " << paths_[ipi] << " reduced to " << reduced_mul << std::endl;
+                // Replace the independent parameter by its reduced form
+                independent_parameters_[i] = parameters_.size();
+                // Add the reduced parameter to the list
+                MathTree::parameter::Ptr par(new MathTree::parameter());
+                par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
+                parameters_.push_back(par);
+                paths_.push_back(reduced_mul);
+
+                // Replace the pointers in the equation matrix
+                tmp2->add_item(parameters_[independent_parameters_[i]]); // Singletons * reduced_path
+                replace_vector.push_back(std::make_pair(tmp, tmp2));
+                one_reduction = true;
+            }
+        }
+    }
+    
+    /*// Loop as long as at least one parameter has been reduced
+    if (one_reduction) {
+        simplify_independent_parameters(replace_vector, start_singleton);
+        std::cout << "one down, more to go" << std::endl;
+    }*/
+
 }
 
 void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {

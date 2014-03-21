@@ -193,7 +193,7 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
                 } else {
                     to_correct = c(to_correct, entry); # the abscisse can't be corrected as long as no valid abscisse has been encountered
                 }
-            } else {
+            } else if ( (entry+1) < length(lprofile$residuals[path,]) && lprofile$residuals[path, entry+1] < 1.1 * lprofile$thresholds[2] ) {
                 if (last_correct == 0) {
                     for (i in to_correct) {
                         lprofile$explored[i] = lprofile$explored[entry];

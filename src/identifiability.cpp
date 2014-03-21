@@ -170,12 +170,13 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
   parameterlist param; // List of correspondance (mathtree, GiNaC expression)
-  for (size_t i=0; i<input_matrix.rows(); i++) 
+  for (size_t i=0; i<input_matrix.rows(); i++) {
     for (size_t j=0; j<input_matrix.cols(); j++) {
       if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t" << std::endl;}
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
     }
-    if(debug) {std::cout << std::endl;}
+  }
+  if(debug) {std::cout << std::endl;}
   // Write parameter dependencies into matrix (this is the matrix which will 
   // be put into Row Echelon form).
   // Each row represents one new parameter, the first colums are the old parameters, then the 

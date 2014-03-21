@@ -100,6 +100,7 @@ protected:
   bool linear_approximation_;
 
   void do_init();
+  void simplify_independent_parameters(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector, size_t start_singleton);
 
   // ----------
   // Contains the constraints to avoid bifurcations
