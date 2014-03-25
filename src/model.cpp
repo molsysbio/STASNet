@@ -1,6 +1,8 @@
 #include "model.hpp"
 #include "fstream"
 
+extern bool debug;
+extern int verbosity;
 
 // Constructor
 // Stores all data neccessary for evaluation 
@@ -116,19 +118,50 @@ void Model::do_init () {
         }
     }
 
-    simplify_independent_parameters(replace_vector, 0);
+    // Removes singletons from the other parameters
+    size_t k=0;
+    if (debug) {
+        std::cout << "Substitution before simplification ";
+        for (k=0; k<replace_vector.size(); k++) {
+            replace_vector[k].first->print(std::cout);
+            std::cout << " to ";
+            replace_vector[k].second->print(std::cout);
+            std::cout << std::endl;
+        }
+    }
+    simplify_independent_parameters(replace_vector);
+    if (debug) {
+        std::cout << "Substitution after simplification ";
+        for (size_t l=k; l<replace_vector.size(); l++) {
+            replace_vector[l].first->print(std::cout);
+            std::cout << " to ";
+            replace_vector[l].second->print(std::cout);
+            std::cout << std::endl;
+        }
+    }
+    if (verbosity > 7) {
+        showParameterDependencyMatrix();
+        showGUnreduced();
+    }
     
     // Replacement of the dependent paths into combination of independent ones
     for (unsigned int i=0; i<model_eqns_.shape()[0];i++) { 
         for (unsigned int j=0; j<model_eqns_.shape()[1];j++) {
+            if (verbosity > 10) {
+                model_eqns_[i][j]->print(std::cout);
+                std::cout << "converted to";
+            }
             if (boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j]).get()!=0) {
                 for (size_t k=0; k<replace_vector.size(); k++) {
                     boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j])
                         ->replace_subitem(replace_vector[k].first,replace_vector[k].second);
                 }
             }
+            if (verbosity > 10) {
+                model_eqns_[i][j]->print(std::cout);
+                std::cout << std::endl;
+            }
         }
-
     }
 
     getConstraints(param_constraints_, constraints_);
@@ -136,70 +169,167 @@ void Model::do_init () {
 }
 
 // If singletons are present, it simplifies the paths that contain them, to make it easy to interpret. Other singletons might appear, that were not there because their first node is not perturbed so we do it recursively. Links to or from non-measured nodes will always appear in combination and won't be simplified.
-void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector, size_t start_singleton) {
+void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector) {
 
-    // Indentify the singletons
+    double eps = 0.0000001;
+
+    // Indentify the singletons, position in the matrix and name
     parameterlist singletons;
+    std::vector<size_t> single_id;
     size_t ipi;
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         ipi = independent_parameters_[i];
         if ( GiNaC::is_a<GiNaC::symbol>(paths_[ipi]) ) {
             singletons.push_back(std::make_pair(parameters_[ipi], paths_[ipi]));
-            std::cout << " singleton " << paths_[ipi] << " identified" << std::endl;
+            single_id.push_back(ipi);
+            if (verbosity > 5) {
+                std::cout << " singleton " << paths_[ipi] << " identified" << std::endl;
+            }
         }
     }
     bool one_reduction = false;
-    start_singleton = independent_parameters_.size(); // The singletons before will be reduced now
     // Reduce the multiplications involving the singletons
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         ipi = independent_parameters_[i];
+        std::vector<size_t> singletons_list;
         if ( GiNaC::is_a<GiNaC::mul>(paths_[ipi]) ) {
             GiNaC::ex reduced_mul = 1;
             bool reduced = false;
             // Check if the parameter has singletons
             MathTree::mul::Ptr tmp2 (new MathTree::mul);
-            MathTree::parameter::Ptr tmp;
+            MathTree::parameter::Ptr tmp (new MathTree::parameter);
             for (size_t j=0 ; j < paths_[ipi].nops() ; j++) {
                 bool singleton = false;
                 for (size_t k=0 ; k < singletons.size() ; k++) {
                     if (paths_[ipi].op(j) == singletons[k].second) {
                         reduced = true;
                         singleton = true;
+                        singletons_list.push_back(k);
                         tmp = parameters_[ipi];
                         tmp2->add_item( singletons[k].first );
                     }
                 }
                 if (!singleton) { // The parameter is multiplied only if it is not a singleton
                     reduced_mul *= paths_[ipi].op(j);
-                    std::cout << "Reduced_mul =  " << reduced_mul << std::endl;
                 }
             }
             if (reduced) {
-                std::cout << "Parameter " << paths_[ipi] << " reduced to " << reduced_mul << std::endl;
-                // Replace the independent parameter by its reduced form
+                if (verbosity > 5) {
+                    std::cout << "Parameter " << paths_[ipi] << " reduced to " << reduced_mul << std::endl;
+                }
+                // Replace the independent parameter
                 independent_parameters_[i] = parameters_.size();
-                // Add the reduced parameter to the list
+                // Add the reduced parameter to the parameters lists
                 MathTree::parameter::Ptr par(new MathTree::parameter());
                 par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
                 parameters_.push_back(par);
                 paths_.push_back(reduced_mul);
-
+                
                 // Replace the pointers in the equation matrix
-                tmp2->add_item(parameters_[independent_parameters_[i]]); // Singletons * reduced_path
+                tmp2->add_item(parameters_[parameters_.size()-1]); // Singletons * reduced_path
                 replace_vector.push_back(std::make_pair(tmp, tmp2));
                 one_reduction = true;
+
+                // Incorporate the new parameter in the dependency matrices (reduced or not)
+                // In case of reduction, reduced_mul will never be one because the parameters are independent
+                //
+                // Reduced Matrix
+                parameter_dependency_matrix_.resize(boost::extents[parameter_dependency_matrix_.shape()[0]+1][parameter_dependency_matrix_.shape()[1]+1]);
+                // Last column of the reduced matrix, replace the old parameter by the combination new_parameter * singletons
+                std::vector<size_t> to_kick;
+                for (size_t row=0 ; row < parameter_dependency_matrix_.shape()[0] ; row++) {
+                    if (std::abs(parameter_dependency_matrix_[row][symbols_.size() + ipi]) > eps) {
+                        parameter_dependency_matrix_[row][parameter_dependency_matrix_.shape()[1]-1] = parameter_dependency_matrix_[row][symbols_.size() + ipi];
+                        to_kick.push_back(row);
+                    } else {
+                        parameter_dependency_matrix_[row][parameter_dependency_matrix_.shape()[1]-1] = 0;
+                    }
+                }
+                // Indicate which singletons are part of the path and remove the old path
+                for (size_t k=0 ; k < to_kick.size() ; k++) {
+                    for (size_t l=0 ; l < singletons_list.size() ; l++) {
+                        parameter_dependency_matrix_[to_kick[k]][symbols_.size() + single_id[singletons_list[l]]] += parameter_dependency_matrix_[to_kick[k]][symbols_.size() + ipi];
+                    }
+                    parameter_dependency_matrix_[to_kick[k]][symbols_.size() + ipi] = 0;
+                }
+                // Last row of the reduced matrix, unused
+                // The parameter only depends on itself when it is inserted (it's independent)
+                for (size_t l=symbols_.size() ; l < parameter_dependency_matrix_.shape()[1] ; l++) {
+                    parameter_dependency_matrix_[parameter_dependency_matrix_.shape()[0]-1][l] = 0;
+                }
+                parameter_dependency_matrix_[parameter_dependency_matrix_.shape()[0]-1][parameter_dependency_matrix_.shape()[1]-1] = -1;
+                // Use the unreduced matrix to find the link composition of the path
+                for (size_t col=0 ; col < symbols_.size() ; col++) {
+                    bool removed = false;
+                    // All the singletons are set to 0 to remove those that were 1 in the original parameter
+                    for (size_t k=0 ; k < singletons.size() ; k++) {
+                        if (parameter_dependency_matrix_unreduced_[single_id[k]][col] == 1) {
+                            parameter_dependency_matrix_[parameter_dependency_matrix_.shape()[0]-1][col] = 0;
+                            removed = true;
+                        }
+                    }
+                    if (!removed) {
+                        parameter_dependency_matrix_[parameter_dependency_matrix_.shape()[0]-1][col] = parameter_dependency_matrix_unreduced_[ipi][col];
+                    }
+                }
+
+                // Unreduced matrix
+                parameter_dependency_matrix_unreduced_.resize(boost::extents[parameter_dependency_matrix_unreduced_.shape()[0]+1][parameter_dependency_matrix_unreduced_.shape()[1]+1]);
+                /* Should NOT be done
+                // Last column of the unreduced matrix, replace the old parameter by the combination new_parameter * singletons
+                to_kick = std::vector<size_t>();
+                for (size_t row=0 ; row < parameter_dependency_matrix_.shape()[0] ; row++) {
+                    if (parameter_dependency_matrix_unreduced_[row][ipi] > eps) {
+                        parameter_dependency_matrix_unreduced_[row][parameter_dependency_matrix_unreduced_.shape()[1]-1] = parameter_dependency_matrix_unreduced_[row][ipi];
+                        to_kick.push_back(row);
+                    } else {
+                        parameter_dependency_matrix_unreduced_[row][parameter_dependency_matrix_unreduced_.shape()[1]-1] = 0;
+                    }
+                }
+                // Indicate that the singletons are part of the path and remove the old path
+                for (size_t k=0 ; k < to_kick.size() ; k++) {
+                    for (size_t l=0 ; l < singletons.size() ; l++) {
+                        parameter_dependency_matrix_unreduced_[to_kick[k]][single_id[l]] += parameter_dependency_matrix_unreduced_[to_kick[k]][ipi];
+                        parameter_dependency_matrix_unreduced_[to_kick[k]][ipi] = 0;
+                    }
+                }
+                */
+                // Last row of the unreduced matrix
+                // The new parameter only depends on itself
+                for (size_t l=symbols_.size() ; l < parameter_dependency_matrix_unreduced_.shape()[1] ; l++) {
+                    parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][l] = 0;
+                }
+                parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][parameter_dependency_matrix_unreduced_.shape()[1]-1] = -1;
+                // Reconstruction of the links dependency, the same as the original parameter minus the singletons
+                for (size_t col=0 ; col < symbols_.size() ; col++) {
+                    bool removed = false;
+                    // All the singletons are set to 0 to remove those that were 1 in the original parameter
+                    for (size_t k=0 ; k < singletons.size() ; k++) {
+                        if (parameter_dependency_matrix_unreduced_[single_id[k]][col] == 1) {
+                            parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][col] = 0;
+                            removed = true;
+                        }
+                    }
+                    if (!removed) {
+                        parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][col] = parameter_dependency_matrix_unreduced_[ipi][col];
+                    }
+                }
+
             }
         }
     }
     
-    /*// Loop as long as at least one parameter has been reduced
+    // Loop as long as at least one parameter has been reduced
     if (one_reduction) {
-        simplify_independent_parameters(replace_vector, start_singleton);
-        std::cout << "one down, more to go" << std::endl;
-    }*/
+        if (verbosity > 5) {
+            std::cout << "one down, more to go" << std::endl;
+        }
+        simplify_independent_parameters(replace_vector);
+    }
 
 }
 
+// Locate the sums to the power of -1
 void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
     MathTree::math_item::Ptr tmp;
     if (GiNaC::is_a<GiNaC::power>(e)) {
@@ -217,6 +347,7 @@ void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
                         }
                     }
 
+                    // Add it only once
                     std::vector<GiNaC::ex>::iterator iter=set.begin();
                     while ( !((iter==set.end()) || ((*iter) == e.op(0)))) {
                         iter++;
@@ -240,6 +371,7 @@ void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
 }
 
 double Model::getPeneltyForConstraints(const double *p) const {
+
     std::vector<double> p_id(nr_of_parameters());
     for (size_t i=0; i< nr_of_parameters(); i++ ) { p_id[i]=p[i]; }
     std::vector<double> p_new;
@@ -311,10 +443,8 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
     
     for (size_t i=0; i< nr_of_parameters(); i++ ) {
         parameters_[independent_parameters_[i]]->set_parameter(p[i]);
-
     }
         
- 
     for (unsigned int i=0; i<cols;i++) { 
         for (unsigned int j=0; j<rows;j++) {
             if (linear_approximation_) {
@@ -324,26 +454,23 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
             }
 
             if (std::isnan(data->error[j][i])) {
-    datax[i*rows+j]=0;
+                datax[i*rows+j]=0;
             } else if ((std::isnan(datax[i*rows+j])) || 
-         (std::isinf(datax[i*rows+j])) ) {
-    datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
+             (std::isinf(datax[i*rows+j])) ) {
+                datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
             } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
     // to exclude extreme values, where the algorithm can't find a way out somehow 
-    datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/data->error[j][i];
+                datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/data->error[j][i];
             } 
         }
     }
-    
- 
 
     double penelty=getPeneltyForConstraints(p);
     if (penelty>1) {
         //      std::cerr << "P:" << penelty << " " ;
         for (unsigned int i=0; i<cols;i++) { 
             for (unsigned int j=0; j<rows;j++) {
-    
-    datax[i*rows+j]=datax[i*rows+j]+100000*penelty*data->stim_data[j][i]/data->error[j][i];
+                datax[i*rows+j]=datax[i*rows+j]+100000*penelty*data->stim_data[j][i]/data->error[j][i];
             }
         }
     }
@@ -447,6 +574,9 @@ void Model::showParameterDependencyMatrix() {
     for (size_t i=0 ; i < parameter_dependency_matrix_.shape()[0] ; i++) {
         for (size_t j=0 ; j < parameter_dependency_matrix_.shape()[1] ; j++) {
             output += to_string(parameter_dependency_matrix_[i][j]) + "\t";
+            if (j < symbols_.size()) {
+                output += "\t";
+            }
         }
         output += "\n";
     }
@@ -464,6 +594,9 @@ void Model::showGUnreduced() {
     for (size_t i=0 ; i < parameter_dependency_matrix_unreduced_.shape()[0] ; i++) {
         for (size_t j=0 ; j < parameter_dependency_matrix_unreduced_.shape()[1] ; j++) {
             output += to_string(parameter_dependency_matrix_unreduced_[i][j]) + "\t";
+            if (j < symbols_.size()) {
+                output += "\t";
+            }
         }
         output += "\n";
     }
@@ -563,7 +696,6 @@ void Model::convert_parameter_map_into_identifiable(std::vector<double> &p1 ,
 
 void Model::convert_original_parameter_into_identifiable( std::vector<double> &p1, const std::vector<double> &p2) 
 {
-    
  
     p1.resize(independent_parameters_.size());
     assert(p2.size()==symbols_.size());
@@ -573,36 +705,42 @@ void Model::convert_original_parameter_into_identifiable( std::vector<double> &p
         double tmp=1.0;
         for (size_t j=0; j<symbols_.size(); ++j) {
             if (std::abs(parameter_dependency_matrix_unreduced_[independent_parameters_[i]][j])>0.000001) {
-    tmp*=pow(p2[j],parameter_dependency_matrix_unreduced_[independent_parameters_[i]][j]);
+                tmp*=pow(p2[j],parameter_dependency_matrix_unreduced_[independent_parameters_[i]][j]);
             }
         }
         p1[i]=tmp;
     }
 }
 
+// Converts paths to links
 void Model::convert_identifiables_to_original_parameter(std::vector<double> &p_new, const std::vector<double> &p_old) const
 {
     p_new.resize(symbols_.size());
     assert(p_old.size()==independent_parameters_.size() && p_new.size()==symbols_.size());
-    // check all rows i for occurances of original parameters k of which take the 1. which will be replaced by the product  
+    // check for occurances of original parameters, which are initialized to 1
     for (size_t i=0; i<rank_; i++) {
-    std::vector<size_t> not_zero;
-    for (size_t k=0;k<symbols_.size();k++){
-        if (std::abs(parameter_dependency_matrix_[i][k])>0.000001) {not_zero.push_back(k);}
-    }
-    if (not_zero.size() >1){
-        for(size_t l=1;l<not_zero.size();l++){
-            p_new[not_zero[l]]=1.0;
+        std::vector<size_t> not_zero;
+        for (size_t k=0;k<symbols_.size();k++){
+            if (std::abs(parameter_dependency_matrix_[i][k])>0.000001) {not_zero.push_back(k);}
         }
-    }
-    double tmp=1.0;
-    for (size_t j=0; j<independent_parameters_.size(); j++) {
-        if(std::abs(parameter_dependency_matrix_[i][symbols_.size()+independent_parameters_[j]])>0.000001){
-            tmp*=pow(p_old[j],-parameter_dependency_matrix_[i][symbols_.size()+independent_parameters_[j]]);
+        //std::cout << symbols_[not_zero[0]]; //
+        if (not_zero.size() >1){
+            for(size_t l=1;l<not_zero.size();l++){
+                p_new[not_zero[l]]=1.0;
+                //std::cout << "*" << symbols_[not_zero[l]]; //
+            }
         }
+        //std::cout << " = "; //
+        double tmp=1.0;
+        for (size_t j=0; j<independent_parameters_.size(); j++) {
+            if(std::abs(parameter_dependency_matrix_[i][symbols_.size()+independent_parameters_[j]])>0.000001){
+                tmp*=pow(p_old[j],-parameter_dependency_matrix_[i][symbols_.size()+independent_parameters_[j]]);
+                //std::cout << paths_[independent_parameters_[j]] << " * "; //
+            }
+        }
+        //std::cout << std::endl; //
+        p_new[not_zero[0]]=tmp; // We give all the effect to the first link of the path
     }
-    p_new[not_zero[0]]=tmp;
- }
 }
 
 void Model::print_original_parameters(std::ostream &os, std::vector<double> &p) {
@@ -645,7 +783,7 @@ void Model::convert_response_matrix_to_original_parameter(std::vector<double> &p
     for (size_t i=0; i<size; i++){
         for (size_t j=0; j<size; j++){
             if ((i!=j)&&(adj[j][i]!=0)) {
-    p.push_back(d[j][i]);
+                p.push_back(d[j][i]);
             }
         }
     }

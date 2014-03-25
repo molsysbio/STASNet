@@ -142,7 +142,7 @@ void sort ( int_matrix &old_pdmu,
   std::sort(indices,indices+param.size(),index_cmp<int*>(nr_of_vars) );
   
   
-  //change the matrix and the parameter vector accordingly
+  //change the matrix (right part) and the parameter vector accordingly
   parameterlist tmpparam = param;
   int_matrix new_pdmu = old_pdmu; 
   for (size_t i=0;i<param.size();i++){
@@ -229,8 +229,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
         }
     }
 
-  //sort the parameter dependency matrix to facilitate reduction
-  // modified to sort for small parameters names
+  // sort the parameter dependency matrix to facilitate reduction
   sort (parameter_dependency_matrix_unreduced, param);
 
   parameter_dependency_matrix.resize(boost::extents[param.size()][param.size()+vars.size()]);

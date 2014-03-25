@@ -151,11 +151,11 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     print ("Initializing the model parameters…")
     params = c();
     residuals = c();
-    nb_samples = 40;
+    nb_samples = 100;
 # Random initializations with Latin Hypercube Sample to find a global maximum fit
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
     for (i in 1:nb_samples) {
-        result = model$fitmodel( data,samples[i,] )
+        result = model$fitmodel( data, samples[i,] )
         residuals = c(residuals,result$residuals);
         params = cbind(params,result$parameter)
     }
@@ -179,10 +179,11 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     profile_list = list();
     for (path in 1:length(init_params)) {
         lprofile = model$profileLikelihood(data, init_params, path, 1000);
-# Values bigger than the simultaneous threshold are useless and would perturb x and y axis
+        # Residuals bigger than the simultaneous threshold are useless and would perturb x and y axis
         lprofile$residuals[path, lprofile$residuals[path,] > 1.1 * lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
-# Collapse the abscisse of the big residual to the closest valid abscisse
+        # Collapse the abscisse of the big residuals to the closest valid abscisse
         last_correct = 0; to_correct = c();
+        if (FALSE) {
         for (entry in 1:length(lprofile$residuals[path,])) {
             if (lprofile$residuals[path, entry] >= 1.1 * lprofile$thresholds[2]) {
         # Collapsing flat zones does not work for some reason, the flat zones are identified but not collapsed
@@ -202,6 +203,7 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
                 last_correct = entry;
             }
         }
+        }
 
         print(paste("Parameter", lprofile$path, "decided"));
 
@@ -211,9 +213,10 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     sorted_profiles = classify_profiles(profile_list);
     print("Profiles extracted and sorted.");
 
+    print(paste("Residual =", initresidual))
     print("Parameters :");
-    print(model$getParametersNames()$names);
-    parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors); # Identifiables (combination of paths)
+    #print(model$getParametersNames()$names);
+    parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     paths = model$getParametersLinks()
     for (i in 1:length(paths)) {
         print(paste( paths[i], "=", parameters[i]));
@@ -257,8 +260,8 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
 # Non identifiables
     nbni = length(ni_profiles);
     print(paste(nbni, "non identifiable paths"));
-    # Compute the dimension, special case if there are no non identifiables
-    if (nbni > 0) {
+    # Compute the dimension, minimal size if there are not enough non identifiables
+    if (nbni > 3) {
         dimension = 2 * nbni + 1;
     }
     else {
@@ -287,6 +290,11 @@ ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
                 else {
                     limy = range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,])
                 }
+                #print (limy)
+                ### Modification of limy if it reaches Inf, should not have to be done
+                if (abs(limy[2]) == Inf) { limy[2] = 10000; print("...")}
+                if (abs(limy[1]) == Inf) { limy[1] = 0}
+
                 plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1, ylim = limy);
                 # Print labels on the right and bottom
                 if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }

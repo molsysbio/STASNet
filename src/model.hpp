@@ -57,12 +57,10 @@ public:
   void convert_identifiables_to_original_parameter(std::vector<double> &p_new,  const std::vector<double> &p_old) const;
   static void convert_original_parameter_to_response_matrix(double_matrix &d, std::vector<double> &inh, const std::vector<double> &p, const int_matrix &adj);
   static void convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh, const int_matrix &adj);
-
   
   void print_original_parameters(std::ostream &os, std::vector<double> &p);
   ExperimentalDesign &exp_design() { return exp_design_; }
   const ExperimentalDesign &exp_design() const { return exp_design_; }
-
 
   double getPeneltyForConstraints(const double *p) const;
   void getConstraints( parameterlist &params, std::vector<MathTree::math_item::Ptr> &equations);
@@ -100,7 +98,7 @@ protected:
   bool linear_approximation_;
 
   void do_init();
-  void simplify_independent_parameters(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector, size_t start_singleton);
+  void simplify_independent_parameters(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector);
 
   // ----------
   // Contains the constraints to avoid bifurcations

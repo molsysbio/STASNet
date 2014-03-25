@@ -198,9 +198,7 @@ void fitmodel( std::vector <double> &bestfit,
   }
 
   //  define the measurement value to compare with measured value divided by the error
-  int number_of_measurements=data->stim_data.shape()[1]*
-    data->stim_data.shape()[0]; 
-
+  int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0]; 
   double datax[number_of_measurements];
   for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
     for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
@@ -272,8 +270,9 @@ void profile_likelihood(const Data &data,
     // Upper and Lower scans are separated, to be sure to scan near the optimum each time 
     // Lower values scan
     double scanned_value = param_value;
-    double step_size = std::min(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01); // By default, we explore 1.5 times the parameter
-    step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
+    double step_size = std::min(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01); // By default, we explore 1.5 times the parameter with a minimum step size of 0.01
+    //double step_size = -0.01;
+    //step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
@@ -312,7 +311,7 @@ void profile_likelihood(const Data &data,
     }
     // We reorder the scanned values in the final vectors
     int size = dec_explored.size();
-    for (int it=0 ; it <  size; it++) {
+    for (int it=0 ; it < size; it++) {
         explored.push_back(dec_explored[size -1 -it]);
         for (int j=0 ; j < residual_track.size() ; j++) {
             residual_track[j].push_back(dec_residual[j][size -1 -it]);
@@ -323,7 +322,8 @@ void profile_likelihood(const Data &data,
     scanned_value = param_value;
     parameters = bestfit;
     step_size = std::max(std::abs(parameters[keep_constant[0]]) * 3 / total_steps, 0.01); // By default, we explore 1.5 times the parameter
-    step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
+    //step_size = 0.01;
+    //step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
     for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 

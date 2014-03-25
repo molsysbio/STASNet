@@ -30,16 +30,14 @@ namespace MathTree {
 
 
   void container::add_item(math_item::Ptr item) { subitems_.push_back(item); }
-  void container::replace_subitem(math_item::Ptr what, 
-				  math_item::Ptr replace_with) {
-    for (std::vector<math_item::Ptr>::iterator iter=subitems_.begin();
-	 iter!=subitems_.end(); ++iter) {
-      if (boost::dynamic_pointer_cast<container>(*iter).get()==0) {
-	if (*iter==what)
-	  (*iter)=replace_with;
-      } else {
-	boost::dynamic_pointer_cast<container>(*iter)->replace_subitem(what, replace_with);
-      }
+  void container::replace_subitem(math_item::Ptr what, math_item::Ptr replace_with) {
+    for (std::vector<math_item::Ptr>::iterator iter=subitems_.begin(); iter!=subitems_.end(); ++iter) {
+        if (boost::dynamic_pointer_cast<container>(*iter).get()==0) {
+	        if (*iter==what)
+	            (*iter)=replace_with;
+        } else {
+	        boost::dynamic_pointer_cast<container>(*iter)->replace_subitem(what, replace_with);
+        }
     }
   }
 
