@@ -135,7 +135,7 @@ template<typename MatrixType>
  
 // convert A to reduced row echelon form
 template<typename MatrixType>
- void to_reduced_row_echelon_form(MatrixType& A)
+void to_reduced_row_echelon_form(MatrixType& A)
 {
   matrix_traits<MatrixType> mt;
   typedef typename matrix_traits<MatrixType>::index_type index_type;
@@ -165,7 +165,22 @@ template<typename MatrixType>
       if (i != row)
         add_multiple_row(A, i, row, -mt.element(A, i, lead));
     }
-    // lead++; ?
   }
 }
+
+// Finish the gaussian elimination of a row echelon matrix on its first rows
+template<typename MatrixType>
+void complete_reductin_on_submatrix(MatrixType &A, size_t max_row) {
+
+    matrix_traits<MatrixType> mt;
+    typedef typename matrix_traits<MatrixType>::index_type index_type;
+
+    index_type lead = 0;
+    for (index_type row = max_row; row >= 0 ; row--) {
+        while (mt.element(A, max_row, lead) == 0) { lead++; }
+    }
+
+    
+}
+
  

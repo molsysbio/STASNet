@@ -120,8 +120,8 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
   double info[LM_INFO_SZ]; // returns some information about the actual fitting process (info[1])=sumsq
   double opts[LM_OPTS_SZ]; // some options to determine initial  \mu (opts[0]), stopping thresholds for some functions (opts[1-3]) and difference approximation to Jacobian)
   opts[0]=LM_INIT_MU*10.0;
-  opts[1]=1E-100; // Gradients value
-  opts[2]=1E-100; // Parameters variation
+  opts[1]=1E-60; // Gradients value
+  opts[2]=1E-60; // Parameters variation
   opts[3]=1E-17; // Residual variation
   opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used  
 
