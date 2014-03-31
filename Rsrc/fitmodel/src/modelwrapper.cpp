@@ -139,15 +139,13 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
 
 }
 
-/* COMMENTED BECAUSE IT NEEDS C++11 LIBRARY thread
- * IF YOU UNCOMMENT THIS, UNCOMMENT THE THREAD HEADERS AS WELL
+/* COMMENTED BECAUSE IT NEEDS rref.hpp which is not in ~/include/fitmodel
+ * IF YOU UNCOMMENT THIS, UNCOMMENT THE rref.hpp HEADERS AS WELL
  *
 // Returns the profile likelihood and functionnal relationship for all parameters, does the computation in parallel
 SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, const unsigned int total_steps = 10000) {
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
-
-    //Rcpp::List *returned:;
 
     std::vector< std::vector<size_t> > keep_constant;
     std::vector< std::vector< std::vector<double> > > residual_track;
@@ -170,7 +168,6 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
         params.push_back(parameters);
 
         // Create a new thread for each parameter
-        //threads.push_back(new boost::thread(::profile_likelihood, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i], total_steps));
         threads.create_thread(::profile_likelihood, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i], total_steps);
     }
     threads.join_all();
@@ -179,7 +176,6 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
     Rcpp::List returned;
     std::vector<std::string> paths;
     for (int i=0 ; i<parameters.size() ; i++) {
-        //threads[i]->join();
 
         model->getParametersLinks(paths);
         Rcpp::NumericMatrix track(parameters.size(), explored.size());
@@ -199,7 +195,7 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
         returned["path"] = paths[i];
         returned["pathid"] = target[i];
 
-        ret[i] = returned;
+        ret[to_string(i)] = returned;
 
         delete[] identifiability[i];
     }
@@ -207,6 +203,7 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
     return ret;
 }
 */
+
 
 
 SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {

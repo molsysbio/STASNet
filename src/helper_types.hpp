@@ -34,9 +34,16 @@ std::ostream &operator<<(std::ostream &os, const std::vector<int> &a);
 std::ostream &operator<<(std::ostream &os, const std::vector<double> &a);
 std::istream &operator>>(std::istream &is, std::map<std::string,double> &p);
  
-// ---------------------------------
-// Class that stores all data
- 
+// Print a 2-dimensions boost array
+template<typename Matrix>
+void print_matrix(const Matrix &m) {
+    for (size_t i=0 ; i < m.shape()[0] ; i++) {
+        for (size_t j=0 ; j < m.shape()[1] ; j++) {
+            std::cout << m[i][j];
+        }
+        std::cout << std::endl;
+    }
+}
 
 template<typename T> 
 void copy_matrix(const T &from, T &to ) {
@@ -47,6 +54,9 @@ void copy_matrix(const T &from, T &to ) {
   to=from;
 }
 
+// ---------------------------------
+// Class that stores all data
+ 
 class ExperimentalDesign {
 
 public:

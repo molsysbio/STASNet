@@ -3,6 +3,7 @@
 #include "wrap_matrices.hpp"
 #include <fitmodel/helper_types.hpp>
 #include <fitmodel/model.hpp>
+//#include <fitmodel/rref.hpp>
 #include <vector>
 #include <string>
 #include "modelstructure.hpp"

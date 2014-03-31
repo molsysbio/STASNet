@@ -1,5 +1,6 @@
 #include "model.hpp"
 #include "fstream"
+#include "rref.hpp"
 
 extern bool debug;
 extern int verbosity;
@@ -149,7 +150,7 @@ void Model::do_init () {
     // Replacement of the dependent paths into combination of independent ones
     for (unsigned int i=0; i<model_eqns_.shape()[0];i++) { 
         for (unsigned int j=0; j<model_eqns_.shape()[1];j++) {
-            if (verbosity > 10) {
+            if (verbosity > -10) {
                 model_eqns_[i][j]->print(std::cout);
                 std::cout << "converted to";
             }
@@ -159,7 +160,7 @@ void Model::do_init () {
                         ->replace_subitem(replace_vector[k].first,replace_vector[k].second);
                 }
             }
-            if (verbosity > 10) {
+            if (verbosity > -10) {
                 model_eqns_[i][j]->print(std::cout);
                 std::cout << std::endl;
             }
@@ -175,7 +176,6 @@ void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::mat
 
     double eps = 0.0000001;
     size_t previous_size = parameters_.size();
-
 
     // ERRORS :
     // when negative exponent, the paths are not rebuilt correctly
@@ -231,7 +231,7 @@ void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::mat
         for (size_t col=0 ; col < symbols_.size() ; col++) {
             parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][col] = parameter_dependency_matrix_[i][col];
         }
-        // An independent parameter only depend on itself
+        // An independent parameter only depends on itself
         for (size_t l=symbols_.size() ; l < (parameter_dependency_matrix_unreduced_.shape()[1]-1) ; l++) {
             parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][l] = 0;
         }
@@ -239,67 +239,53 @@ void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::mat
     }
 
     size_t ipi;
-    // Reduce the old parameters into the new ones
+    // Put the expression of k in paths in a matrix
+    // Express the old parameters as combination of the new ones
+    int_matrix p_from_k_unreduced;
+    p_from_k_unreduced.resize(boost::extents[independent_parameters_.size()][2*independent_parameters_.size()]);
+    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
+        for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
+            p_from_k_unreduced[i][j] = parameter_dependency_matrix_[i][symbols_.size() + independent_parameters_[j]];
+            p_from_k_unreduced[i][independent_parameters_.size() + j] = 0;
+        }
+        // Identity, will contain expression of paths in k after reduction
+        p_from_k_unreduced[i][independent_parameters_.size() + i] =- 1;
+    }
+
+    rational_matrix rational_for_rref;
+    convert_int_to_rational_matrix(p_from_k_unreduced, rational_for_rref);
+
+    // Invert the matrix to get the expression of paths in k
+    to_reduced_row_echelon_form(rational_for_rref);
+
+    double_matrix p_from_k;
+    convert_rational_to_double_matrix(rational_for_rref, p_from_k);
+    print_matrix(p_from_k);
+
+    // Replace the paths by the corresponding combination of k
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         ipi = independent_parameters_[i];
 
         // Find which singletons are in the old parameter
-        std::vector<size_t> singletons_list;
-        MathTree::parameter::Ptr tmp = parameters_[ipi];
-        MathTree::mul::Ptr tmp2 (new MathTree::mul);
-        for (size_t k=0 ; k < singletons.size() ; k++) {
-            // We check for every link of the singleton, no matter the order
-            int length = singletons[k].second.nops();
-            int score = 0;
-
-            if (length == 0) { // Special case for symbols, which can't be access with op()
-                length = 1;
-                if (!GiNaC::is_a<GiNaC::symbol>(paths_[ipi])) {
-                    for (size_t j=0 ; j < paths_[ipi].nops() ; j++) {
-                        if (paths_[ipi].op(j) == singletons[k].second) {
-                            score++;
-                            break;
-                        }
-                    }
-                } else if (paths_[ipi] == singletons[k].second) {
-                    score++;
-                }
-            }
-            else {
-                // If it's a symbol, it can't contain a mul
-                for (size_t l=0 ; l < length ; l++) {
-                    if (!GiNaC::is_a<GiNaC::symbol>(paths_[ipi])) {
-                        for (size_t j=0 ; j < paths_[ipi].nops() ; j++) {
-                            if (paths_[ipi].op(j) == singletons[k].second.op(l)) {
-                                score++;
-                            }
-                        }
-                    }
-                }
-            }
-            if (score == length) {
-                singletons_list.push_back(k);
-                tmp2->add_item( singletons[k].first );
-                if (verbosity > -5) {
-                    std::cout << "Singleton " << singletons[k].second << " found in " << paths_[ipi] << std::endl;
-                    std::cout << "Length = " <<  length << ", score = " << score << std::endl;
-                }
+        MathTree::mul::Ptr tmp (new MathTree::mul);
+        for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
+            if (p_from_k[i][independent_parameters_.size() + j] == 1) {
+                tmp->add_item(parameters_[previous_size + j]);
+            } else if (p_from_k[i][independent_parameters_.size() + j] == -1) {
+                MathTree::pow::Ptr tmp2(new MathTree::pow);
+                tmp2->add_item(parameters_[previous_size + j]);
+                tmp2->add_item(new MathTree::numeric(-1.0));
+                tmp->add_item(tmp2);
             }
         }
-        
         // Replace the pointers in the equation matrix
-        replace_vector.push_back(std::make_pair(tmp, tmp2));
+        replace_vector.push_back(std::make_pair(parameters_[ipi], tmp));
 
-        // Incorporate the new parameter in the dependency matrices (reduced or not)
-        // In case of reduction, reduced_mul will never be one because the parameters are independent
-        //
-        // Reduced Matrix
-        // Last columns of the reduced matrix, replace each old parameter by the combination of independent singletons
-        std::vector<size_t> to_kick;
+        // Replace the old parameters by the reduced ones in the reduced dependency matrix
         for (size_t row=0 ; row < previous_size ; row++) {
             if (std::abs(parameter_dependency_matrix_[row][symbols_.size() + ipi]) > eps) {
-                for (size_t l=0 ; l < singletons_list.size() ; l++) {
-                    parameter_dependency_matrix_[row][symbols_.size() + previous_size + singletons_list[l]] += parameter_dependency_matrix_[row][symbols_.size() + ipi];
+                for (size_t l=0 ; l < independent_parameters_.size() ; l++) {
+                    parameter_dependency_matrix_[row][symbols_.size() + previous_size + l] += parameter_dependency_matrix_[row][symbols_.size() + ipi] * p_from_k[i][independent_parameters_.size() + l];
                 }
                 parameter_dependency_matrix_[row][symbols_.size() + ipi] = 0;
             }
@@ -307,7 +293,7 @@ void Model::simplify_independent_parameters(std::vector< std::pair<MathTree::mat
 
     }
     
-    // Tell were the new independent parameters are in the matrices
+    // Tell where the new independent parameters are in the matrices
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         independent_parameters_[i] = previous_size + i;
     }

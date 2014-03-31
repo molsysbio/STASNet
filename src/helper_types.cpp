@@ -112,7 +112,6 @@ void convert_rational_to_double_matrix(const rational_matrix &r, double_matrix &
   }
 }
 
-
 bool ExperimentalDesign::read_from_stream(std::istream &is) {
   std::string label;
   is >> label;
@@ -142,7 +141,6 @@ bool ExperimentalDesign::read_from_stream(std::istream &is) {
   return true;
   
 }
-
 
 
 bool Data::read_from_stream(std::istream &is) {
