@@ -21,6 +21,16 @@ void profile_likelihood( const Data &data,
             const double param_value,
 			const Model *model,
 			bool* n_identifiability,
+            std::vector<double> &thresholds);
+
+void profile_likelihood( const Data &data,
+			std::vector<double> parameters,
+            const std::vector<size_t> keep_constant,
+	        std::vector< std::vector<double> > &residual_track,
+            std::vector<double> &explored,
+            const double param_value,
+			const Model *model,
+			bool* n_identifiability,
             std::vector<double> &thresholds,
 			const unsigned int total_steps);
 

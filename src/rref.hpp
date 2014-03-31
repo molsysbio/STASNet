@@ -1,3 +1,6 @@
+#ifndef RREF_CPP
+#define RREF_CPP
+
 #include <algorithm> // for std::swap
 #include <cstddef>
 #include <cassert>
@@ -133,9 +136,9 @@ template<typename MatrixType>
     mt.element(A, i, col) += v * mt.element(A, k, col);
 }
  
-// convert A to reduced row echelon form
+// Full gaussian reduction of A
 template<typename MatrixType>
-void to_reduced_row_echelon_form(MatrixType& A)
+ void to_reduced_row_echelon_form(MatrixType& A)
 {
   matrix_traits<MatrixType> mt;
   typedef typename matrix_traits<MatrixType>::index_type index_type;
@@ -165,22 +168,42 @@ void to_reduced_row_echelon_form(MatrixType& A)
       if (i != row)
         add_multiple_row(A, i, row, -mt.element(A, i, lead));
     }
+    // lead++; ?
   }
 }
-
-// Finish the gaussian elimination of a row echelon matrix on its first rows
+ 
+// Partially finish the gaussian elimination of a row echelon matrix, keeping only positive coefficients in the initial matrix
 template<typename MatrixType>
-void complete_reductin_on_submatrix(MatrixType &A, size_t max_row) {
+void positive_reduction(MatrixType &A, size_t size) {
 
     matrix_traits<MatrixType> mt;
     typedef typename matrix_traits<MatrixType>::index_type index_type;
 
-    index_type lead = 0;
-    for (index_type row = max_row; row >= 0 ; row--) {
-        while (mt.element(A, max_row, lead) == 0) { lead++; }
+    // Reduce top vectors with lower one
+    for (index_type row = mt.max_row(A); row > mt.min_row(A) ; row--) {
+        // Find where the row starts
+        index_type lead = 0;
+        while (mt.element(A, row, lead) == 0) { lead++; }
+
+        // Substract the current line from those where it is fully included
+        for (index_type i = (row - 1) ; i >= mt.min_row(A) && i < mt.max_row(A) ; i--) {
+            bool contained = true;
+            for (index_type col = lead ; col < size ; col++) {
+                if (i >= 0 && mt.element(A, row, col) == 1 && mt.element(A, i, col) != 1) {
+                    contained = false;
+                }
+            }
+            
+            if (contained) {
+                add_multiple_row(A, i, row, -1);
+            }
+        }
     }
+
+    // Use reduced top vectors to reduce lower ones
+    //for (index_type row = mt.min_row(A) ; row <= mt.max ; row++) {}
 
     
 }
 
- 
+#endif //RREF_CPP

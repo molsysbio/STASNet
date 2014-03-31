@@ -141,7 +141,7 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
 
 /* COMMENTED BECAUSE IT NEEDS rref.hpp which is not in ~/include/fitmodel
  * IF YOU UNCOMMENT THIS, UNCOMMENT THE rref.hpp HEADERS AS WELL
- *
+ */
 // Returns the profile likelihood and functionnal relationship for all parameters, does the computation in parallel
 SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, const unsigned int total_steps = 10000) {
     if ( parameters.size() != model->nr_of_parameters() ) 
@@ -157,18 +157,23 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
 
     // Creation of the threads
     //std::vector<boost::thread*> threads;
-    boost::thread_group threads();
+    boost::thread_group threads;
     for (int i=0 ; i<parameters.size() ; i++) {
         keep_constant.push_back(std::vector<size_t>(1, i));
-        residual_track.push_back(std::vector< std::vector<double> >);
-        explored.push_back(std::vector<double>);
+        residual_track.push_back(std::vector< std::vector<double> >());
+        explored.push_back(std::vector<double>());
         identifiability.push_back(new bool[4]);
-        thresholds.push_back(std::vector<double>);
+        thresholds.push_back(std::vector<double>());
         target.push_back(i);
         params.push_back(parameters);
 
         // Create a new thread for each parameter
-        threads.create_thread(::profile_likelihood, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i], total_steps);
+        //threads.add_thread(new boost::thread(::profile_likelihood, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i]));
+        // Ugly cast for bind desambiguation        
+        //threads.create_thread(boost::bind( static_cast< void(*)(const Data&,std::vector<double>,const std::vector<size_t>,std::vector< std::vector<double> >&,std::vector<double>&,const double,const Model*,bool*,std::vector<double>&)>(::profile_likelihood), data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i]));
+        void (*pl) (const Data&,std::vector<double>,const std::vector<size_t>,std::vector< std::vector<double> >&,std::vector<double>&,const double,const Model*,bool*,std::vector<double>&) = &::profile_likelihood;
+        threads.create_thread(boost::bind( pl, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i]));
+        // Without total_steps because it is max 9 arguments plus the function
     }
     threads.join_all();
 
@@ -202,7 +207,7 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
 
     return ret;
 }
-*/
+
 
 
 

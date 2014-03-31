@@ -1,6 +1,5 @@
 #include "model.hpp"
 #include "fstream"
-#include "rref.hpp"
 
 extern bool debug;
 extern int verbosity;
@@ -518,27 +517,6 @@ void Model::print_parameter_report(std::ostream &os, const std::vector<double> &
     } else {
             for (size_t j=0; j<independent_parameters_.size(); ++j) 
                 os << symbols_[independent_parameters_[j]] << "\t=\t" << d[independent_parameters_[j]] << " (" << independent_parameters_[j] << ")" << std::endl;
-    }
-}
-
-// Put the litteral description of the identifiable parameters in a vector of strings
-//std::string to_string(const GiNaC::ex &a); // Dirty hack
-//std::string to_string(const double &a); // Dirty hack
-template <typename T>
-std::string to_string(const T &a); // Dirty hack
-// Global function, only used here, dirty hack part II
-template <typename T>
-std::string to_string(const T &a) {
-    std::ostringstream oss;
-    oss << a;
-    return oss.str();
-}
-
-void Model::getParametersLinks(std::vector<std::string> &description) {
-    description = std::vector<std::string>();
-    for (size_t j=0; j<independent_parameters_.size(); ++j) {
-        description.push_back(to_string(paths_[independent_parameters_[j]]));
-        //if (debug) { std::cout << paths_[independent_parameters_[j]] << std::endl; }
     }
 }
 

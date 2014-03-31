@@ -238,6 +238,18 @@ void fitmodel( std::vector <double> &bestfit,
 
 }
 
+// Function with 9 arguments only, for boost multithreading
+void profile_likelihood(const Data &data,
+	std::vector<double> parameters,
+	const std::vector<size_t> keep_constant,
+	std::vector< std::vector<double> > &residual_track,
+	std::vector<double> &explored,
+	const double param_value,
+	const Model *model,
+	bool* identifiability,
+    std::vector<double> &thresholds) {
+        profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, identifiability, thresholds);
+}
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
 void profile_likelihood(const Data &data,

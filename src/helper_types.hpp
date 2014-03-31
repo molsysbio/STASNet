@@ -45,6 +45,13 @@ void print_matrix(const Matrix &m) {
     }
 }
 
+template <typename T>
+std::string to_string(const T &a) {
+    std::ostringstream oss;
+    oss << a;
+    return oss.str();
+}
+
 template<typename T> 
 void copy_matrix(const T &from, T &to ) {
   std::vector<std::size_t> extendlist(2);

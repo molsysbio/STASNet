@@ -7,9 +7,7 @@ libfitmodel_la_SOURCES = fitmodel_in_CPP.cpp  identifiability.cpp mathtree.cpp m
 libfitmodel_la_CPPFLAGS = $(GINAC_CFLAGS) $(BOOST_CPPFLAGS)
 
 libfitmodel_la_includedir=$(includedir)/fitmodel
-libfitmodel_la_include_HEADERS = fitmodel_in_CPP.hpp helper_types.hpp mathtree.hpp generate_response.hpp identifiability.hpp model.hpp
-
-EXTRA_DIST = rref.hpp 
+libfitmodel_la_include_HEADERS = fitmodel_in_CPP.hpp helper_types.hpp mathtree.hpp generate_response.hpp identifiability.hpp model.hpp rref.hpp
 
 dist-hook:
 	rm -rf `find $(distdir)/threadpool -name .svn`

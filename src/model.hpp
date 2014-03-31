@@ -11,6 +11,7 @@
 #include "mathtree.hpp"
 #include "identifiability.hpp"
 #include "helper_types.hpp"
+#include "rref.hpp"
 
 class Model {
 public:
