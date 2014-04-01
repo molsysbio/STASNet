@@ -141,7 +141,7 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
 
 /* COMMENTED BECAUSE IT NEEDS rref.hpp which is not in ~/include/fitmodel
  * IF YOU UNCOMMENT THIS, UNCOMMENT THE rref.hpp HEADERS AS WELL
- */
+ *
 // Returns the profile likelihood and functionnal relationship for all parameters, does the computation in parallel
 SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, const unsigned int total_steps = 10000) {
     if ( parameters.size() != model->nr_of_parameters() ) 
@@ -207,8 +207,7 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
 
     return ret;
 }
-
-
+*/
 
 
 SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {

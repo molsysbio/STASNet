@@ -150,8 +150,9 @@ void Model::do_init () {
     for (unsigned int i=0; i<model_eqns_.shape()[0];i++) { 
         for (unsigned int j=0; j<model_eqns_.shape()[1];j++) {
             if (verbosity > -10) {
+                printf("%u\n", i);
                 model_eqns_[i][j]->print(std::cout);
-                std::cout << "converted to";
+                std::cout << " converted to ";
             }
             if (boost::dynamic_pointer_cast<MathTree::container>(model_eqns_[i][j]).get()!=0) {
                 for (size_t k=0; k<replace_vector.size(); k++) {
@@ -482,8 +483,7 @@ int Model::find_parameter(std::string name) {
 }
 
 // TODO prints a human readable report about the identifiable parameter combinations
-void Model::print_parameter_report(std::ostream &os, const std::vector<double> &d)
-{
+void Model::print_parameter_report(std::ostream &os, const std::vector<double> &d) {
 
     assert(d.size()==independent_parameters_.size());
     double eps = 0.000000001;
@@ -517,6 +517,14 @@ void Model::print_parameter_report(std::ostream &os, const std::vector<double> &
     } else {
             for (size_t j=0; j<independent_parameters_.size(); ++j) 
                 os << symbols_[independent_parameters_[j]] << "\t=\t" << d[independent_parameters_[j]] << " (" << independent_parameters_[j] << ")" << std::endl;
+    }
+}
+
+void Model::getParametersLinks(std::vector<std::string> &description) {
+    description = std::vector<std::string>();
+    for (size_t j=0; j<independent_parameters_.size(); ++j) {
+        description.push_back(to_string(paths_[independent_parameters_[j]]));
+        //if (debug) { std::cout << paths_[independent_parameters_[j]] << std::endl; }
     }
 }
 

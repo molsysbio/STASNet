@@ -87,7 +87,10 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
             boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
 
     } else if (GiNaC::is_a<GiNaC::symbol>(e)) {
-        item = param.getParameterForExpression(e);
+        //item = param.getParameterForExpression(e);
+        // Necessary, to be able to explicit single parameters
+        item = MathTree::mul::Ptr(new MathTree::mul());
+        boost::dynamic_pointer_cast<MathTree::mul>(item)->add_item(param.getParameterForExpression(e));
 
     } else if (GiNaC::is_a<GiNaC::numeric>(e)) {
         item = MathTree::numeric::Ptr(new MathTree::numeric());

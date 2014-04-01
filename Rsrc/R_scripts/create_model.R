@@ -177,6 +177,9 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     print(paste(length(init_params), "paths to evaluate"));
 
     profile_list = list();
+    #if (MULTITHREAD) {
+##
+    #}
     for (path in 1:length(init_params)) {
         lprofile = model$profileLikelihood(data, init_params, path, 1000);
         # Residuals bigger than the simultaneous threshold are useless and would perturb x and y axis

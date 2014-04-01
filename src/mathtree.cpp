@@ -1,6 +1,7 @@
 #include "mathtree.hpp"
 #include <cmath>
 #include <iostream>
+#include <fstream>
 
 // These are helper classes to evaluate the model quickly
 // They will be used to construct a tree that represents a formula
