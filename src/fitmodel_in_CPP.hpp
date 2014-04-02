@@ -13,15 +13,32 @@ void fitmodel( std::vector<double> &bestfit,
 	       const Data * data,
 	       std::vector<size_t> keep_constant = std::vector<size_t>());
 
-void profile_likelihood( const Data &data,
-			std::vector<double> parameters,
-            const std::vector<size_t> keep_constant,
-	        std::vector< std::vector<double> > &residual_track,
-            std::vector<double> &explored,
-            const double param_value,
-			const Model *model,
-			bool* n_identifiability,
-            std::vector<double> &thresholds);
+// Structure for the profile likelihood
+struct pl_analysis {
+    // Uncertainty
+    double decision;
+    // Values of the thresholds
+    double pointwise_threshold;
+    double simultaneous_threshold;
+
+    // Tells whether the high/low threshold has been reached for positive/negative steps
+    bool ln_threshold;
+    bool hn_threshold;
+    bool lp_threshold;
+    bool hp_threshold;
+
+    // Values for which the threshold is ascendingly reached
+    std::vector<double> negative_uncertainty;
+    std::vector<double> positive_uncertainty;
+
+    pl_analysis() {
+        ln_threshold = false;
+        hn_threshold = false;
+        lp_threshold = false;
+        hp_threshold = false;
+    }
+};
+typedef struct pl_analysis pl_analysis;
 
 void profile_likelihood( const Data &data,
 			std::vector<double> parameters,
@@ -30,8 +47,7 @@ void profile_likelihood( const Data &data,
             std::vector<double> &explored,
             const double param_value,
 			const Model *model,
-			bool* n_identifiability,
-            std::vector<double> &thresholds,
+            pl_analysis &thresholds,
 			const unsigned int total_steps);
 
 double choose_step_size(const Data &data,

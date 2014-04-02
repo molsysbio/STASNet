@@ -136,8 +136,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
 
 # Finds a minimal model that fits the data and gives its parameters
-# Requires the fitmodel package
-profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
+profile_likelihood <- function(model_description=NULL, in_file=FALSE)
 {
 ### MODEL SETUP
     expdes = model_description$design;
@@ -216,13 +215,23 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     sorted_profiles = classify_profiles(profile_list);
     print("Profiles extracted and sorted.");
 
+    # Results, with error
     print(paste("Residual =", initresidual))
     print("Parameters :");
     #print(model$getParametersNames()$names);
     parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
     paths = model$getParametersLinks()
     for (i in 1:length(paths)) {
-        print(paste( paths[i], "=", parameters[i]));
+        print(profile_list[0]$lower_pointwise)
+        if (profile_list[[i]]$lower_pointwise && profile_list[[i]]$upper_pointwise) {
+            print(paste( paths[i], "=", parameters[i], "(", profile_list[[i]]$lower_error[1], "-", profile_list[[i]]$upper_error[1], ")"));
+        } else if (profile_list[[i]]$lower_pointwise) {
+            print(paste( paths[i], "=", parameters[i], "(", profile_list[[i]]$lower_error[1], "- ni )"));
+        } else if (profile_list[[i]]$upper_pointwise) {
+            print(paste( paths[i], "=", parameters[i], "( ni -", profile_list[[i]]$upper_error[1], ")"));
+        } else {
+            print(paste( paths[i], "=", parameters[i], "(non identifiable)"));
+        }
     }
 
     print("Response matrix : ");
@@ -238,6 +247,8 @@ profile_likelihood <- function(model_description=NULL, trace_relation=FALSE)
     return(sorted_profiles);
 }
 
+
+
 # Separates the profiles whether they are identifiables or not
 classify_profiles <- function (pl_collection) {
     ni_profiles = list()
@@ -245,7 +256,7 @@ classify_profiles <- function (pl_collection) {
 
     for (lprofile in pl_collection) {
         # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
-        if (lprofile$lowt_upper && lprofile$lowt_lower) {
+        if (lprofile$lower_pointwise && lprofile$upper_pointwise) {
             i_profiles[[length(i_profiles)+1]] <- lprofile;
         }
         else {

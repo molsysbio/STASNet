@@ -109,10 +109,10 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
     std::vector<size_t> keep_constant(1, target-1); // -1 for R users
     std::vector< std::vector<double> > residual_track;
     std::vector<double> explored;
-    bool identifiability[4] = {false};
-    std::vector<double> thresholds;
+    pl_analysis thresholds;
+    thresholds.decision = 0.95;
 
-    ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, identifiability, thresholds, total_steps);
+    ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, thresholds, total_steps);
     
     Rcpp::List ret;
     Rcpp::NumericMatrix track(parameters.size(), explored.size());
@@ -123,17 +123,22 @@ SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, 
     }
     std::vector<std::string> paths;
     model->getParametersLinks(paths);
+    std::vector<double> threshold_values; 
+    threshold_values.push_back(thresholds.pointwise_threshold);
+    threshold_values.push_back(thresholds.simultaneous_threshold);
 
     ret["residuals"] = track;
     ret["explored"] = explored;
-    ret["lowt_upper"] = identifiability[2];
-    ret["lowt_lower"] = identifiability[0];
-    ret["hight_upper"] = identifiability[3];
-    ret["hight_lower"] = identifiability[1];
-    ret["thresholds"] = thresholds;
+    ret["lower_pointwise"] = thresholds.ln_threshold;
+    ret["upper_pointwise"] = thresholds.lp_threshold;
+    ret["lower_simultaneous"] = thresholds.hn_threshold;
+    ret["upper_simultaneous"] = thresholds.hp_threshold;
+    ret["thresholds"] = threshold_values;
     ret["path"] = paths[target-1];
     ret["pathid"] = target;
     ret["value"] = param_value;
+    ret["lower_error"] = thresholds.negative_uncertainty;
+    ret["upper_error"] = thresholds.positive_uncertainty;
 
     return ret;
 

@@ -238,19 +238,6 @@ void fitmodel( std::vector <double> &bestfit,
 
 }
 
-// Function with 9 arguments only, for boost multithreading
-void profile_likelihood(const Data &data,
-	std::vector<double> parameters,
-	const std::vector<size_t> keep_constant,
-	std::vector< std::vector<double> > &residual_track,
-	std::vector<double> &explored,
-	const double param_value,
-	const Model *model,
-	bool* identifiability,
-    std::vector<double> &thresholds) {
-        profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, identifiability, thresholds);
-}
-
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
 void profile_likelihood(const Data &data,
 	std::vector<double> parameters,
@@ -259,13 +246,9 @@ void profile_likelihood(const Data &data,
 	std::vector<double> &explored,
 	const double param_value,
 	const Model *model,
-	bool* identifiability,
-    std::vector<double> &thresholds,
+    pl_analysis &thresholds,
 	const unsigned int total_steps = 10000) {
 
-    for (int i=0 ; i<4 ; i++) {
-        identifiability[i] = false;
-    }
     double residual;
     double_matrix prediction;
 
@@ -274,17 +257,21 @@ void profile_likelihood(const Data &data,
     double previous_residual = residual;
     std::vector<double> bestfit = parameters;
 
-    // Thresholds, repeated twice
-    double decision = 0.95;
-    thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(1), decision ));
-    thresholds.push_back(residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), decision ));
+    // Add the values of the thresholds
+    thresholds.decision = 0.95;
+    thresholds.pointwise_threshold = residual + boost::math::quantile( boost::math::chi_squared(1), thresholds.decision );
+    thresholds.simultaneous_threshold = residual + boost::math::quantile( boost::math::chi_squared(parameters.size()), thresholds.decision );
     
     // Upper and Lower scans are separated, to be sure to scan near the optimum each time 
     // Lower values scan
+    bool first_low = true;
+    bool first_high = true;
     double scanned_value = param_value;
-    double step_size = std::min(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01); // By default, we explore 1.5 times the parameter with a minimum step size of 0.01
-    //double step_size = -0.01;
-    //step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
+    // By default, we explore 1.5 times the parameter with a minimum step size of 0.01
+    // ?? except if the parameter is smaller than 0.01 in which case we make sure to have 10 iterations before 0
+    double step_size = std::min(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01);
+    /*double step_size = -0.01;
+    step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);*/
 	std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
@@ -308,8 +295,6 @@ void profile_likelihood(const Data &data,
             }
         }
         
-        scanned_value += step_size;
-        if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
         for (int j=0 ; j < parameters.size() ; j++) {
             dec_residual[j].push_back(parameters[j]);
@@ -318,8 +303,21 @@ void profile_likelihood(const Data &data,
         dec_residual[keep_constant[0]].pop_back();
         dec_residual[keep_constant[0]].push_back(residual);
 
-        if (residual > thresholds[0]) identifiability[2] = true;
-        if (residual > thresholds[1]) identifiability[3] = true;
+        // Tell if the thresholds were reached and for which values
+        if (first_low && residual > thresholds.pointwise_threshold) {
+            thresholds.ln_threshold = true;
+            first_low = false;
+            thresholds.negative_uncertainty.push_back(scanned_value);
+        } else if (residual < thresholds.pointwise_threshold){
+            first_low = true;
+        }
+        if (residual > thresholds.simultaneous_threshold && first_high) {
+            thresholds.hn_threshold = true;
+            first_high = false;
+        }
+
+        scanned_value += step_size;
+        if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
     }
     // We reorder the scanned values in the final vectors
     int size = dec_explored.size();
@@ -331,9 +329,13 @@ void profile_likelihood(const Data &data,
     }
 
     // Upper values scan
+    first_low = true;
+    first_high = true;
     scanned_value = param_value;
     parameters = bestfit;
-    step_size = std::max(std::abs(parameters[keep_constant[0]]) * 3 / total_steps, 0.01); // By default, we explore 1.5 times the parameter
+    step_size = -step_size;
+    // By default, we explore 1.5 times the parameter
+    //step_size = std::max(std::abs(parameters[keep_constant[0]]) * 3 / total_steps, 0.01);
     //step_size = 0.01;
     //step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
     for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
@@ -353,8 +355,6 @@ void profile_likelihood(const Data &data,
             }
         }
 
-        scanned_value += step_size;
-        if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
         // We write the other parameters new values
         for (int j=0 ; j < parameters.size() ; j++) {
             residual_track[j].push_back(parameters[j]);
@@ -363,8 +363,21 @@ void profile_likelihood(const Data &data,
         residual_track[keep_constant[0]].pop_back();
         residual_track[keep_constant[0]].push_back(residual);
 
-        if (residual > thresholds[0]) identifiability[0] = true;
-        if (residual > thresholds[1]) identifiability[1] = true;
+        // Update if the threshold is reached for ascending value
+        if (first_low && residual > thresholds.pointwise_threshold) {
+            thresholds.lp_threshold = true;
+            first_low = false;
+            thresholds.positive_uncertainty.push_back(scanned_value);
+        } else if (residual < thresholds.pointwise_threshold){
+            first_low = true;
+        }
+        if (first_high && residual > thresholds.simultaneous_threshold) {
+            thresholds.hp_threshold = true;
+            first_high = false;
+        }
+
+        scanned_value += step_size;
+        if(scanned_value - step_size < 0 && scanned_value + step_size > 0) {scanned_value = 0;}
     }
 
 }
