@@ -186,23 +186,21 @@ void positive_reduction(MatrixType &A, size_t size) {
         while (mt.element(A, row, lead) == 0) { lead++; }
 
         // Substract the current line from those where it is fully included
-        for (index_type i = (row - 1) ; i >= mt.min_row(A) && i < mt.max_row(A) ; i--) {
+        for (index_type i = mt.max_row(A) ; i >= mt.min_row(A) && i <= mt.max_row(A) ; i--) {
             bool contained = true;
-            for (index_type col = lead ; col < size ; col++) {
-                if (i >= 0 && mt.element(A, row, col) == 1 && mt.element(A, i, col) != 1) {
-                    contained = false;
+            if (i != row) {
+                for (index_type col = lead ; col < size ; col++) {
+                    if (i >= 0 && mt.element(A, row, col) == 1 && mt.element(A, i, col) != 1) {
+                        contained = false;
+                    }
                 }
-            }
-            
-            if (contained) {
-                add_multiple_row(A, i, row, -1);
+                
+                if (contained) {
+                    add_multiple_row(A, i, row, -1);
+                }
             }
         }
     }
-
-    // Use reduced top vectors to reduce lower ones
-    //for (index_type row = mt.min_row(A) ; row <= mt.max ; row++) {}
-
     
 }
 
