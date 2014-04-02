@@ -173,7 +173,7 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
     print(model$simulate(data, initparams)$prediction);
 
     init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
-    print(paste(length(init_params), "paths to evaluate"));
+    print(paste(length(init_params), " paths to evaluate"));
 
     profile_list = list();
     #if (MULTITHREAD) {
@@ -207,13 +207,10 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
         }
         }
 
-        print(paste("Parameter", lprofile$path, "decided"));
+        print(paste("Parameter", lprofile$path, "decided (", path, "/", length(init_params), ")", sep=""));
 
         profile_list[[path]] = lprofile;
     }
-
-    sorted_profiles = classify_profiles(profile_list);
-    print("Profiles extracted and sorted.");
 
     # Results, with error
     print(paste("Residual =", initresidual))
@@ -244,7 +241,7 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
     print("Inhibitors :");
     print(local_response$inhibitors);
 
-    return(sorted_profiles);
+    return(profile_list);
 }
 
 
@@ -264,10 +261,14 @@ classify_profiles <- function (pl_collection) {
         }
     }
     sorted_profiles = list(i_profiles, ni_profiles);
+    print("Profiles sorted")
+    return(sorted_profiles);
 }
 
 # Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
-ni_pf_plot <- function(sorted_profiles, initresidual=0, data_name="default") {
+ni_pf_plot <- function(profiles, initresidual=0, data_name="default") {
+    # Sort the profiles to print differently whether they are identifiable or not
+    sorted_profiles = classify_profiles(profiles)
     i_profiles = sorted_profiles[[1]];
     ni_profiles = sorted_profiles[[2]];
 
