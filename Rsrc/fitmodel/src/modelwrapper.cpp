@@ -101,7 +101,7 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
 }
 
 // Computes the profile likelihood of one parameter and the functionnal relationships of the others with this parameter
-SEXP ModelWrapper::profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000) {
+SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000) {
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 

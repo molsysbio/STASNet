@@ -2,6 +2,7 @@
 # tells git which files shouldn't be tracked nor shown as being untracked
 *.[oa]
 *.swp
+*.swo
 .nfs00000000000059f400000711
 *.lo
 *.la

@@ -1,10 +1,12 @@
-## Two functions that simplify data parsing and model creation and fitting
+## Functions that simplify data parsing and model creation and fitting using the package
+
+library("igraph")
 
 # Global variable to have more outputs
 verbose = FALSE;
 debug = TRUE;
 
-create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat")
+create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="")
 {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
@@ -19,6 +21,10 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 	# Creation of the structure object
 	links = read.delim(model.links, header=FALSE)
 	model.structure=getModelStructure(links)
+    model_graph = graph.edgelist(as.matrix(links))
+    pdf(gsub(".tab$", ".pdf", model.links))
+    plot.igraph(model_graph)
+    dev.off()
 
 	# Read the experiment design and extract the values
 	data.file = read.delim(data.stimulation)
@@ -33,52 +39,61 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 	# Calculates the mean and standard deviation for each condition 
 	mean.values = aggregate(as.list(data.values),by=data.file[,1:3],mean);
 	sd.values = aggregate(as.list(data.values),by=data.file[,1:3],sd);
+    print("Data used :")
     print(mean.values)
 
-	### CALCULATE ERROR MODEL
-
-	# Define the lower and default error threshold
-	min.cv=0.1;     # parameters: minimal cv=0.1
-	default.cv=0.3; # parameters: default cv if there are only 2 replicates
-
-	# Calculate error percentage
-	cv.values = sd.values[4:dim(sd.values)[2]] / mean.values[4:dim(sd.values)[2]];
-	# Values to close to the blank are removed because the error is not due to antibody specific binding
-	cv.values[!mean.values[,4:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA;
-	
-	# Generation of error percentage, one cv per antibody, default.cv if there is only two replicate to calculate the cv
-	cv = colMeans(cv.values,na.rm=TRUE)
-	cv[cv<min.cv] = min.cv;
-    cv[is.nan(cv)|is.na(cv)]=default.cv;
-    
-    if (FALSE) { #"Multiline comment"
-    for (i in 1:dim(cv.values)[2]) {
-        count = 0;
-        for (j in 1:dim(cv.values)[1]) {
-            if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
-                count = count + 1;
-            }
-        }
-        if (count <= 2) {
-            cv[i] = default.cv
-            print("Defaulted");
-        }
-    }
-    }
-
-    if (verbose) {
-        print("Error model :");
-        for (i in 1:length(cv)) {
-            print(paste(colnames(data.values)[i], " : ", cv[i]));
-        }
-    }
-
-# Separate values and perturbation
+    # Separate values and perturbation
 	data.stim = mean.values[mean.values$type=="t",4:dim(mean.values)[2]];
 	data.perturb = mean.values[mean.values$type=="t",1:2]
 
-# Generate the error model
-	error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
+	### CALCULATE ERROR MODEL
+
+    if (grepl("\\.cv$", data.variation) || grepl("\\.var$", data.variation)) {
+        # We use the CV file if there is one
+        print("Using var file")
+        variation.file = read.delim(data.variation)
+	    cv.values = aggregate(as.list(variation.file[, colnames(variation.file) %in% model.structure$names]),by=variable.file[,1:3],mean);
+        cv.stim = cv.values[cv.values$type=="t", 4:dim(cv.values)[2]];
+	    error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
+    } else {
+	    # Define the lower and default error threshold
+	    min.cv=0.1;     # parameters: minimal cv=0.1
+	    default.cv=0.3; # parameters: default cv if there are only 2 replicates
+
+	    # Calculate error percentage
+	    cv.values = sd.values[4:dim(sd.values)[2]] / mean.values[4:dim(sd.values)[2]];
+	    # Values to close to the blank are removed because the error is not due to antibody specific binding
+	    cv.values[!mean.values[,4:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA;
+	    
+	    # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
+	    cv = colMeans(cv.values,na.rm=TRUE)
+	    cv[cv<min.cv] = min.cv;
+        cv[is.nan(cv)|is.na(cv)]=default.cv;
+        
+        if (FALSE) { #"Multiline comment"
+        for (i in 1:dim(cv.values)[2]) {
+            count = 0;
+            for (j in 1:dim(cv.values)[1]) {
+                if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
+                    count = count + 1;
+                }
+            }
+            if (count <= 2) {
+                cv[i] = default.cv
+                print("Defaulted");
+            }
+        }
+        }
+
+        if (verbose) {
+            print("Error model :");
+            for (i in 1:length(cv)) {
+                print(paste(colnames(data.values)[i], " : ", cv[i]));
+            }
+        }
+	    error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
+    }
+
 
 ### SET UP DATA OBJECT
 

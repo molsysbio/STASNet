@@ -240,7 +240,7 @@ void fitmodel( std::vector <double> &bestfit,
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
 void profile_likelihood(const Data &data,
-	std::vector<double> parameters,
+	const std::vector<double> bestfit,
 	const std::vector<size_t> keep_constant,
 	std::vector< std::vector<double> > &residual_track,
 	std::vector<double> &explored,
@@ -253,9 +253,9 @@ void profile_likelihood(const Data &data,
     double_matrix prediction;
 
     // Initial fit
+    std::vector<double> parameters = bestfit;
     fitmodel(parameters, &residual, prediction, model, &data);
     double previous_residual = residual;
-    std::vector<double> bestfit = parameters;
 
     // Add the values of the thresholds
     thresholds.decision = 0.95;
