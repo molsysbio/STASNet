@@ -2,6 +2,8 @@
 
 library("igraph")
 
+source("./randomLHS.r"); # Latin Hypercube Sampling
+
 # Global variable to have more outputs
 verbose = FALSE;
 debug = TRUE;
@@ -139,29 +141,10 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 # Experimental design
 	expdes=getExperimentalDesign(model.structure,stim.nodes,inhib.nodes,measured.nodes,stimuli,inhibitor,basal.activity);
 
-# Model inputs structure
-    model_description = list()
-    model_description$design = expdes;
-    model_description$structure = model.structure;
-    model_description$data = data;
-    model_description$fileName = data.stimulation;
-
-    return(model_description);
-}
-
-
-# Finds a minimal model that fits the data and gives its parameters
-profile_likelihood <- function(model_description=NULL, in_file=FALSE)
-{
 ### MODEL SETUP
-    expdes = model_description$design;
-    model.structure = model_description$structure;
-    data = model_description$data;
-
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
-
-### INITIAL FIT
+## INITIAL FIT
     print ("Initializing the model parameters…")
     params = c();
     residuals = c();
@@ -178,16 +161,39 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
     }
     
 # Choice of the best fit
-    initparams = params[,order(residuals)[1]]
-    initresidual = residuals[order(residuals)[1]]
-    initial.response = model$getLocalResponseFromParameter( initparams )
-    adj = model.structure$adjacencymatrix
-    rank = model$modelRank();
+    init_params = params[,order(residuals)[1]]
+    init_residual = residuals[order(residuals)[1]]
 
     print("Model simulation :")
-    print(model$simulate(data, initparams)$prediction);
+    print(model$simulate(data, init_params)$prediction);
 
-    init_params = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
+
+# Information required to run the model (including the model itself)
+    model_description = list()
+    model_description$model = model;
+    model_description$design = expdes;
+    model_description$structure = model.structure;
+    model_description$data = data;
+    model_description$parameters = init_params;
+    model_description$bestfit = init_residual;
+    model_description$fileName = data.stimulation;
+
+    return(model_description);
+}
+
+
+# Computes the profile likelihood and the parameters relationships of each parameters in the model
+# Returns a list with the profiles for each parameters
+profile_likelihood <- function(model_description, in_file=FALSE)
+{
+### Get the information from the model description
+    model = model_description$model;
+    model.structure = model_description$structure;
+    data = model_description$data;
+
+    init_params = model_description$parameters;
+    initial_response = model$getLocalResponseFromParameter( init_params )
+    init_residual = model_description$bestfit;
     print(paste(length(init_params), " paths to evaluate"));
 
     profile_list = list();
@@ -195,9 +201,11 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
 ##
     #}
     for (path in 1:length(init_params)) {
-        lprofile = model$profileLikelihood(data, init_params, path, 1000);
-        # Residuals bigger than the simultaneous threshold are useless and would perturb x and y axis
+        lprofile = model$profileLikelihood(data, init_params, path, 10);
+        # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
         lprofile$residuals[path, lprofile$residuals[path,] > 1.1 * lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
+        # Simplify the name of the path
+        lprofile$path = simplify_path_name(lprofile$path);
         # Collapse the abscisse of the big residuals to the closest valid abscisse
         last_correct = 0; to_correct = c();
         if (FALSE) {
@@ -222,16 +230,17 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
         }
         }
 
-        print(paste("Parameter", lprofile$path, "decided (", path, "/", length(init_params), ")", sep=""));
+        print(paste("Parameter ", lprofile$path, " decided (", path, "/", length(init_params), ")", sep=""));
 
         profile_list[[path]] = lprofile;
     }
 
-    # Results, with error
-    print(paste("Residual =", initresidual))
+    ### Print results
+    # Print each path value with its error
+    print(paste("Residual =", init_residual))
     print("Parameters :");
     #print(model$getParametersNames()$names);
-    parameters = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
+    parameters = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors);
     paths = model$getParametersLinks()
     for (i in 1:length(paths)) {
         print(profile_list[0]$lower_pointwise)
@@ -246,10 +255,9 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
         }
     }
 
+    # Print the adjacency matrix and the inhibitors values
     print("Response matrix : ");
     print(model.structure$names)
-    print(model.structure$adjacencymatrix);
-
     local_response = model$getLocalResponseFromParameter(model$fitmodel(data, parameters)$parameter);
     print("Local response : ");
     print(local_response$local_response)
@@ -257,6 +265,44 @@ profile_likelihood <- function(model_description=NULL, in_file=FALSE)
     print(local_response$inhibitors);
 
     return(profile_list);
+}
+
+print_error_intervals <- function(profile_list) {
+
+}
+
+# Simplify the path name from the r_t_f* form to a f->t-> form
+simplify_path_name <- function (path_name) {
+    # Prepare a matrix 2*nb_nodes
+    elements = c();
+    nodes = unique(unlist(strsplit(path_name, "\\*|_|r")))
+    for (node in nodes) {
+        if (node != "") {
+            elements = rbind(elements, c("", ""))
+            rownames(elements)[dim(elements)[1]] = node
+        }
+    }
+    # Indicate for each node it previous and following node in the path
+    for (link in unlist(strsplit(path_name, "\\*")) ) {
+        nodes = unlist(strsplit(link, "_"))[2:3]
+        elements[nodes[1], 1] = nodes[2]
+        elements[nodes[2], 2] = nodes[1]
+    }
+    print(elements)
+    # Look for the node without predecessor
+    selected = 1
+    while (elements[selected, 1] != "") {
+        selected = selected + 1;
+    }
+    # Build the simple path
+    node = elements[selected, 2];
+    simple_path = paste(elements[node, 1], "->", elements[selected, 2], sep="");
+    while(elements[node, 2] != "") {
+        node = elements[node, 2];
+        simple_path = paste(simple_path, "->", node, sep="");
+    }
+
+    return(simple_path);
 }
 
 
@@ -281,7 +327,7 @@ classify_profiles <- function (pl_collection) {
 }
 
 # Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
-ni_pf_plot <- function(profiles, initresidual=0, data_name="default") {
+ni_pf_plot <- function(profiles, init_residual=0, data_name="default") {
     # Sort the profiles to print differently whether they are identifiable or not
     sorted_profiles = classify_profiles(profiles)
     i_profiles = sorted_profiles[[1]];
@@ -333,7 +379,7 @@ ni_pf_plot <- function(profiles, initresidual=0, data_name="default") {
                     # Could be accelerated with two points instead of hundreds
                     lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[1], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" );
                     lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[2], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" );
-                    if (initresidual != 0) { lines( rep(ni_profiles[[ni]]$value, length(-5:100)), (1 + -5:100/100) * initresidual, col="red"); }
+                    if (init_residual != 0) { lines( rep(ni_profiles[[ni]]$value, length(-5:100)), (1 + -5:100/100) * init_residual, col="red"); }
                 }
             }
             print(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"));
@@ -350,7 +396,7 @@ ni_pf_plot <- function(profiles, initresidual=0, data_name="default") {
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"));
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" );
-            if (initresidual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * initresidual, col="red"); }
+            if (init_residual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * init_residual, col="red"); }
 
             plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) );
             # Plot the functionnal relation

@@ -5,7 +5,6 @@ library("methods")
 
 source("./generate_model.R");
 source("./create_model.R");
-source("./randomLHS.r");
 
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
@@ -40,9 +39,9 @@ if (network == "") {
 #### Creates the model from network and basal files and fits a minimal model to the data
 model = create_model(network, data, basal_nodes, variation);
 
-#profiles = profile_likelihood(model);
+profiles = profile_likelihood(model);
 
-#ni_pf_plot(profiles, data_name=data_name);
+ni_pf_plot(profiles, data_name=data_name);
 
 # IDEAS :
 # data as last argument, possibility to give severals, in which case a comparison of the models is also done
