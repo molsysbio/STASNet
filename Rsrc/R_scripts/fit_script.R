@@ -17,14 +17,14 @@ variation = ""
 # Collect the filenames based on their extension
 for (argument in commandArgs()) {
     if (grepl(".tab$", argument)) {
-        network = paste(getwd(), "/", argument, sep="")
+        network = paste0(getwd(), "/", argument)
     } else if (grepl(".data$", argument)) {
-        data = paste(getwd(), "/", argument, sep="")
+        data = paste0(getwd(), "/", argument)
         data_name = basename(argument)
     } else if (grepl(".dat$", argument)) {
-        basal_nodes = paste(getwd(), "/", argument, sep="")
+        basal_nodes = paste0(getwd(), "/", argument)
     } else if (grepl(".var$", argument)) {
-        variation = paste(getwd(), "/", argument, sep="")
+        variation = paste0(getwd(), "/", argument)
     }
 }
 
@@ -38,8 +38,9 @@ if (network == "") {
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 model = create_model(network, data, basal_nodes, variation);
+plot_model_accuracy(model);
 
-profiles = profile_likelihood(model);
+profiles = profile_likelihood(model, 10);
 
 ni_pf_plot(profiles, data_name=data_name);
 

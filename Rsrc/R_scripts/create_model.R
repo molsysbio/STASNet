@@ -1,6 +1,7 @@
 ## Functions that simplify data parsing and model creation and fitting using the package
 
 library("igraph")
+library("pheatmap")
 
 source("./randomLHS.r"); # Latin Hypercube Sampling
 
@@ -24,6 +25,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 	links = read.delim(model.links, header=FALSE)
 	model.structure=getModelStructure(links)
     model_graph = graph.edgelist(as.matrix(links))
+    # Plot the network in a file
     pdf(gsub(".tab$", ".pdf", model.links))
     plot.igraph(model_graph)
     dev.off()
@@ -184,7 +186,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
 # Computes the profile likelihood and the parameters relationships of each parameters in the model
 # Returns a list with the profiles for each parameters
-profile_likelihood <- function(model_description, in_file=FALSE)
+profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALSE)
 {
 ### Get the information from the model description
     model = model_description$model;
@@ -196,19 +198,19 @@ profile_likelihood <- function(model_description, in_file=FALSE)
     init_residual = model_description$bestfit;
     print(paste(length(init_params), " paths to evaluate"));
 
-    profile_list = list();
+    profiles_list = list();
     #if (MULTITHREAD) {
 ##
     #}
     for (path in 1:length(init_params)) {
-        lprofile = model$profileLikelihood(data, init_params, path, 10);
+        lprofile = model$profileLikelihood(data, init_params, path, nb_points);
         # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
         lprofile$residuals[path, lprofile$residuals[path,] > 1.1 * lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
         # Simplify the name of the path
         lprofile$path = simplify_path_name(lprofile$path);
+        if (FALSE) {
         # Collapse the abscisse of the big residuals to the closest valid abscisse
         last_correct = 0; to_correct = c();
-        if (FALSE) {
         for (entry in 1:length(lprofile$residuals[path,])) {
             if (lprofile$residuals[path, entry] >= 1.1 * lprofile$thresholds[2]) {
         # Collapsing flat zones does not work for some reason, the flat zones are identified but not collapsed
@@ -230,65 +232,97 @@ profile_likelihood <- function(model_description, in_file=FALSE)
         }
         }
 
-        print(paste("Parameter ", lprofile$path, " decided (", path, "/", length(init_params), ")", sep=""));
+        print(paste0("Parameter ", lprofile$path, " decided (", path, "/", length(init_params), ")"));
 
-        profile_list[[path]] = lprofile;
+        profiles_list[[path]] = lprofile;
     }
 
     ### Print results
-    # Print each path value with its error
     print(paste("Residual =", init_residual))
-    print("Parameters :");
-    #print(model$getParametersNames()$names);
-    parameters = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors);
-    paths = model$getParametersLinks()
-    for (i in 1:length(paths)) {
-        print(profile_list[0]$lower_pointwise)
-        if (profile_list[[i]]$lower_pointwise && profile_list[[i]]$upper_pointwise) {
-            print(paste( paths[i], "=", parameters[i], "(", profile_list[[i]]$lower_error[1], "-", profile_list[[i]]$upper_error[1], ")"));
-        } else if (profile_list[[i]]$lower_pointwise) {
-            print(paste( paths[i], "=", parameters[i], "(", profile_list[[i]]$lower_error[1], "- ni )"));
-        } else if (profile_list[[i]]$upper_pointwise) {
-            print(paste( paths[i], "=", parameters[i], "( ni -", profile_list[[i]]$upper_error[1], ")"));
-        } else {
-            print(paste( paths[i], "=", parameters[i], "(non identifiable)"));
-        }
-    }
+    print_error_intervals(profiles_list)
 
     # Print the adjacency matrix and the inhibitors values
     print("Response matrix : ");
     print(model.structure$names)
-    local_response = model$getLocalResponseFromParameter(model$fitmodel(data, parameters)$parameter);
+    local_response = model$getLocalResponseFromParameter(init_params);
     print("Local response : ");
     print(local_response$local_response)
     print("Inhibitors :");
     print(local_response$inhibitors);
 
-    return(profile_list);
+    return(profiles_list);
 }
 
-print_error_intervals <- function(profile_list) {
+# Plots heatmaps of the model prediction against the data weighted by the error
+plot_model_accuracy <- function(model_description, data_name = "default") {
+    # Calculate the mismatch
+    model = model_description$model;
+    data = model_description$data;
+    error = data$error;
+    stim_data = data$stim_data
+    init_params = model_description$parameter;
 
+    mismatch = (stim_data - model$simulate(data, init_params)$prediction) / error;
+
+    # Rebuild the conditions from the design
+    nodes = model_description$structure$names
+    design = model_description$design
+    treatments = c()
+    for (row in 1:nrow(mismatch)) {
+        treatments = c(treatments, paste(c(nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1], nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]), collapse="+", sep="") );
+    }
+    print(treatments)
+    colnames(mismatch) = nodes[design$measured_nodes + 1];
+    rownames(mismatch) = treatments;
+
+    pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
+    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(100), clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", clustering_method="ward", display_numbers = T)
+    dev.off()
+}
+
+# Print each path value with its error
+print_error_intervals <- function(profiles_list) {
+    print("Parameters :");
+    for (i in 1:length(profiles_list)) {
+        print(profiles_list[0]$lower_pointwise)
+        if (profiles_list[[i]]$lower_pointwise && profiles_list[[i]]$upper_pointwise) {
+            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(", profiles_list[[i]]$lower_error[1], "-", profiles_list[[i]]$upper_error[1], ")"));
+        } else if (profiles_list[[i]]$lower_pointwise) {
+            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(", profiles_list[[i]]$lower_error[1], "- ni )"));
+        } else if (profiles_list[[i]]$upper_pointwise) {
+            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "( ni -", profiles_list[[i]]$upper_error[1], ")"));
+        } else {
+            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(non identifiable)"));
+        }
+    }
 }
 
 # Simplify the path name from the r_t_f* form to a f->t-> form
 simplify_path_name <- function (path_name) {
+    # Inhibitors do not need modification
+    if (grepl("i$", path_name) || grepl("^i", path_name)) {
+        return(path_name)
+    }
+
     # Prepare a matrix 2*nb_nodes
     elements = c();
-    nodes = unique(unlist(strsplit(path_name, "\\*|_|r")))
+    nodes = unique(unlist(strsplit(path_name, "\\*|_|r|\\^")))
     for (node in nodes) {
-        if (node != "") {
+        if (node != "" && !grepl("\\(-1\\)", node)) {
             elements = rbind(elements, c("", ""))
             rownames(elements)[dim(elements)[1]] = node
         }
     }
     # Indicate for each node it previous and following node in the path
     for (link in unlist(strsplit(path_name, "\\*")) ) {
-        nodes = unlist(strsplit(link, "_"))[2:3]
+        if (grepl("\\(-1\\)", link)) { # If the power is -1, we reverse the link
+            nodes = unlist(strsplit(link, "_|\\^"))[3:2]
+        } else {
+            nodes = unlist(strsplit(link, "_"))[2:3]
+        }
         elements[nodes[1], 1] = nodes[2]
         elements[nodes[2], 2] = nodes[1]
     }
-    print(elements)
     # Look for the node without predecessor
     selected = 1
     while (elements[selected, 1] != "") {
@@ -296,23 +330,21 @@ simplify_path_name <- function (path_name) {
     }
     # Build the simple path
     node = elements[selected, 2];
-    simple_path = paste(elements[node, 1], "->", elements[selected, 2], sep="");
+    simple_path = paste0(elements[node, 1], "->", elements[selected, 2]);
     while(elements[node, 2] != "") {
         node = elements[node, 2];
-        simple_path = paste(simple_path, "->", node, sep="");
+        simple_path = paste0(simple_path, "->", node);
     }
 
     return(simple_path);
 }
 
-
-
 # Separates the profiles whether they are identifiables or not
-classify_profiles <- function (pl_collection) {
+classify_profiles <- function (profiles_list) {
     ni_profiles = list()
     i_profiles = list();
 
-    for (lprofile in pl_collection) {
+    for (lprofile in profiles_list) {
         # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
         if (lprofile$lower_pointwise && lprofile$upper_pointwise) {
             i_profiles[[length(i_profiles)+1]] <- lprofile;
@@ -327,9 +359,9 @@ classify_profiles <- function (pl_collection) {
 }
 
 # Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
-ni_pf_plot <- function(profiles, init_residual=0, data_name="default") {
+ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
     # Sort the profiles to print differently whether they are identifiable or not
-    sorted_profiles = classify_profiles(profiles)
+    sorted_profiles = classify_profiles(profiles_list)
     i_profiles = sorted_profiles[[1]];
     ni_profiles = sorted_profiles[[2]];
 
@@ -344,7 +376,7 @@ ni_pf_plot <- function(profiles, init_residual=0, data_name="default") {
         dimension = 7;
     }
 
-    pdf(paste("NIplot_", data_name, ".pdf", sep=""), height=dimension, width=dimension);
+    pdf(paste0("NIplot_", data_name, ".pdf"), height=dimension, width=dimension);
     #limx = i_profiles[[1]]$
     if (nbni > 0) {
         margin = c(2, 2, 0.5, 0.5);
