@@ -1,10 +1,13 @@
 #!/usr/bin/Rscript
 # -*- coding=utf-8 -*-
 
-library("methods")
+# Hidden from the R installer but with the other scripts from the package
 
-source("generate_model.R");
-source("create_model.R");
+library("methods")
+library("fitmodel")
+
+#source("generate_model.R");
+#source("create_model.R");
 
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal

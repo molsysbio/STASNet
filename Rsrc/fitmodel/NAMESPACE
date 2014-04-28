@@ -1,3 +1,5 @@
 useDynLib(fitmodel)
 exportPattern("^[^\\.]")
 import( Rcpp )
+import( igraph )
+import( pheatmap )

@@ -3,7 +3,7 @@
 library("igraph")
 library("pheatmap")
 
-source("./randomLHS.r"); # Latin Hypercube Sampling
+source("R/randomLHS.r"); # Latin Hypercube Sampling
 
 # Global variable to have more outputs
 verbose = FALSE;
@@ -15,87 +15,87 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
 # model.links should be an adjacency list file representing the network
 # Experiment file data.stimulation syntax should be as follows, with one line per replicate
-#          stimulator                |          inhibitor                |                 	    type                       | [one column per measured nodes]
+#          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------
 # stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
 
-	### READ DATA
+    ### READ DATA
     print("Reading data")
-	# Creation of the structure object
-	links = read.delim(model.links, header=FALSE)
-	model.structure=getModelStructure(links)
+    # Creation of the structure object
+    links = read.delim(model.links, header=FALSE)
+    model.structure=getModelStructure(links)
     model_graph = graph.edgelist(as.matrix(links))
     # Plot the network in a file
     pdf(gsub(".tab$", ".pdf", model.links))
     plot.igraph(model_graph)
     dev.off()
 
-	# Read the experiment design and extract the values
-	data.file = read.delim(data.stimulation)
+    # Read the experiment design and extract the values
+    data.file = read.delim(data.stimulation)
     data.file[data.file=="Medium"] = "DMSO"
-	data.values = data.file[,colnames(data.file) %in% model.structure$names]
+    data.values = data.file[,colnames(data.file) %in% model.structure$names]
 
-	# Means of basal activity of the network and of the blank fixation of the antibodies
-	unstim.values = colMeans(data.values[data.file$type=="c",])
-	blank.values = colMeans(data.values[data.file$type=="blank",])
+    # Means of basal activity of the network and of the blank fixation of the antibodies
+    unstim.values = colMeans(data.values[data.file$type=="c",])
+    blank.values = colMeans(data.values[data.file$type=="blank",])
     blank.values[is.nan(blank.values)] = 0; # For sample without blank values
 
-	# Calculates the mean and standard deviation for each condition 
-	mean.values = aggregate(as.list(data.values),by=data.file[,1:3],mean);
-	sd.values = aggregate(as.list(data.values),by=data.file[,1:3],sd);
+    # Calculates the mean and standard deviation for each condition 
+    mean.values = aggregate(as.list(data.values),by=data.file[,1:3],mean);
+    sd.values = aggregate(as.list(data.values),by=data.file[,1:3],sd);
     print("Data used :")
     print(mean.values)
 
     # Separate values and perturbation
-	data.stim = mean.values[mean.values$type=="t",4:dim(mean.values)[2]];
-	data.perturb = mean.values[mean.values$type=="t",1:2]
+    data.stim = mean.values[mean.values$type=="t",4:dim(mean.values)[2]];
+    data.perturb = mean.values[mean.values$type=="t",1:2]
 
-	### CALCULATE ERROR MODEL
+    ### CALCULATE ERROR MODEL
 
     if (grepl("\\.cv$", data.variation) || grepl("\\.var$", data.variation)) {
         # We use the CV file if there is one
         print("Using var file")
         variation.file = read.delim(data.variation)
-	    cv.values = aggregate(as.list(variation.file[, colnames(variation.file) %in% model.structure$names]),by=variable.file[,1:3],mean);
+        cv.values = aggregate(as.list(variation.file[, colnames(variation.file) %in% model.structure$names]),by=variable.file[,1:3],mean);
         cv.stim = cv.values[cv.values$type=="t", 4:dim(cv.values)[2]];
-	    error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
+        error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
     } else {
-	    # Define the lower and default error threshold
-	    min.cv=0.1;     # parameters: minimal cv=0.1
-	    default.cv=0.3; # parameters: default cv if there are only 2 replicates
+    # Define the lower and default error threshold
+        min.cv=0.1;     # parameters: minimal cv=0.1
+        default.cv=0.3; # parameters: default cv if there are only 2 replicates
 
-	    # Calculate error percentage
-	    cv.values = sd.values[4:dim(sd.values)[2]] / mean.values[4:dim(sd.values)[2]];
-	    # Values to close to the blank are removed because the error is not due to antibody specific binding
-	    cv.values[!mean.values[,4:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA;
-	    
-	    # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
-	    cv = colMeans(cv.values,na.rm=TRUE)
-	    cv[cv<min.cv] = min.cv;
-        cv[is.nan(cv)|is.na(cv)]=default.cv;
-        
-        if (FALSE) { #"Multiline comment"
-        for (i in 1:dim(cv.values)[2]) {
-            count = 0;
-            for (j in 1:dim(cv.values)[1]) {
-                if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
-                    count = count + 1;
-                }
-            }
-            if (count <= 2) {
-                cv[i] = default.cv
-                print("Defaulted");
-            }
-        }
-        }
+        # Calculate error percentage
+        cv.values = sd.values[4:dim(sd.values)[2]] / mean.values[4:dim(sd.values)[2]];
+        # Values to close to the blank are removed because the error is not due to antibody specific binding
+        cv.values[!mean.values[,4:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA;
+            
+    # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
+    cv = colMeans(cv.values,na.rm=TRUE)
+    cv[cv<min.cv] = min.cv;
+    cv[is.nan(cv)|is.na(cv)]=default.cv;
 
-        if (verbose) {
-            print("Error model :");
-            for (i in 1:length(cv)) {
-                print(paste(colnames(data.values)[i], " : ", cv[i]));
-            }
-        }
-	    error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
+    if (FALSE) { #"Multiline comment"
+    for (i in 1:dim(cv.values)[2]) {
+    count = 0;
+    for (j in 1:dim(cv.values)[1]) {
+    if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
+    count = count + 1;
+    }
+    }
+    if (count <= 2) {
+    cv[i] = default.cv
+    print("Defaulted");
+    }
+    }
+    }
+
+    if (verbose) {
+    print("Error model :");
+    for (i in 1:length(cv)) {
+        print(paste(colnames(data.values)[i], " : ", cv[i]));
+    }
+    }
+    error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
     }
 
 
@@ -121,7 +121,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 # Inhibition and stimulation vectors for each experiment
     stimuli=matrix(0,ncol=length(stim.nodes),nrow=dim(data.perturb)[1])
     for (i in 1:length(stim.nodes)) {
-	    stimuli[data.perturb$stimulator==stim.nodes[i],i]=1;
+        stimuli[data.perturb$stimulator==stim.nodes[i],i]=1;
     }
     if (verbose) {
         print("Stimulated nodes");
@@ -131,7 +131,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     inhibitor=matrix(0,ncol=length(inhib.nodes),nrow=dim(data.perturb)[1])
     if (length(inhib.nodes) > 0) { # Usefull for artificial networks
         for (i in 1:length(inhib.nodes)) {
-	        inhibitor[data.perturb$inhibitor==inhib.nodes[i],i]=1;
+            inhibitor[data.perturb$inhibitor==inhib.nodes[i],i]=1;
         }
         if (verbose) {
             print("Inhibited nodes");
@@ -141,7 +141,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     }
 
 # Experimental design
-	expdes=getExperimentalDesign(model.structure,stim.nodes,inhib.nodes,measured.nodes,stimuli,inhibitor,basal.activity);
+    expdes=getExperimentalDesign(model.structure,stim.nodes,inhib.nodes,measured.nodes,stimuli,inhibitor,basal.activity);
 
 ### MODEL SETUP
     model = new(fitmodel::Model);
