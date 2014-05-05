@@ -1,4 +1,5 @@
 #include "generate_response.hpp"
+#include "helper_types.hpp"
 #include <boost/lexical_cast.hpp>
 #include <iostream>                      // cin, cout, iostrstream...
 
@@ -48,7 +49,9 @@ void generate_response( GiNaC::matrix &response,
   }
 
   //  (III) -Create the global response matrix "R": R = -1 * inv(r)
+  //std::cout << r << std::endl;
   GiNaC::matrix R=GiNaC::ex_to<GiNaC::matrix>(r.inverse()).mul_scalar(-1);
+  //std::cout << R.expand() << std::endl; // Variation here due to different simplification by GiNaC
 
 
   //  (IV) -Create the actual response vector (of what was measured and perturbed including inhibitor effects)-

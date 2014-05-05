@@ -32,10 +32,10 @@ size_t ModelWrapper::nr_of_parameters() {
   return -1;
 } 
 
-  
+// Check if the experiment design is consistent
 bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructure &mod) {
   int nodes= mod.getAdjacencyMatrix().shape()[0]; 
-  if (nodes!=mod.getAdjacencyMatrix().shape()[0]) 
+  if (nodes!=mod.getAdjacencyMatrix().shape()[1]) 
     throw (std::invalid_argument("adj matrix not square"));
   if (nodes!=mod.getNames().size()) 
     throw (std::invalid_argument("names size wrong"));

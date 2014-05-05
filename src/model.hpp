@@ -83,16 +83,16 @@ public:
 
 
 protected:
-  // The equations of the reduced model
+  // The equations of the reduced model under GiNaC or mathtree format
   equation_matrix model_eqns_;
   std::vector<MathTree::parameter::Ptr> parameters_;
   std::vector<size_t> independent_parameters_;
   std::vector<GiNaC::ex> paths_;
+  GiNaC::matrix response_;
   
   // 
   ExperimentalDesign exp_design_;
   std::vector< GiNaC::symbol > symbols_;
-  GiNaC::matrix response_;
   double_matrix parameter_dependency_matrix_;
   int_matrix parameter_dependency_matrix_unreduced_;
   size_t rank_;

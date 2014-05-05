@@ -56,7 +56,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
         # We use the CV file if there is one
         print("Using var file")
         variation.file = read.delim(data.variation)
-        cv.values = aggregate(as.list(variation.file[, colnames(variation.file) %in% model.structure$names]),by=variable.file[,1:3],mean);
+        cv.values = aggregate(as.list(variation.file[, colnames(variation.file) %in% model.structure$names]),by=variation.file[,1:3],mean);
         cv.stim = cv.values[cv.values$type=="t", 4:dim(cv.values)[2]];
         error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
     } else {
@@ -76,24 +76,24 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
     if (FALSE) { #"Multiline comment"
     for (i in 1:dim(cv.values)[2]) {
-    count = 0;
-    for (j in 1:dim(cv.values)[1]) {
-    if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
-    count = count + 1;
-    }
-    }
-    if (count <= 2) {
-    cv[i] = default.cv
-    print("Defaulted");
-    }
+        count = 0;
+        for (j in 1:dim(cv.values)[1]) {
+            if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
+                count = count + 1;
+            }
+        }
+        if (count <= 2) {
+            cv[i] = default.cv
+            print("Defaulted");
+        }
     }
     }
 
     if (verbose) {
-    print("Error model :");
-    for (i in 1:length(cv)) {
-        print(paste(colnames(data.values)[i], " : ", cv[i]));
-    }
+        print("Error model :");
+        for (i in 1:length(cv)) {
+            print(paste(colnames(data.values)[i], " : ", cv[i]));
+        }
     }
     error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
     }
@@ -110,7 +110,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
 ### EXTRACT EXPERIMENTAL DESIGN
 
-# Exctraction of stimulate, inhibited and measured nodes
+# Exctraction of stimulated, inhibited and measured nodes
     stim.nodes=as.character(unique(mean.values$stimulator[mean.values$stimulator %in% model.structure$names]));
     inhib.nodes=as.character(unique(mean.values$inhibitor[mean.values$inhibitor %in% model.structure$names]));
     measured.nodes=colnames(data.stim);
@@ -121,7 +121,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 # Inhibition and stimulation vectors for each experiment
     stimuli=matrix(0,ncol=length(stim.nodes),nrow=dim(data.perturb)[1])
     for (i in 1:length(stim.nodes)) {
-        stimuli[data.perturb$stimulator==stim.nodes[i],i]=1;
+        stimuli[grepl(stim.nodes[i], data.perturb$stimulator),i]=1;
     }
     if (verbose) {
         print("Stimulated nodes");
@@ -131,7 +131,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     inhibitor=matrix(0,ncol=length(inhib.nodes),nrow=dim(data.perturb)[1])
     if (length(inhib.nodes) > 0) { # Usefull for artificial networks
         for (i in 1:length(inhib.nodes)) {
-            inhibitor[data.perturb$inhibitor==inhib.nodes[i],i]=1;
+            inhibitor[grepl(inhib.nodes[i], data.perturb$inhibitor),i]=1;
         }
         if (verbose) {
             print("Inhibited nodes");
@@ -147,16 +147,20 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
 ## INITIAL FIT
-    print ("Initializing the model parameters…")
+    nb_samples = 10000;
+#length(model.structure$names);
+    print (paste("Initializing the model parameters… (", nb_samples, " random samplings)", sep=""))
     params = c();
     residuals = c();
-    nb_samples = 100;
 # Random initializations with Latin Hypercube Sample to find a global maximum fit
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
     for (i in 1:nb_samples) {
         result = model$fitmodel( data, samples[i,] )
         residuals = c(residuals,result$residuals);
         params = cbind(params,result$parameter)
+        if (i %% (nb_samples/20) == 0) {
+            print(paste(i %/% (nb_samples/20), "/ 20 initialization done."))
+        }
     }
     if (debug) {
         print(sort(residuals))
@@ -269,22 +273,28 @@ plot_model_accuracy <- function(model_description, data_name = "default") {
     design = model_description$design
     treatments = c()
     for (row in 1:nrow(mismatch)) {
-        treatments = c(treatments, paste(c(nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1], nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]), collapse="+", sep="") );
+        stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1];
+        inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1];
+        if (length(inhib_names) > 0) {
+            paste(inhib_names, "i", sep="")
+        }
+        treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") );
     }
     print(treatments)
     colnames(mismatch) = nodes[design$measured_nodes + 1];
     rownames(mismatch) = treatments;
 
     pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
-    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(100), clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", clustering_method="ward", display_numbers = T)
+    bk = unique( c(seq(min(mismatch), 0, length=50), seq(0, max(mismatch), length=50)) )
+    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", clustering_method="ward", display_numbers = T)
     dev.off()
 }
 
 # Print each path value with its error
 print_error_intervals <- function(profiles_list) {
     print("Parameters :");
+        print(profiles_list[1]$lower_pointwise)
     for (i in 1:length(profiles_list)) {
-        print(profiles_list[0]$lower_pointwise)
         if (profiles_list[[i]]$lower_pointwise && profiles_list[[i]]$upper_pointwise) {
             print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(", profiles_list[[i]]$lower_error[1], "-", profiles_list[[i]]$upper_error[1], ")"));
         } else if (profiles_list[[i]]$lower_pointwise) {

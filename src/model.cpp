@@ -174,10 +174,6 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
     double eps = 0.0000001;
     size_t previous_size = parameters_.size();
 
-    // ERRORS :
-    // when negative exponent, the paths are not rebuilt correctly
-    // need to solve the system to get k = f(iP)
-
     // Build the new independent parameters ("singletons") from the reduced matrix
     parameterlist singletons;
     for (size_t i=0 ; i < rank_ ; i++) {
@@ -450,25 +446,27 @@ void Model::simplify_independent_parameters_using_subtraction(std::vector< std::
 }
 
 
-// Locate the sums to the power of -1
+// Locate the sums to the power of -1 (denominators) from the GiNaC expression
 void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
     MathTree::math_item::Ptr tmp;
     if (GiNaC::is_a<GiNaC::power>(e)) {
-        if (e.nops()==2) {
+        if (e.nops()==2) { // Sanity check
             if (e.op(1)==-1) {
                 if (GiNaC::is_a<GiNaC::add>(e.op(0))) {
+                /* Commented by Mathurin 2014/05/02 because multiple feedback loops cause +1 to appear by multiplication like (a-1)(b-1)
                     for (size_t i=0; i<e.op(0).nops(); ++i) {
                         if (GiNaC::is_a<GiNaC::numeric>(e.op(0).op(i))) {
                             if (GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double()!=-1) {
-                    std::cout << "Was soll das?" << 
-                        GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double() << std::endl;
-                    exit(-1);
+                                std::cout << "Was soll das ? " << 
+                                GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double() << " " << e.op(0) << std::endl;
+                                //exit(-1); // commented by Mathurin 2014/04/28 because it caused unwanted stops (the minus sign is on the other terms)
                             }
                             
                         }
                     }
+                    */
 
-                    // Add it only once
+                    // Add each sum once to the set
                     std::vector<GiNaC::ex>::iterator iter=set.begin();
                     while ( !((iter==set.end()) || ((*iter) == e.op(0)))) {
                         iter++;
@@ -517,6 +515,7 @@ double Model::getPeneltyForConstraints(const double *p) const {
     return penelty;
 }
 
+// Collect the sums to the power of -1 from the GiNaC equation matrix and put them under the mathtree format in a vector (put into constraints_ by do_init)
 void Model::getConstraints( parameterlist &params, std::vector<MathTree::math_item::Ptr> &equations) {
     std::vector<GiNaC::ex> set;
     for (size_t i=0; i<response_.rows(); i++) 

@@ -6,6 +6,15 @@
 library("methods")
 library("fitmodel")
 
+# Print the time it took in a readable format
+get_running_time <- function(init_time, text="") {
+    run_time = proc.time()["elapsed"]-init_time
+    run_hours = run_time %/% 3600;
+    run_minutes = (run_time - 3600 * run_hours) %/% 60;
+    run_seconds = run_time - 3600 * run_hours - 60 * run_minutes;
+    print(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
+}
+
 #source("generate_model.R");
 #source("create_model.R");
 
@@ -16,6 +25,7 @@ data = ""
 network = ""
 basal_nodes = ""
 variation = ""
+nb_steps = 10000
 
 # Collect the filenames based on their extension
 for (argument in commandArgs()) {
@@ -40,14 +50,22 @@ if (network == "") {
 }
 
 #### Creates the model from network and basal files and fits a minimal model to the data
+init_time = proc.time()["elapsed"];
 model = create_model(network, data, basal_nodes, variation);
-plot_model_accuracy(model);
+get_running_time(init_time, "to build the model.")
+plot_model_accuracy(model, data_name);
 
-profiles = profile_likelihood(model, 10);
+# No need to plot the profiles to start building the network
+#profiles = profile_likelihood(model, nb_steps);
 
-ni_pf_plot(profiles, data_name=data_name);
+#ni_pf_plot(profiles, data_name=data_name);
+get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
+
 
 # IDEAS :
 # data as last argument, possibility to give severals, in which case a comparison of the models is also done
 # one argument : name of a file with network, basal_nodes, and the name of the data files
+
+# Display the warnings if there are some
+warnings()
 
