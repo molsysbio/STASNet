@@ -31,7 +31,7 @@ nb_steps = 10000
 for (argument in commandArgs()) {
     if (grepl(".tab$", argument)) {
         network = paste0(getwd(), "/", argument)
-    } else if (grepl(".data$", argument)) {
+    } else if (grepl(".data$", argument) || grepl(".csv$", argument)) {
         data = paste0(getwd(), "/", argument)
         data_name = basename(argument)
     } else if (grepl(".dat$", argument)) {
@@ -58,7 +58,7 @@ plot_model_accuracy(model, data_name);
 # No need to plot the profiles to start building the network
 #profiles = profile_likelihood(model, nb_steps);
 
-#ni_pf_plot(profiles, data_name=data_name);
+#ni_pf_plot(profiles, data_name=data_name
 get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
 
 

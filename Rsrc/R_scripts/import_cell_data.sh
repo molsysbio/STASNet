@@ -17,14 +17,14 @@ then
     file=$1/
 fi
 
-for cell_line in `ls $file*.data`
+for cell_line in `ls $file*.data || ls $file*.csv`
 do
-    base=`echo $cell_line | sed -r s_/.+/\([^/]+\)\\.data_\\\\1_`
+    base=`echo $cell_line | sed -r "s_/.+/([^/]+)\.(data|csv)_\1_"`
     if [[ ! -e $base ]]
     then
         mkdir $base
     fi
-    cp $file$base.data $base
+    cp $cell_line $base
     cp $file$base.var $base
 done
 

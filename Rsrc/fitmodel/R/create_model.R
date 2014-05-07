@@ -21,19 +21,39 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
     ### READ DATA
     print("Reading data")
-    # Creation of the structure object
+    # Creation of the model structure object
     links = read.delim(model.links, header=FALSE)
     model.structure=getModelStructure(links)
     model_graph = graph.edgelist(as.matrix(links))
     # Plot the network in a file
     pdf(gsub(".tab$", ".pdf", model.links))
-    plot.igraph(model_graph)
+    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
     # Read the experiment design and extract the values
-    data.file = read.delim(data.stimulation)
-    data.file[data.file=="Medium"] = "DMSO"
-    data.values = data.file[,colnames(data.file) %in% model.structure$names]
+    use_midas = FALSE
+    if (grepl(".data$", data.stimulation)) {
+        data.file = read.delim(data.stimulation)
+        data.file[data.file=="Medium"] = "DMSO"
+        begin_measure = 4
+        # Indicate where the conditions are
+        conditions = c(1, 2)
+        data.values = data.file[, colnames(data.file) %in% model.structure$names]
+    } else if (grepl(".csv$", data.stimulation)) {
+        use_midas = TRUE
+        data.file = read.delim(data.stimulation, sep=",")
+        begin_measure = which(grepl("^DA.", colnames(data.file)))
+        data.file = data.file[-begin_measure] # Delete the DA field which is not used
+        begin_measure = begin_measure[1] # If there were several DA fields
+        # Indicate where the conditions are
+        conditions = 2:(begin_measure-1)
+
+        # Extract the measurements of nodes in the network
+        data.values = data.file[,grepl("^DV", colnames(data.file))]
+        colnames(data.file) = gsub("^[A-Z]{2}.", "", colnames(data.file))
+        colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
+        data.values = data.values[, colnames(data.values) %in% model.structure$names]
+    }
 
     # Means of basal activity of the network and of the blank fixation of the antibodies
     unstim.values = colMeans(data.values[data.file$type=="c",])
@@ -41,23 +61,30 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     blank.values[is.nan(blank.values)] = 0; # For sample without blank values
 
     # Calculates the mean and standard deviation for each condition 
-    mean.values = aggregate(as.list(data.values),by=data.file[,1:3],mean);
-    sd.values = aggregate(as.list(data.values),by=data.file[,1:3],sd);
+    mean.values = aggregate(as.list(data.values),by=data.file[,1:(begin_measure-1)],mean);
+    sd.values = aggregate(as.list(data.values),by=data.file[,1:(begin_measure-1)],sd);
     print("Data used :")
     print(mean.values)
 
     # Separate values and perturbation
-    data.stim = mean.values[mean.values$type=="t",4:dim(mean.values)[2]];
-    data.perturb = mean.values[mean.values$type=="t",1:2]
+    data.stim = mean.values[mean.values$type=="t",begin_measure:dim(mean.values)[2]];
+    data.perturb = mean.values[mean.values$type=="t", conditions]
 
     ### CALCULATE ERROR MODEL
-
     if (grepl("\\.cv$", data.variation) || grepl("\\.var$", data.variation)) {
         # We use the CV file if there is one
+        # The format and the order of the conditions are assumed to be the same as the data file
         print("Using var file")
-        variation.file = read.delim(data.variation)
-        cv.values = aggregate(as.list(variation.file[, colnames(variation.file) %in% model.structure$names]),by=variation.file[,1:3],mean);
-        cv.stim = cv.values[cv.values$type=="t", 4:dim(cv.values)[2]];
+        if (use_midas) {
+            variation.file = read.delim(data.variation, sep=",")
+            pre_cv = variation.file[, grepl("^DV", colnames(variation.file))]
+            colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
+            cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model.structure$names] ), by=data.file[,1:(begin_measure-1)], mean);
+        } else {
+            variation.file = read.delim(data.variation)
+            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model.structure$names]),by=data.file[,1:(begin_measure-1)],mean);
+        }
+        cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]];
         error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
     } else {
     # Define the lower and default error threshold
@@ -65,37 +92,37 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
         default.cv=0.3; # parameters: default cv if there are only 2 replicates
 
         # Calculate error percentage
-        cv.values = sd.values[4:dim(sd.values)[2]] / mean.values[4:dim(sd.values)[2]];
+        cv.values = sd.values[begin_measure:dim(sd.values)[2]] / mean.values[begin_measure:dim(sd.values)[2]];
         # Values to close to the blank are removed because the error is not due to antibody specific binding
-        cv.values[!mean.values[,4:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA;
+        cv.values[!mean.values[,begin_measure:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA;
             
-    # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
-    cv = colMeans(cv.values,na.rm=TRUE)
-    cv[cv<min.cv] = min.cv;
-    cv[is.nan(cv)|is.na(cv)]=default.cv;
+        # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
+        cv = colMeans(cv.values,na.rm=TRUE)
+        cv[cv<min.cv] = min.cv;
+        cv[is.nan(cv)|is.na(cv)]=default.cv;
 
-    if (FALSE) { #"Multiline comment"
-    for (i in 1:dim(cv.values)[2]) {
-        count = 0;
-        for (j in 1:dim(cv.values)[1]) {
-            if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
-                count = count + 1;
+        if (FALSE) { #"Multiline comment"
+        for (i in 1:dim(cv.values)[2]) {
+            count = 0;
+            for (j in 1:dim(cv.values)[1]) {
+                if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
+                    count = count + 1;
+                }
+            }
+            if (count <= 2) {
+                cv[i] = default.cv
+                print("Defaulted");
             }
         }
-        if (count <= 2) {
-            cv[i] = default.cv
-            print("Defaulted");
         }
-    }
-    }
 
-    if (verbose) {
-        print("Error model :");
-        for (i in 1:length(cv)) {
-            print(paste(colnames(data.values)[i], " : ", cv[i]));
+        if (verbose) {
+            print("Error model :");
+            for (i in 1:length(cv)) {
+                print(paste(colnames(data.values)[i], " : ", cv[i]));
+            }
         }
-    }
-    error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
+        error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
     }
 
 
@@ -110,34 +137,50 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
 ### EXTRACT EXPERIMENTAL DESIGN
 
-# Exctraction of stimulated, inhibited and measured nodes
-    stim.nodes=as.character(unique(mean.values$stimulator[mean.values$stimulator %in% model.structure$names]));
-    inhib.nodes=as.character(unique(mean.values$inhibitor[mean.values$inhibitor %in% model.structure$names]));
+# Extraction of stimulated, inhibited and measured nodes
+    if (use_midas) {
+        names = colnames(mean.values)[conditions]
+        stim_names = names[grepl("[^i]$", names)];
+        stim.nodes = as.character( stim_names[ stim_names %in% model.structure$names] )
+        names = gsub("i$", "", names[grepl("i$", names)])
+        inhib.nodes = as.character( names[names %in% model.structure$names] )
+    } else {
+        stim.nodes = as.character(unique(mean.values$stimulator[mean.values$stimulator %in% model.structure$names]));
+        inhib.nodes = as.character(unique(mean.values$inhibitor[mean.values$inhibitor %in% model.structure$names]));
+    }
     measured.nodes=colnames(data.stim);
 
 ## Identification of nodes with basal activity
     basal.activity=as.character(read.delim(basal_activity,header=FALSE)[,1]);
 
 # Inhibition and stimulation vectors for each experiment
-    stimuli=matrix(0,ncol=length(stim.nodes),nrow=dim(data.perturb)[1])
-    for (i in 1:length(stim.nodes)) {
-        stimuli[grepl(stim.nodes[i], data.perturb$stimulator),i]=1;
+    if (use_midas) {
+        stimuli = as.matrix(data.perturb[stim.nodes])
+    } else {
+        stimuli=matrix(0,ncol=length(stim.nodes),nrow=dim(data.perturb)[1])
+        for (i in 1:length(stim.nodes)) {
+            stimuli[grepl(stim.nodes[i], data.perturb$stimulator),i]=1;
+        }
     }
     if (verbose) {
         print("Stimulated nodes");
         print(stim.nodes);
         print(stimuli);
     }
-    inhibitor=matrix(0,ncol=length(inhib.nodes),nrow=dim(data.perturb)[1])
-    if (length(inhib.nodes) > 0) { # Usefull for artificial networks
-        for (i in 1:length(inhib.nodes)) {
-            inhibitor[grepl(inhib.nodes[i], data.perturb$inhibitor),i]=1;
+    if (use_midas) {
+        inhibitor = as.matrix(data.perturb[paste(inhib.nodes, "i", sep="")])
+    } else {
+        inhibitor=matrix(0,ncol=length(inhib.nodes),nrow=dim(data.perturb)[1])
+        if (length(inhib.nodes) > 0) { # Usefull for artificial networks
+            for (i in 1:length(inhib.nodes)) {
+                inhibitor[grepl(inhib.nodes[i], data.perturb$inhibitor),i]=1;
+            }
         }
-        if (verbose) {
-            print("Inhibited nodes");
-            print(inhib.nodes);
-            print(inhibitor);
-        }
+    }
+    if (verbose) {
+        print("Inhibited nodes");
+        print(inhib.nodes);
+        print(inhibitor);
     }
 
 # Experimental design
@@ -147,7 +190,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
 ## INITIAL FIT
-    nb_samples = 10000;
+    nb_samples = 10;
 #length(model.structure$names);
     print (paste("Initializing the model parameters… (", nb_samples, " random samplings)", sep=""))
     params = c();
@@ -455,5 +498,19 @@ ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
     dev.off();
 
 }
+
+# Exports the model in a file 
+export_model <- function(model_description, file_name="model") {
+    # Add an extension
+    if (!grepl(".mra$", file_name)) {
+        file_name = paste(file_name, ".mra", sep="")
+    }
+}
+
+# Import model from a file
+import_model <- function(file_name) {
+    print("Not implemented yet")
+}
+
 
 
