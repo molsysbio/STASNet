@@ -15,6 +15,7 @@ ModelWrapper::~ModelWrapper() {
   if (model!=NULL) delete model;
 }
 
+
 void ModelWrapper::printResponse() {
     if (model == NULL) throw(std::logic_error("Model not set"));
     model-> printResponse();

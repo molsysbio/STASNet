@@ -2,6 +2,7 @@
 
 library("igraph")
 library("pheatmap")
+library("parallel")
 
 source("R/randomLHS.r"); # Latin Hypercube Sampling
 
@@ -9,7 +10,7 @@ source("R/randomLHS.r"); # Latin Hypercube Sampling
 verbose = FALSE;
 debug = TRUE;
 
-create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="")
+create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", multi_thread = FALSE)
 {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
@@ -190,21 +191,13 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
 ## INITIAL FIT
-    nb_samples = 10;
-#length(model.structure$names);
+    nb_samples = 1000;
     print (paste("Initializing the model parameters… (", nb_samples, " random samplings)", sep=""))
-    params = c();
-    residuals = c();
-# Random initializations with Latin Hypercube Sample to find a global maximum fit
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
-    for (i in 1:nb_samples) {
-        result = model$fitmodel( data, samples[i,] )
-        residuals = c(residuals,result$residuals);
-        params = cbind(params,result$parameter)
-        if (i %% (nb_samples/20) == 0) {
-            print(paste(i %/% (nb_samples/20), "/ 20 initialization done."))
-        }
-    }
+    # Parallelized version uses all cores but one to keep control
+    results = parallel_initialisation(model, expdes, model.structure, data, samples, detectCores()-1)
+    params = results$params;
+    residuals = results$residuals;
     if (debug) {
         print(sort(residuals))
     }
@@ -228,6 +221,82 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model_description$fileName = data.stimulation;
 
     return(model_description);
+}
+
+# Initialise the parameters with a one core processing
+classic_initialisation <- function(model, data, samples) {
+    for (i in 1:nb_samples) {
+        result = model$fitmodel( data, samples[i,] )
+        residuals = c(residuals,result$residuals);
+        params = cbind(params,result$parameter)
+        if (i %% (nb_samples/20) == 0) {
+            print(paste(i %/% (nb_samples/20), "/ 20 initialization done."))
+        }
+    }
+    if (debug) {
+        print(sort(residuals))
+    }
+    results = list()
+    results$residuals = resisuals
+    results$params = params
+}
+
+setRefClass("usable", fields=list(ready="vector")) # Class to be sure that a model is available for the new thread
+# Parallel initialisation of the parameters
+parallel_initialisation <- function(model, expdes, structure, data, samples, NB_THREADS) {
+    # Put it under list format, as randomLHS only provides a matrix
+    parallel_sampling = list()
+    for (i in 1:dim(samples)[1]) {
+        parallel_sampling[[i]] = samples[i,]
+    }
+    # Parallel initialisations
+    ## Create a set of models that can be used in parallel
+    print("Creating copies of the model for multithreaded initialisation...")
+    model_set = list()
+    available = c()
+    for (i in 1:NB_THREADS) {
+        model_set[[i]] = new(fitmodel::Model)
+        model_set[[i]]$setModel(expdes, structure)
+        # It might be possible to use C++ copy construction, using the same GiNaC object (not copied) for all models
+        available = c(available, TRUE)
+    }
+    # The referenced object seems to be copied for each thread, it might not be necessary to create several copies of model
+    usability = new("usable", ready=available) # Object that will be passed by reference
+    ## Perform the initialisation
+    # The number of cores used depends on the ability of the detectCores function to detect them
+    print("Performing initialisation...")
+    parallel_results = mclapply(parallel_sampling, parallel_fitmodel, data, model_set, usability, mc.cores=NB_THREADS);
+
+    # Reorder the results to get the same output as the linear function
+    results = list()
+    results$residuals = c()
+    results$params = c()
+    for (entry in parallel_results) {
+        results$residuals = c(results$residuals, entry$residuals)
+        results$params = cbind(results$params, entry$parameter)
+    }
+
+    return(results)
+}
+
+# Allow to initialise in parallel using several copies of the model
+parallel_fitmodel <- function (params, data, model_set, usability) {
+    if (length(model_set) < length(usability$ready)) {
+        stop("Model set has less element than the availability control vector which will lead to multiple access to the same instance")
+    }
+    # Find a model that can be used 
+    i = 1;
+    while (!usability$ready[i]) {
+        i = i + 1;
+        if (i > length(usability$ready)) {
+            i = 1;
+        }
+    }
+    usability$ready[i] = FALSE; # The model i is not available
+    result = model_set[[i]]$fitmodel(data, params)
+    usability$ready[i] = TRUE; # The model i is available again
+
+    return(result)
 }
 
 
