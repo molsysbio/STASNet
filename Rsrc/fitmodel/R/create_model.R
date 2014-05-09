@@ -191,18 +191,19 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
 ## INITIAL FIT
-    nb_samples = 1000;
+    nb_samples = 100000;
     print (paste("Initializing the model parameters… (", nb_samples, " random samplings)", sep=""))
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
     # Parallelized version uses all cores but one to keep control
     results = parallel_initialisation(model, expdes, model.structure, data, samples, detectCores()-1)
+    
+# Choice of the best fit
     params = results$params;
     residuals = results$residuals;
     if (debug) {
-        print(sort(residuals))
+        # Print the 20 smallest residuals to check if the optimum has been found several times
+        print(sort(residuals)[1:20])
     }
-    
-# Choice of the best fit
     init_params = params[,order(residuals)[1]]
     init_residual = residuals[order(residuals)[1]]
 
@@ -219,6 +220,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model_description$parameters = init_params;
     model_description$bestfit = init_residual;
     model_description$fileName = data.stimulation;
+    model_description$basal = basal.activity;
 
     return(model_description);
 }
@@ -241,7 +243,6 @@ classic_initialisation <- function(model, data, samples) {
     results$params = params
 }
 
-setRefClass("usable", fields=list(ready="vector")) # Class to be sure that a model is available for the new thread
 # Parallel initialisation of the parameters
 parallel_initialisation <- function(model, expdes, structure, data, samples, NB_THREADS) {
     # Put it under list format, as randomLHS only provides a matrix
@@ -250,22 +251,8 @@ parallel_initialisation <- function(model, expdes, structure, data, samples, NB_
         parallel_sampling[[i]] = samples[i,]
     }
     # Parallel initialisations
-    ## Create a set of models that can be used in parallel
-    print("Creating copies of the model for multithreaded initialisation...")
-    model_set = list()
-    available = c()
-    for (i in 1:NB_THREADS) {
-        model_set[[i]] = new(fitmodel::Model)
-        model_set[[i]]$setModel(expdes, structure)
-        # It might be possible to use C++ copy construction, using the same GiNaC object (not copied) for all models
-        available = c(available, TRUE)
-    }
-    # The referenced object seems to be copied for each thread, it might not be necessary to create several copies of model
-    usability = new("usable", ready=available) # Object that will be passed by reference
-    ## Perform the initialisation
     # The number of cores used depends on the ability of the detectCores function to detect them
-    print("Performing initialisation...")
-    parallel_results = mclapply(parallel_sampling, parallel_fitmodel, data, model_set, usability, mc.cores=NB_THREADS);
+    parallel_results = mclapply(parallel_sampling, function(params, data, model) { model$fitmodel(data, params) }, data, model, mc.cores=NB_THREADS);
 
     # Reorder the results to get the same output as the linear function
     results = list()
@@ -279,31 +266,9 @@ parallel_initialisation <- function(model, expdes, structure, data, samples, NB_
     return(results)
 }
 
-# Allow to initialise in parallel using several copies of the model
-parallel_fitmodel <- function (params, data, model_set, usability) {
-    if (length(model_set) < length(usability$ready)) {
-        stop("Model set has less element than the availability control vector which will lead to multiple access to the same instance")
-    }
-    # Find a model that can be used 
-    i = 1;
-    while (!usability$ready[i]) {
-        i = i + 1;
-        if (i > length(usability$ready)) {
-            i = 1;
-        }
-    }
-    usability$ready[i] = FALSE; # The model i is not available
-    result = model_set[[i]]$fitmodel(data, params)
-    usability$ready[i] = TRUE; # The model i is available again
-
-    return(result)
-}
-
-
 # Computes the profile likelihood and the parameters relationships of each parameters in the model
 # Returns a list with the profiles for each parameters
-profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALSE)
-{
+profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALSE) {
 ### Get the information from the model description
     model = model_description$model;
     model.structure = model_description$structure;
@@ -398,7 +363,7 @@ plot_model_accuracy <- function(model_description, data_name = "default") {
 
     pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
     bk = unique( c(seq(min(mismatch), 0, length=50), seq(0, max(mismatch), length=50)) )
-    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", clustering_method="ward", display_numbers = T)
+    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", cluster_rows=F, cluster_col=F, clustering_method="ward", display_numbers = T)
     dev.off()
 }
 
@@ -416,6 +381,17 @@ print_error_intervals <- function(profiles_list) {
         } else {
             print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(non identifiable)"));
         }
+    }
+}
+
+# Print each path value
+print_parameters <- function(model_description) {
+    model = model_description$model;
+    parameters = model_description$parameters;
+
+    paths = model$getParametersLinks()
+    for (i in 1:length(paths)) {
+        print (paste(simplify_path_name(paths[i]), ":", parameters[i]))
     }
 }
 
@@ -568,17 +544,45 @@ ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
 
 }
 
+# Custom paste functions
+pastecoma <- function(...) {
+    return(paste(..., sep=","))
+}
+pastetab <- function(...) {
+    return(paste(..., sep="\t"))
+}
+
+# TODO
 # Exports the model in a file 
 export_model <- function(model_description, file_name="model") {
+    print("Not ready yet")
     # Add an extension
     if (!grepl(".mra$", file_name)) {
-        file_name = paste(file_name, ".mra", sep="")
+        file_name = paste0(file_name, ".mra")
+    }
+    handle = file(file_name, open="w")
+    for (row in 1:dim(model_description$data)[1]) {
+        text = pastecoma("", "")
+        for (col in 1:dim(model_description$data)[2]) {
+
+        }
     }
 }
 
+# TODO
 # Import model from a file
 import_model <- function(file_name) {
     print("Not implemented yet")
+
+#    model_description = list()
+#    model_description$model = model;
+#    model_description$design = expdes;
+#    model_description$structure = model.structure;
+#    model_description$data = data;
+#    model_description$parameters = init_params;
+#    model_description$bestfit = init_residual;
+#    model_description$fileName = data.stimulation;
+#    model_description$basal = basal.activity;
 }
 
 

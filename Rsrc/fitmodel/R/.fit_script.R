@@ -60,6 +60,7 @@ plot_model_accuracy(model, data_name);
 
 #ni_pf_plot(profiles, data_name=data_name
 get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
+print_parameters(model)
 
 
 # IDEAS :

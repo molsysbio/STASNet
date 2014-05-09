@@ -12,7 +12,7 @@ Model::Model() : rank_(0) {
 };
 
 // COPY CONSTRUCTOR IS BUGGY!
-Model::Model(const Model &model) : symbols_(model.symbols_), response_(model.response_), rank_(0), linear_approximation_(true) {
+Model::Model(const Model &model) : symbols_(model.symbols_), response_(model.response_), rank_(0), linear_approximation_(false) {
     std::cerr << "Scheisse 2!" << std::endl;
     exit(1);
     
@@ -669,6 +669,7 @@ void Model::print_parameter_report(std::ostream &os, const std::vector<double> &
     }
 }
 
+// Returns the strings corresponding to the expression of the parameters
 void Model::getParametersLinks(std::vector<std::string> &description) {
     description = std::vector<std::string>();
     for (size_t j=0; j<independent_parameters_.size(); ++j) {
