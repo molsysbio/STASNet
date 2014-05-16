@@ -5,6 +5,7 @@
 
 library("methods")
 library("fitmodel")
+library("parallel")
 
 # Print the time it took in a readable format
 get_running_time <- function(init_time, text="") {
@@ -26,6 +27,9 @@ network = ""
 basal_nodes = ""
 variation = ""
 nb_steps = 10000
+inits = 1000
+# Autodetection of the cores
+cores = 0
 
 # Collect the filenames based on their extension
 for (argument in commandArgs()) {
@@ -38,7 +42,22 @@ for (argument in commandArgs()) {
         basal_nodes = paste0(getwd(), "/", argument)
     } else if (grepl(".var$", argument)) {
         variation = paste0(getwd(), "/", argument)
+    } else if (grepl("^-i", argument)) {
+        inits = as.numeric(gsub("-i", "", argument))
+        if (is.na(inits)) { # If error
+            inits = 1000
+            print("Incorrect number of initialisation, using 1000 instead")
+        }
+    } else if (grepl("^-c", argument)) {
+        cores = as.numeric(gsub("-c", "", argument))
+        if (is.na(cores)) { # If error
+            cores = 2
+            stop("Incorrect number of cores (use -c#)")
+        }
     }
+}
+if (cores == 0) {
+    cores = detectCores() - 1;
 }
 
 if (network == "") {
@@ -51,16 +70,20 @@ if (network == "") {
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
-model = create_model(network, data, basal_nodes, variation);
-get_running_time(init_time, "to build the model.")
+model = create_model(network, data, basal_nodes, variation, nb_init=inits, cores=cores);
+get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
+
+power = c("", "k", "M", "G", "T", "P", "Y");
+power_init = floor(log(inits, base=1000))
+conditions = paste( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", gsub(".tab", "", network), "_", inits%/%(1000^power_init), power[1+power_init] , sep="" );
 plot_model_accuracy(model, data_name);
+print_parameters(model)
 
 # No need to plot the profiles to start building the network
 #profiles = profile_likelihood(model, nb_steps);
 
 #ni_pf_plot(profiles, data_name=data_name
 get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
-print_parameters(model)
 
 
 # IDEAS :
