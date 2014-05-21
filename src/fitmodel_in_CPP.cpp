@@ -119,9 +119,9 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
 
   double info[LM_INFO_SZ]; // returns some information about the actual fitting process (info[1])=sumsq
   double opts[LM_OPTS_SZ]; // some options to determine initial  \mu (opts[0]), stopping thresholds for some functions (opts[1-3]) and difference approximation to Jacobian)
-  opts[0]=LM_INIT_MU*10.0;
-  opts[1]=1E-60; // Gradients value
-  opts[2]=1E-60; // Parameters variation
+  opts[0]=LM_INIT_MU*100.0;
+  opts[1]=1E-30; // Gradient value
+  opts[2]=1E-200; // Parameters variation
   opts[3]=1E-17; // Residual variation
   opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used  
 
@@ -144,29 +144,30 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
 
   std::string termination_why;
   switch ((int)info[6]) {
-  case 1: termination_why="stopped by small gradient J^T";
+  case 1: termination_why="stopped by small gradient J^T"; // Ideally, the reason why terminated
     break;
-  case 2: termination_why="stopped by small Dp";
+  case 2: termination_why="stopped by small Dp"; // opts[2] to big
     break;
-  case 3: termination_why="stopped by itmax";
+  case 3: termination_why="stopped by itmax"; // On the good way but from too far
     break;
   case 4: termination_why="singular matrix. Restart from current p with increased mu";
     break;
-  case 5: termination_why="no further error reduction is possible. Restart with increased mu";
+  case 5: termination_why="no further error reduction is possible. Restart with increased mu"; //
     break;
   case 6: termination_why="stopped by small ||e||_2";
     break;
-  case 7: termination_why="stopped by invalid (i.e. NaN or Inf) func values; a user error";
+  case 7: termination_why="stopped by invalid (i.e. NaN or Inf) func values; a user error"; // Bad initialisation, it's ok to have some
     break;
   default: 
     termination_why="Dont know why terminated!";
     break;
   }
-  if (verbosity>1) 
+  if (verbosity>1) {
     std::cerr << "Terminated optimisation after " << info[5] << 
       " iterations and "<< info[7]<< 
-      " function evaluations because : " << 
+      " function evaluations with a residual of " << info[1] << ", because : " << 
       termination_why << std::endl;
+      }
   
    return info[1];
 }

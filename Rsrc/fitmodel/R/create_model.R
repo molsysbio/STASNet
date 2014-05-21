@@ -10,7 +10,7 @@ source("R/randomLHS.r"); # Latin Hypercube Sampling
 verbose = FALSE;
 debug = TRUE;
 
-create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", multi_thread = FALSE)
+create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=0, nb_init=1000)
 {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
@@ -191,12 +191,15 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model = new(fitmodel::Model);
     model$setModel(expdes, model.structure);
 ## INITIAL FIT
-    nb_samples = 100000;
-    print (paste("Initializing the model parameters… (", nb_samples, " random samplings)", sep=""))
+    nb_samples = nb_init;
+    print (paste("Initializing the model parameters… (", nb_samples, " random samplings) with ", cores, " cores", sep=""))
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
     # Parallelized version uses all cores but one to keep control
-    results = parallel_initialisation(model, expdes, model.structure, data, samples, detectCores()-1)
-    
+    if (cores == 0) {
+        results = parallel_initialisation(model, expdes, model.structure, data, samples, detectCores()-1)
+    } else {
+        results = parallel_initialisation(model, expdes, model.structure, data, samples, cores)
+    }
 # Choice of the best fit
     params = results$params;
     residuals = results$residuals;
@@ -221,6 +224,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model_description$bestfit = init_residual;
     model_description$fileName = data.stimulation;
     model_description$basal = basal.activity;
+    #model_description$name = ;
 
     return(model_description);
 }
@@ -275,7 +279,6 @@ profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALS
     data = model_description$data;
 
     init_params = model_description$parameters;
-    initial_response = model$getLocalResponseFromParameter( init_params )
     init_residual = model_description$bestfit;
     print(paste(length(init_params), " paths to evaluate"));
 
@@ -287,7 +290,8 @@ profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALS
         lprofile = model$profileLikelihood(data, init_params, path, nb_points);
         # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
         lprofile$residuals[path, lprofile$residuals[path,] > 1.1 * lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
-        # Simplify the name of the path
+        # Simplify the name of the paths, keep the old one
+        lprofile$old_path = lprofile$path;
         lprofile$path = simplify_path_name(lprofile$path);
         if (FALSE) {
         # Collapse the abscisse of the big residuals to the closest valid abscisse
@@ -363,7 +367,7 @@ plot_model_accuracy <- function(model_description, data_name = "default") {
 
     pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
     bk = unique( c(seq(min(mismatch), 0, length=50), seq(0, max(mismatch), length=50)) )
-    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, clustering_distance_rows = "euclidean", clustering_distance_cols = "euclidean", cluster_rows=F, cluster_col=F, clustering_method="ward", display_numbers = T)
+    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T)
     dev.off()
 }
 
@@ -384,11 +388,12 @@ print_error_intervals <- function(profiles_list) {
     }
 }
 
-# Print each path value
+# Print the value of each path
 print_parameters <- function(model_description) {
     model = model_description$model;
     parameters = model_description$parameters;
 
+    print("Parameters :")
     paths = model$getParametersLinks()
     for (i in 1:length(paths)) {
         print (paste(simplify_path_name(paths[i]), ":", parameters[i]))
@@ -544,6 +549,78 @@ ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
 
 }
 
+# Selection of a minimal model
+select_minimal_model <- function(model_description, accuracy=0.95) {
+    model = model_description$model;
+    init_params = model_description$parameters;
+    initial_response = model$getLocalResponseFromParameter( init_params );
+    expdes = model_description$design;
+    model_structure = model_description$structure;
+    data = model_description$data;
+
+    print("Performing model reduction…");
+    reduce=TRUE;
+    while (reduce) {
+        links.to.test=which(adj==1)
+        params=c();
+        residuals=c();
+        ranks=c();
+        newadj=adj;
+
+        # Each link is removed and the best of those networks is compared to the previous model
+        newadj=adj;
+        for (i in links.to.test) {
+            newadj[i]=0;
+            model_structure$setAdjacencymatrix( newadj );
+            model$setModel ( expdes, model_structure );
+            paramstmp = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
+            result = model$fitmodel( data,paramstmp)
+            response.matrix = model$getLocalResponseFromParameter( result$parameter )
+            residuals = c(residuals,result$residuals);   
+            params = cbind(params,c(response.matrix));
+            new_rank = model$modelRank();
+            ranks = c(ranks, new_rank);
+
+            if (verbose) {
+                dr = rank - new_rank;
+                print(paste("old :", rank, ", new : ", new_rank));
+                deltares = residuals[length(residuals)]-initresidual;
+                print(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ));
+            }
+
+            newadj[i]=1; ## Slightly accelerate the computation
+        }
+        
+        order.res=order(residuals);
+        # The loss of degree of freedom is equal to the difference in the ranks of the matrices
+        new_rank = ranks[order.res[1]];
+        dr = rank - new_rank;
+        deltares = residuals[order.res[1]]-initresidual;
+        # Some boundary cases might give low improvement of the fit
+        if (deltares < 0) { deltares = -deltares; warning(paste("Negative delta residual :", deltares)) }
+        if (deltares < qchisq(accuracy, df=dr)) {
+            adj[links.to.test[order.res[1]]]=0;
+            rank = new_rank;
+            initial.response=params[,order.res[1]];
+            print(paste0("remove ",
+                      model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
+                      model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
+
+            print(paste( "residual = ", residuals[order.res[1]], ", Delta residual = ", residuals[order.res[1]]-initresidual, ",  p-value = ", pchisq(deltares, df=dr) ));
+            print("------------------------------------------------------------------------------------------------------");
+
+        } else {
+          reduce=FALSE;
+        }
+    }
+    #print(adj)
+    # We recover the final model
+    model_description$model_structure$setAdjacencymatrix(adj);
+    model_description$model$setModel(expdes, model_description$model_structure);
+
+    return(model_description);
+}
+
 # Custom paste functions
 pastecoma <- function(...) {
     return(paste(..., sep=","))
@@ -560,8 +637,10 @@ export_model <- function(model_description, file_name="model") {
     if (!grepl(".mra$", file_name)) {
         file_name = paste0(file_name, ".mra")
     }
+
     handle = file(file_name, open="w")
-    for (row in 1:dim(model_description$data)[1]) {
+
+    for (row in 1:dim(model_description$data$stim_data)[1]) {
         text = pastecoma("", "")
         for (col in 1:dim(model_description$data)[2]) {
 
@@ -574,16 +653,222 @@ export_model <- function(model_description, file_name="model") {
 import_model <- function(file_name) {
     print("Not implemented yet")
 
-#    model_description = list()
+    model_description = list()
+    model = new(fitmodel::model);
+
+    file = readLines(file_name)
+    lnb = 1;
+    if (!grepl("^[NF]", file[lnb])) {
+        stop("This is not a mra model file.")
+    }
+    # Model name (cell line, network, ...)
+    if (grepl("^F", file[lnb])) {
+        model_description$name = gsub("^F( |\t)", "", file[1]);
+        lnb = lnb + 1;
+    }
+
+    # Names of the nodes of the model
+    nodes = c();
+    while (grepl("^N", file[lnb])) {
+        nodes = c(nodes, gsub("^N( |\t)", "", file[lnb]))
+        lnb = lnb + 1;
+    }
+
+    # Get the format of the network and put it in a modelStructure object
+    if (grepl("[mM](atrix|ATRIX)", file[lnb])) { # Adjacency matrix
+        lnb=lnb+1;
+        links = c();
+        headers = unlist(strsplit(",| |\t", file[lnb]))
+        headers = headers[3:length(headers)]
+        lnb=lnb+1;
+        while (grepl("^L"), file[lnb]) {
+            line = unlist(strsplit(",| |\t", file[lnb]))
+
+            lnb=lnb+1;
+        }
+    } else if (grepl("[Aa](djacency|DJACENCY)", file[lnb])) { # Adjacency list
+        lnb = lnb + 1;
+        print("Adjacency list not implemented yet")
+    } else { # List of links
+        if (grepl("list|LIST", file[lnb])) { lnb = lnb + 1; }
+        print("Link list not implemented yet")
+        links = c()
+        while (grepl("^L", file[lnb])) {
+            line = gsub("^L( |\t)", "", file[lnb]);
+            line = unlist(strsplit(line, " |\t"));
+            links = rbind(links, c(line[1], line[2]));
+
+            lnb = lnb + 1;
+        }
+        model_structure = getModelStructure(links);
+        model_description$structure = model_structure;
+    }
+
+    if (grepl("^I", file[lnb])) {
+        while (grepl("^I", file[lnb])) {
+            line = unlist(strsplit(" |\t", file[lnb]))
+
+
+            lnb = lnb + 1;
+        }
+    } else {
+        print("No inhibitors found !")
+    }
+
+    # Get the unstimulated data
+#    model_description$data = data;
+
 #    model_description$model = model;
 #    model_description$design = expdes;
-#    model_description$structure = model.structure;
-#    model_description$data = data;
 #    model_description$parameters = init_params;
 #    model_description$bestfit = init_residual;
 #    model_description$fileName = data.stimulation;
 #    model_description$basal = basal.activity;
 }
+
+simulateModelWithTargets <- function(model_description, ) {
+}
+
+# TODO
+# Get the target simulations in a MIDAS design-like or list format
+# Returns a matrix in a MIDAS measure-like format
+simulateModel <- function(model_description, targets, readouts = "all") {
+    design = model_description$design;
+    nodes = model_description$structure$names;
+
+    stim_nodes = design$stim_nodes;
+    inhib_nodes = design$inhib_nodes;
+    measured_nodes = design$measured_nodes;
+    # Get the experimental design constraints on the prediction capacity (index+1 because the arrays start at 0)
+    perturbables = nodes[ 1 + unique(c(stim_nodes, inhib_nodes)) ];
+    perID = 1 + unique(c(stim_nodes, inhib_nodes));
+    measurables = nodes[ 1 + unique(c(measured_nodes, stim_nodes, inhib_nodes)) ];
+    measID = 1 + unique(c(measured_nodes, stim_nodes, inhib_nodes));
+
+    # Get the names of the nodes in the network to stimulate and inhibit, and the matrix of the perturbation is MIDAS-like format
+    if (is.matrix(targets)) {
+        # Already in matrix form
+        inhibitions = gsub("i$", "", targets[grepl("i$", colnames(targets))] )
+        stimulations = targets[!grepl("i$", colnames(targets))]
+        target_matrix = targets;
+    } else if (is.list(targets)) { # TODO distinguish between numeric and character
+        # List of perturbation giving nodes names
+        target_names = unlist(targets)
+        inhibitions = unique(c( inhibitions, gsub("i$", "", target_names[grepl("i$", target_names)]) ))
+        stimulations = unique(c( stimulations, target_names[!grepl("i$", target_names)] ))
+        target_matrix = rep(0, length(c(stimulations, inhibitions))
+        colnames(target_matrix) = c(stimulations, inhibitions);
+
+        for (combination in targets) {
+            line = 
+        }
+        colnames(target_matrix) = c(stimulations, inhibitions);
+    }
+
+    inhib_nodes = c();
+    inhibitor = c();
+    # Set the inhibition matrices
+    for (node in inhibitions) {
+        if (!(node %in% perturbables)) {
+            plot(paste0("Node ", node, " is not in the network and won't be used"))
+        } else {
+            inhib_nodes = cbind(inhib_nodes, which(nodes == node)-1)
+            inhibitor = cbind(inhibitors, target_matrix[, which(nodes == node)])
+        }
+    }
+
+    stim_nodes = c();
+    # Set the stimuli matrices
+    for (node in stimulations) {
+        if (!(node %in% perturbables)) {
+            plot(paste0("Node ", node, " is not in the network and won't be used"))
+        } else {
+
+        }
+    }
+
+    # Set up the model for the simulation
+    model = new(fitmodel::Model)
+    model$setModel( design, model_description$structure )
+    params = model$getParameterFromLocalResponse(model_description$model$getLocalResponse(model_description$parameters))
+    prediction = model$simulate(model_description$data, params)$prediction;
+    # Only unstim_data is required for the simulation
+
+    rm(model) # Free the memory
+
+}
+
+# Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions
+get_matrix_combination <- function (perturbations, inhib_combo = 2, stim_combo = 1) {
+    stimulators = perturbations[!grepl("i$", perturbations)]
+    if (stim_combo > length(stimulators) ) {
+        stop ("Not enough stimulations to build the combinations")
+    }
+    inhibitors = perturbations[grepl("i$", perturbations)]
+    if (inhib_combo > length(inhibitors) ) {
+        stop ("Not enough inhibitions to build the combinations")
+    }
+
+    # Create the inhibition matrix
+    inhib_combos = build_combo(seq(length(inhibitors)), inhib_combo, c())
+    tmp = rep(0, length(inhibitors))
+    inhib_matrix = c();
+    for (i in 1:nrow(inhib_combos)) {
+        inhib_matrix = rbind(inhib_matrix, tmp);
+        inhib_matrix[i, inhib_combos[i,]] = 1;
+    }
+    colnames(inhib_matrix) = inhibitors;
+
+    # Create the stimulation matrix
+    stim_combos = build_combo(seq(length(stimulators)), stim_combo, c())
+    tmp = rep(0, length(stimulators))
+    stim_matrix = c();
+    for (i in 1:nrow(stim_combos)) {
+        stim_matrix = rbind(stim_matrix, tmp);
+        stim_matrix[i, stim_combos[i,]] = 1;
+    }
+    colnames(stim_matrix) = stimulators;
+
+    # Merge the two matrices to get all the combinations
+    perturbation_matrix = inhib_matrix;
+    ## Start merging inhibitions only and stimulations only
+    for (i in 1:ncol(stim_matrix)) {
+        perturbation_matrix = cbind(perturbation_matrix, 0)
+    }
+    colnames(perturbation_matrix) = c(inhibitors, stimulators);
+    tmp = rep(0, nrow(stim_matrix))
+    tmp2 = c()
+    for (i in 1:ncol(inhib_matrix)) {
+        tmp2 = cbind(tmp2, tmp)
+    }
+    perturbation_matrix = rbind(perturbation_matrix, cbind(tmp2, stim_matrix))
+    ## Combination of perturbations and inhibitions
+    for (i in 1:nrow(inhib_matrix)) {
+        perturbation_matrix = rbind(perturbation_matrix, cbind( matrix(rep(inhib_matrix[i,], nrow(stim_matrix)), nrow(stim_matrix), ncol(inhib_matrix) , byrow=T), stim_matrix ))
+    }
+    rownames(perturbation_matrix) = NULL;
+
+    return(perturbation_matrix)
+}
+
+# Recursively build the n choose k combinations for a set
+build_combo <- function (symbols, remaining_steps, to_extend) {
+    if (remaining_steps <= 0) {
+        return(to_extend);
+    } else if (length(symbols) < remaining_steps) {
+        return(c());
+    }
+    final = c()
+    # Add each symbol and deepen the recursion with remaining symbols beyond the selected one
+    for ( index in seq(length(symbols)) ) {
+        extension = cbind(to_extend, symbols[index])
+        extension = build_combo(symbols[ -(1:index) ], remaining_steps-1, extension)
+        final = rbind(final, extension)
+    }
+    return(final);
+}
+
+
 
 
 
