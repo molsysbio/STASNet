@@ -10,7 +10,7 @@ source("R/randomLHS.r"); # Latin Hypercube Sampling
 verbose = FALSE;
 debug = TRUE;
 
-create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=0, nb_init=1000)
+create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, nb_init=1000)
 {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
@@ -726,9 +726,6 @@ import_model <- function(file_name) {
 #    model_description$basal = basal.activity;
 }
 
-simulateModelWithTargets <- function(model_description, ) {
-}
-
 # TODO
 # Get the target simulations in a MIDAS design-like or list format
 # Returns a matrix in a MIDAS measure-like format
@@ -736,13 +733,12 @@ simulateModel <- function(model_description, targets, readouts = "all") {
     design = model_description$design;
     nodes = model_description$structure$names;
 
+    # Get the experimental design constraints on the prediction capacity (index + 1 for the C++)
     stim_nodes = design$stim_nodes;
     inhib_nodes = design$inhib_nodes;
-    measured_nodes = design$measured_nodes;
-    # Get the experimental design constraints on the prediction capacity (index+1 because the arrays start at 0)
     perturbables = nodes[ 1 + unique(c(stim_nodes, inhib_nodes)) ];
     perID = 1 + unique(c(stim_nodes, inhib_nodes));
-    measurables = nodes[ 1 + unique(c(measured_nodes, stim_nodes, inhib_nodes)) ];
+    measurables = nodes[ 1 + unique(c(design$measured_nodes, stim_nodes, inhib_nodes)) ];
     measID = 1 + unique(c(measured_nodes, stim_nodes, inhib_nodes));
 
     # Get the names of the nodes in the network to stimulate and inhibit, and the matrix of the perturbation is MIDAS-like format
@@ -752,50 +748,80 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         stimulations = targets[!grepl("i$", colnames(targets))]
         target_matrix = targets;
     } else if (is.list(targets)) { # TODO distinguish between numeric and character
-        # List of perturbation giving nodes names
+        # List of perturbation giving nodes names in vectors, TODO
         target_names = unlist(targets)
-        inhibitions = unique(c( inhibitions, gsub("i$", "", target_names[grepl("i$", target_names)]) ))
-        stimulations = unique(c( stimulations, target_names[!grepl("i$", target_names)] ))
-        target_matrix = rep(0, length(c(stimulations, inhibitions))
+        inhibitions = unique(c( inhibitions, gsub("i$", "", target_names[grepl("i$", target_names)]) ));
+        stimulations = unique(c( stimulations, target_names[!grepl("i$", target_names)] ));
+        target_matrix = rep(0, length(c(stimulations, inhibitions)))
         colnames(target_matrix) = c(stimulations, inhibitions);
 
         for (combination in targets) {
-            line = 
+            line = 1; # TODO
         }
         colnames(target_matrix) = c(stimulations, inhibitions);
     }
 
+    # Set the new experiment design that will be used for the simulation
+    ## Set the inhibition matrices
     inhib_nodes = c();
-    inhibitor = c();
-    # Set the inhibition matrices
+    inhibitors = c();
     for (node in inhibitions) {
         if (!(node %in% perturbables)) {
             plot(paste0("Node ", node, " is not in the network and won't be used"))
         } else {
             inhib_nodes = cbind(inhib_nodes, which(nodes == node)-1)
-            inhibitor = cbind(inhibitors, target_matrix[, which(nodes == node)])
+            inhibitors = cbind(inhibitors, target_matrix[, which(nodes == node)])
         }
     }
 
+    ## Set the stimuli matrices
     stim_nodes = c();
-    # Set the stimuli matrices
     for (node in stimulations) {
         if (!(node %in% perturbables)) {
             plot(paste0("Node ", node, " is not in the network and won't be used"))
         } else {
-
+            stim_nodes = cbind(stim_nodes, which(nodes == node)-1)
+            stimulators = cbind(stimulators, target_matrix[, which(nodes == node)])
+        }
+    }
+    # Set the nodes to be measured
+    measured_nodes = c();
+    if (readouts == "all") {
+        measured_nodes = measurables;
+    } else {
+        for (node in readouts) {
+            if (is.character(readouts)) {
+                if (!(node %in% nodes)) {
+                    print(paste0("The node ", node, " is not in the network."));
+                } else if (!(node %in% measurables)) {
+                    print(paste0("The node ", node, " cannot be measured with this network."));
+                } else {
+                    measured_nodes = c(measured_nodes, which(nodes == node)-1)
+                }
+            } else if (is.numeric(readouts)) { # Consider the R style numeration
+                if (!(node %in% 1:length(nodes))) {
+                    print(paste0("There are only ", length(nodes), " node in the network."))
+                } else if (!(node %in% measID)) {
+                    print(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this network"));
+                } else {
+                    measured_nodes = c(measured_nodes, node)
+                }
+            }
         }
     }
 
+    new_design = new(fitmodel::ExperimentalDesign)
+    new_design = getExperimentalDesign(model_description$model.structure,stim_nodes,inhib_nodes,measured_nodes,stimuli,inhibitor,model_description$basal);
+
     # Set up the model for the simulation
     model = new(fitmodel::Model)
-    model$setModel( design, model_description$structure )
+    model$setModel( new_design, model_description$structure )
     params = model$getParameterFromLocalResponse(model_description$model$getLocalResponse(model_description$parameters))
     prediction = model$simulate(model_description$data, params)$prediction;
     # Only unstim_data is required for the simulation
 
     rm(model) # Free the memory
-
+    return(prediction);
 }
 
 # Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions
