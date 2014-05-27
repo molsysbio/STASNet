@@ -58,8 +58,9 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
 
     # Means of basal activity of the network and of the blank fixation of the antibodies
     unstim.values = colMeans(data.values[data.file$type=="c",])
+    lapply(unstim.values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are recquired to simulate the network")}})
     blank.values = colMeans(data.values[data.file$type=="blank",])
-    blank.values[is.nan(blank.values)] = 0; # For sample without blank values
+    blank.values[is.nan(blank.values)] = 0; # For conditions without blank values
 
     # Calculates the mean and standard deviation for each condition 
     mean.values = aggregate(as.list(data.values),by=data.file[,1:(begin_measure-1)],mean);
@@ -196,10 +197,9 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()));
     # Parallelized version uses all cores but one to keep control
     if (cores == 0) {
-        results = parallel_initialisation(model, expdes, model.structure, data, samples, detectCores()-1)
-    } else {
-        results = parallel_initialisation(model, expdes, model.structure, data, samples, cores)
+        cores = detectCores()-1;
     }
+    results = parallel_initialisation(model, expdes, model.structure, data, samples, cores)
 # Choice of the best fit
     params = results$params;
     residuals = results$residuals;
@@ -210,7 +210,7 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     init_params = params[,order(residuals)[1]]
     init_residual = residuals[order(residuals)[1]]
 
-    print("Model simulation :")
+    print("Model simulation with optimal parameters :")
     print(model$simulate(data, init_params)$prediction);
 
 
@@ -222,9 +222,9 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model_description$data = data;
     model_description$parameters = init_params;
     model_description$bestfit = init_residual;
-    model_description$fileName = data.stimulation;
     model_description$basal = basal.activity;
-    #model_description$name = ;
+    model_description$name = data.stimulation;
+    model_description$infos = c(paste0(nb_samples, " samplings"), paste0(cores, " cores used"));
 
     return(model_description);
 }
@@ -242,9 +242,10 @@ classic_initialisation <- function(model, data, samples) {
     if (debug) {
         print(sort(residuals))
     }
-    results = list()
-    results$residuals = resisuals
-    results$params = params
+    results = list();
+    results$residuals = resisuals;
+    results$params = params;
+    return(results);
 }
 
 # Parallel initialisation of the parameters
@@ -272,6 +273,7 @@ parallel_initialisation <- function(model, expdes, structure, data, samples, NB_
 
 # Computes the profile likelihood and the parameters relationships of each parameters in the model
 # Returns a list with the profiles for each parameters
+# TODO : add the parameters sets for each extreme value of the confidence interval
 profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALSE) {
 ### Get the information from the model description
     model = model_description$model;
@@ -461,6 +463,11 @@ classify_profiles <- function (profiles_list) {
     return(sorted_profiles);
 }
 
+# TODO
+# Add the information provided by the profile likelihood in the model_description object
+addPLinfos <- function(model_description, profile_likelihood) {
+}
+
 # Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
 ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
     # Sort the profiles to print differently whether they are identifiable or not
@@ -641,92 +648,174 @@ export_model <- function(model_description, file_name="model") {
     handle = file(file_name, open="w")
 
     for (row in 1:dim(model_description$data$stim_data)[1]) {
-        text = pastecoma("", "")
+        text = 
         for (col in 1:dim(model_description$data)[2]) {
 
         }
     }
 }
 
-# TODO
+# TO CHECK
 # Import model from a file
 import_model <- function(file_name) {
-    print("Not implemented yet")
+# Fields not covered :
+#    model_description$bestfit = init_residual; # Not
 
     model_description = list()
-    model = new(fitmodel::model);
 
     file = readLines(file_name)
     lnb = 1;
-    if (!grepl("^[NF]", file[lnb])) {
-        stop("This is not a mra model file.")
+    if (!grepl("^[NH]", file[lnb])) {
+        stop("This is not a valid mra model file.")
     }
     # Model name (cell line, network, ...)
-    if (grepl("^F", file[lnb])) {
-        model_description$name = gsub("^F( |\t)", "", file[1]);
+    if (grepl("^H", file[lnb])) {
+        model_description$name = gsub("^H[A-Z]?( |\t)", "", file[lnb]);
+        lnb = lnb + 1;
+    } else {
+        model_description$name = "";
+        model_description$infos = "";
+    }
+    while (grepl("^H", file[lnb])) {
+        model_description$infos = c(model_description$infos, gsub("^H[A-Z]?( |\t)", "", file[lnb]));
         lnb = lnb + 1;
     }
 
-    # Names of the nodes of the model
+    # Names of the nodes of the model and nodes with basal activity
     nodes = c();
+    basal_activity = c()
     while (grepl("^N", file[lnb])) {
-        nodes = c(nodes, gsub("^N( |\t)", "", file[lnb]))
+        line = unlist(strsplit(file[lnb], "( |\t)"))
+        nodes = c(nodes, line[2])
+        if (is.numeric(line[3]) == 1) {
+            basal_activity = c(basal_activity, line[2])
+        }
         lnb = lnb + 1;
     }
 
     # Get the format of the network and put it in a modelStructure object
-    if (grepl("[mM](atrix|ATRIX)", file[lnb])) { # Adjacency matrix
+    links_matrix = c();
+    links_list = c();
+    # Adjacency matrix
+    if (grepl("^M", file[lnb])) {
         lnb=lnb+1;
-        links = c();
-        headers = unlist(strsplit(",| |\t", file[lnb]))
-        headers = headers[3:length(headers)]
-        lnb=lnb+1;
-        while (grepl("^L"), file[lnb]) {
+        while (grepl("^M", file[lnb])) {
             line = unlist(strsplit(",| |\t", file[lnb]))
-
+            links_matrix = rbind(links_matrix, as.numeric( line[2:length(line)] ))
             lnb=lnb+1;
         }
-    } else if (grepl("[Aa](djacency|DJACENCY)", file[lnb])) { # Adjacency list
+    }
+#    else if (grepl("[Aa](djacency|DJACENCY)", file[lnb])) { # Adjacency list
+#        lnb = lnb + 1;
+#        print("Adjacency list not implemented yet")
+#    } else { # List of links
+#        if (grepl("list|LIST", file[lnb])) { lnb = lnb + 1; }
+#        print("Link list not implemented yet")
+#        while (grepl("^L", file[lnb])) {
+#            line = gsub("^L( |\t)", "", file[lnb]);
+#            line = unlist(strsplit(line, " |\t"));
+#            links_matrix = rbind(links_matrix, c(line[1], line[2]));
+
+#            lnb = lnb + 1;
+#        }
+#    }
+    # Convert from the matrix form to the link list form to get the model structure
+    for (r in nrow(links_matrix)) {
+        for (c in ncol(links_matrix)) {
+            if (links_matrix[r, c] != 0) {
+                links_list = rbind(links_list, c(nodes[c], nodes[r]))
+            }
+        }
+    }
+    model_description$structure = getModelStructure(links_list);
+
+    if (!grepl("^P", file[lnb])) {
+        stop("This mra file is not valid, the parameters lines should start with a P")
+    }
+    # Collect the values of the parameters with the limit cases provided by the profile likelihood if available
+    model_description$parameters = c();
+    model_description$lower_values = c();
+    model_description$upper_values = c();
+    model_description$param_range = c();
+    while (grepl("^P", file[lnb])) {
+        if (grepl("^PV", file[lnb])) {
+            line = unlist(strsplit(",| |\t|;", file[lnb])) # PV fitted_value lower_value upper_value
+            model_description$parameters = c(model_description$parameters, line[2])
+            if (length(line) > 2) {
+                # NA will be introduced if there is no limit
+                model_description$lower_values = c(model_description$lower_values, suppressWarnings(as.numeric(line[3])) );
+                model_description$upper_values = c(model_description$upper_values, suppressWarnings(as.numeric(line[4])) );
+            }
+            lnb = lnb + 1;
+        }
+        # Parameters sets for the extreme values of the confidence interval for the parameter
+        if (grepl("^PL|^PH", file[lnb])) {
+            line = unlist(strsplit(",| |\t|;", file[lnb])) # One parameter set
+            model_description$param_range = rbind(model_description$param_range, line[2:length(line)]);
+            lnb = lnb + 1;
+        }
+    }
+
+    # Collect the experimental design to build the equations
+    ## List of inhibited nodes by C++ index
+    if (grepl("^IN", file[lnb])) {
+        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        inhib_nodes = as.numeric(line)[2:length(line)]
         lnb = lnb + 1;
-        print("Adjacency list not implemented yet")
-    } else { # List of links
-        if (grepl("list|LIST", file[lnb])) { lnb = lnb + 1; }
-        print("Link list not implemented yet")
-        links = c()
-        while (grepl("^L", file[lnb])) {
-            line = gsub("^L( |\t)", "", file[lnb]);
-            line = unlist(strsplit(line, " |\t"));
-            links = rbind(links, c(line[1], line[2]));
-
-            lnb = lnb + 1;
-        }
-        model_structure = getModelStructure(links);
-        model_description$structure = model_structure;
-    }
-
-    if (grepl("^I", file[lnb])) {
-        while (grepl("^I", file[lnb])) {
-            line = unlist(strsplit(" |\t", file[lnb]))
-
-
-            lnb = lnb + 1;
-        }
     } else {
-        print("No inhibitors found !")
+        stop("This mra file is not valid, the experimental design lines should be Inhibited Nodes, Inhibition matrix, Stimulated nodes, Stimulation matrix, Measured nodes (with unstimulated value)")
     }
+    ## Inhibitions for each measurement
+    inhibitions = c()
+    while (grepl("^I", file[lnb])) {
+        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        line = as.numeric(line[2:length(line)]);
+        lnb = lnb + 1;
+
+        inhibitions = rbind(inhibitions, line);
+    }
+    ## Index of the inhibited nodes
+    if (grepl("^SN", file[lnb])) {
+        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        stim_nodes = as.numeric(line)[2:length(line)]
+        lnb = lnb + 1;
+    }
+    ## Stimuli for each measurement
+    stimuli = c();
+    while (grepl("^I", file[lnb])) {
+        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        line = as.numeric(line[2:length(line)]);
+        lnb = lnb + 1;
+
+        stimuli = rbind(stimuli, line);
+    }
+    ## Measured nodes with their unstimulated value
+    basal_activity = c();
+    unstim_data = c();
+    while (grepl("^M", file[lnb])) {
+        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        lnb = lnb + 1;
+
+        basal_activity = c(basal_activity, line[2])
+        unstim_data = c(unstim_data, as.numeric(line[2]));
+    }
+
+    # Set up the experimental design and the model
+    model_description$basal = basal.activity;
+    expDes = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, inhibitions, stimuli, basal_activity)
+    model_description$design = expDes;
+    model_description$model = new(fitmodel::Model);
+    model_description$model$setModel( expDes, model_description$structure );
 
     # Get the unstimulated data
-#    model_description$data = data;
+    data = new(fitmodel::Data);
+    data.set_unstim_data(unstim_data)
+    model_description$data = data;
 
-#    model_description$model = model;
-#    model_description$design = expdes;
-#    model_description$parameters = init_params;
-#    model_description$bestfit = init_residual;
-#    model_description$fileName = data.stimulation;
-#    model_description$basal = basal.activity;
+    return(model_description);
 }
 
-# TODO
+# TO CHECK
 # Get the target simulations in a MIDAS design-like or list format
 # Returns a matrix in a MIDAS measure-like format
 simulateModel <- function(model_description, targets, readouts = "all") {
@@ -736,10 +825,10 @@ simulateModel <- function(model_description, targets, readouts = "all") {
     # Get the experimental design constraints on the prediction capacity (index + 1 for the C++)
     stim_nodes = design$stim_nodes;
     inhib_nodes = design$inhib_nodes;
-    perturbables = nodes[ 1 + unique(c(stim_nodes, inhib_nodes)) ];
-    perID = 1 + unique(c(stim_nodes, inhib_nodes));
-    measurables = nodes[ 1 + unique(c(design$measured_nodes, stim_nodes, inhib_nodes)) ];
-    measID = 1 + unique(c(measured_nodes, stim_nodes, inhib_nodes));
+    perturbables = nodes[ 1 + unique(c(design$measured_nodes, stim_nodes, inhib_nodes)) ];
+    perID = 1 + unique(c(design$measured_nodes, stim_nodes, inhib_nodes));
+    measurables = nodes[ 1 + unique(c(design$measured_nodes)) ];
+    measID = 1 + unique(c(measured_nodes));
 
     # Get the names of the nodes in the network to stimulate and inhibit, and the matrix of the perturbation is MIDAS-like format
     if (is.matrix(targets)) {
@@ -784,7 +873,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
             stimulators = cbind(stimulators, target_matrix[, which(nodes == node)])
         }
     }
-    # Set the nodes to be measured
+    ## Set the nodes to be measured
     measured_nodes = c();
     if (readouts == "all") {
         measured_nodes = measurables;
@@ -794,7 +883,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
                 if (!(node %in% nodes)) {
                     print(paste0("The node ", node, " is not in the network."));
                 } else if (!(node %in% measurables)) {
-                    print(paste0("The node ", node, " cannot be measured with this network."));
+                    print(paste0("The node ", node, " cannot be measured with this model."));
                 } else {
                     measured_nodes = c(measured_nodes, which(nodes == node)-1)
                 }
@@ -802,7 +891,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
                 if (!(node %in% 1:length(nodes))) {
                     print(paste0("There are only ", length(nodes), " node in the network."))
                 } else if (!(node %in% measID)) {
-                    print(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this network"));
+                    print(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this model."));
                 } else {
                     measured_nodes = c(measured_nodes, node)
                 }

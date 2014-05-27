@@ -76,7 +76,7 @@ get_running_time(init_time, paste("to build the model with", inits, "initialisat
 power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
 conditions = paste( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", gsub(".tab", "", network), "_", inits%/%(1000^power_init), power[1+power_init] , sep="" );
-plot_model_accuracy(model, data_name);
+plot_model_accuracy(model, conditions);
 print_parameters(model)
 
 # No need to plot the profiles to start building the network
