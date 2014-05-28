@@ -567,7 +567,7 @@ select_minimal_model <- function(model_description, accuracy=0.95) {
     initial_response = model$getLocalResponseFromParameter( init_params );
     expdes = model_description$design;
     model_structure = model_description$structure;
-    adj = model_structure$getAdjacencyMatrix()
+    adj = model_structure$adjacencyMatrix;
     data = model_description$data;
 
     print("Performing model reduction…");
@@ -583,7 +583,7 @@ select_minimal_model <- function(model_description, accuracy=0.95) {
         newadj=adj;
         for (i in links.to.test) {
             newadj[i]=0;
-            model_structure$setAdjacencymatrix( newadj );
+            model_structure$setAdjacencyMatrix( newadj );
             model$setModel ( expdes, model_structure );
             paramstmp = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors);
             result = model$fitmodel( data,paramstmp)
@@ -627,7 +627,7 @@ select_minimal_model <- function(model_description, accuracy=0.95) {
     }
     #print(adj)
     # We recover the final model
-    model_description$model_structure$setAdjacencymatrix(adj);
+    model_description$model_structure$setAdjacencyMatrix(adj);
     model_description$model$setModel(expdes, model_description$model_structure);
 
     return(model_description);
@@ -644,11 +644,12 @@ pastetab <- function(...) {
 # TO CHECK
 # Exports the model in a file 
 export_model <- function(model_description, file_name="model") {
-    print("Not ready yet")
     # Add an extension
     if (!grepl(".mra$", file_name)) {
         file_name = paste0(file_name, ".mra")
     }
+    # For the controls
+    nb_params = length(model_description$parameters);
 
     handle = file(file_name, open="w")
     # Header of the model, with its name and extra infos
@@ -669,19 +670,21 @@ export_model <- function(model_description, file_name="model") {
     }
 
     # Copy adjacency matrix for the structure of the network
-    adj = model_description$structure$getAdjacencyMatrix();
-    for (r in nrow(adj)) {
-        line = paste0(adj[i,], collapse=" ");
+    adj = model_description$structure$adjacencyMatrix;
+    for (r in 1:nrow(adj)) {
+        line = paste0(adj[r,], collapse=" ");
         line = paste0("M ", line);
+        writeLines(line, handle);
     }
 
     # Write the values of the parameters and the extreme sets
     for (i in 1:length(model_description$parameters)) {
         line = paste0("P ");
         # Write the range provided by the profile likelihood if both limits are there
-        if (exists(model_description$lower_values) && exists(model_description$upper_values)) {
+        if (length(model_description$lower_values) == nb_params && length(model_description$upper_values) > nb_params) {
             line = paste(line, model_description$lower_values[i], model_description$upper_values[i], sep=" ")
         }
+        writeLines(line, handle);
         # Write the parameters sets provided by the profile likelihood if it is there
         if (length(model_description$param_range) == length(model_description$parameters)) {
             line = paste0(model_description$param_range[[i]][1,], collapse=" ");
@@ -698,20 +701,22 @@ export_model <- function(model_description, file_name="model") {
     ## Inhibitions
     line = paste0(design$inhib_nodes, collapse = " ")
     writeLines(paste0("IN ", line) , handle);
-    for (condition in design$inhibitor) {
-        line = paste0(condition, collapse = " ");
+    for (r in 1:nrow(design$inhibitor)) {
+        line = paste0(design$inhibitor[r,], collapse = " ");
         writeLines(paste0("I ", line), handle);
     }
     ## Stimulations
     line = paste0(design$stim_nodes, collapse = " ")
     writeLines(paste0("SN ", line) , handle);
-    for (condition in design$stimuli) {
-        line = paste0(condition, collapse = " ");
+    for (r in 1:nrow(design$stimuli)) {
+        line = paste0(design$stimuli, collapse = " ");
         writeLines(paste0("S ", line), handle);
     }
     for (i in 1:length(design$measured_nodes)) {
-        writeLines(paste0("MN ", design$measured_nodes[i], " ", model_description$data$unstim_data[i]), handle);
+        writeLines(paste0("MN ", design$measured_nodes[i], " ", model_description$data$unstim_data[1, i]), handle);
     }
+
+    close(handle)
 }
 
 # TO CHECK

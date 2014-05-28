@@ -73,8 +73,8 @@ RCPP_MODULE(ModelStructureEx){
       .default_constructor()
       .constructor<std::vector<std::string>,std::vector<std::string> >()
       .method( "set", &ModelStructure::set )
-      .property( "adjacencymatrix", &ModelStructure::getAdjacencyMatrix )
-      .method("setAdjacencymatrix", &ModelStructure::setAdjacencyMatrix )
+      .property( "adjacencyMatrix", &ModelStructure::getAdjacencyMatrix )
+      .method("setAdjacencyMatrix", &ModelStructure::setAdjacencyMatrix )
       .property( "names", &ModelStructure::getNames, "Names" )
       ;
 }
