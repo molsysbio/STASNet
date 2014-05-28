@@ -660,7 +660,7 @@ export_model <- function(model_description, file_name="model") {
     # Names of the nodes, with info on basal activity
     for (name in model_description$structure$names) {
         line = paste0("N ", name ," ");
-        if (name in model_description$basal) {
+        if (name %in% model_description$basal) {
             line = paste(line, 1);
         } else {
             line = paste(line, 0);
@@ -722,7 +722,7 @@ import_model <- function(file_name) {
 
     model_description = list()
     # TODO : decide for a file extension
-    if (!grepl(".mra"), file_name) {
+    if (!grepl(".mra", file_name)) {
         print("This file does not have the correct .mra extension. Trying to extract a model anyway...")
     }
 
@@ -873,7 +873,7 @@ import_model <- function(file_name) {
 
     # Get the unstimulated data
     model_description$data = new(fitmodel::Data);
-    model_description$data$set_unstim_data(matrix(rep(unstim_data, each = nrow(stim_nodes), nrow = nrow(stim_nodes)));
+    model_description$data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stim_nodes), nrow = nrow(stim_nodes))) );
 
     return(model_description);
 }
