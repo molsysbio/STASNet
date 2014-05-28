@@ -225,6 +225,10 @@ create_model <- function(model.links="links", data.stimulation="data", basal_act
     model_description$basal = basal.activity;
     model_description$name = data.stimulation;
     model_description$infos = c(paste0(nb_samples, " samplings"), paste0(cores, " cores used"));
+    # Values that can't be defined without the profile likelihood
+    model_description$param_range = list();
+    model_description$lower_values = c();
+    model_description$upper_values = c();
 
     return(model_description);
 }
@@ -563,6 +567,7 @@ select_minimal_model <- function(model_description, accuracy=0.95) {
     initial_response = model$getLocalResponseFromParameter( init_params );
     expdes = model_description$design;
     model_structure = model_description$structure;
+    adj = model_structure$getAdjacencyMatrix()
     data = model_description$data;
 
     print("Performing model reduction…");
@@ -636,7 +641,7 @@ pastetab <- function(...) {
     return(paste(..., sep="\t"))
 }
 
-# TODO
+# TO CHECK
 # Exports the model in a file 
 export_model <- function(model_description, file_name="model") {
     print("Not ready yet")
@@ -646,12 +651,66 @@ export_model <- function(model_description, file_name="model") {
     }
 
     handle = file(file_name, open="w")
+    # Header of the model, with its name and extra infos
+    writeLines(paste0("H ", model_description$name), handle)
+    for (info in model_description$infos) {
+        writeLines(paste0("H ", info), handle);
+    }
 
-    for (row in 1:dim(model_description$data$stim_data)[1]) {
-        text = 
-        for (col in 1:dim(model_description$data)[2]) {
-
+    # Names of the nodes, with info on basal activity
+    for (name in model_description$structure$names) {
+        line = paste0("N ", name ," ");
+        if (name in model_description$basal) {
+            line = paste(line, 1);
+        } else {
+            line = paste(line, 0);
         }
+        writeLines(line, handle);
+    }
+
+    # Copy adjacency matrix for the structure of the network
+    adj = model_description$structure$getAdjacencyMatrix();
+    for (r in nrow(adj)) {
+        line = paste0(adj[i,], collapse=" ");
+        line = paste0("M ", line);
+    }
+
+    # Write the values of the parameters and the extreme sets
+    for (i in 1:length(model_description$parameters)) {
+        line = paste0("P ");
+        # Write the range provided by the profile likelihood if both limits are there
+        if (exists(model_description$lower_values) && exists(model_description$upper_values)) {
+            line = paste(line, model_description$lower_values[i], model_description$upper_values[i], sep=" ")
+        }
+        # Write the parameters sets provided by the profile likelihood if it is there
+        if (length(model_description$param_range) == length(model_description$parameters)) {
+            line = paste0(model_description$param_range[[i]][1,], collapse=" ");
+            line = paste0("PL ", line);
+            writeLines(line, handle);
+            line = paste0(model_description$param_range[[i]][2,], collapse=" ");
+            line = paste0("PH ", line);
+            writeLines(line, handle);
+        }
+    }
+    
+    # Write the experimental design
+    design = model_description$design
+    ## Inhibitions
+    line = paste0(design$inhib_nodes, collapse = " ")
+    writeLines(paste0("IN ", line) , handle);
+    for (condition in design$inhibitor) {
+        line = paste0(condition, collapse = " ");
+        writeLines(paste0("I ", line), handle);
+    }
+    ## Stimulations
+    line = paste0(design$stim_nodes, collapse = " ")
+    writeLines(paste0("SN ", line) , handle);
+    for (condition in design$stimuli) {
+        line = paste0(condition, collapse = " ");
+        writeLines(paste0("S ", line), handle);
+    }
+    for (i in 1:length(design$measured_nodes)) {
+        writeLines(paste0("MN ", design$measured_nodes[i], " ", model_description$data$unstim_data[i]), handle);
     }
 }
 
@@ -662,6 +721,10 @@ import_model <- function(file_name) {
 #    model_description$bestfit = init_residual; # Not
 
     model_description = list()
+    # TODO : decide for a file extension
+    if (!grepl(".mra"), file_name) {
+        print("This file does not have the correct .mra extension. Trying to extract a model anyway...")
+    }
 
     file = readLines(file_name)
     lnb = 1;
@@ -692,15 +755,15 @@ import_model <- function(file_name) {
         }
         lnb = lnb + 1;
     }
+    model_description$basal = basal.activity;
 
     # Get the format of the network and put it in a modelStructure object
     links_matrix = c();
     links_list = c();
     # Adjacency matrix
     if (grepl("^M", file[lnb])) {
-        lnb=lnb+1;
         while (grepl("^M", file[lnb])) {
-            line = unlist(strsplit(",| |\t", file[lnb]))
+            line = unlist(strsplit(",| |\t|;", file[lnb]))
             links_matrix = rbind(links_matrix, as.numeric( line[2:length(line)] ))
             lnb=lnb+1;
         }
@@ -736,30 +799,32 @@ import_model <- function(file_name) {
     model_description$parameters = c();
     model_description$lower_values = c();
     model_description$upper_values = c();
-    model_description$param_range = c();
+    model_description$param_range = list();
+    id = 1;
     while (grepl("^P", file[lnb])) {
-        if (grepl("^PV", file[lnb])) {
-            line = unlist(strsplit(",| |\t|;", file[lnb])) # PV fitted_value lower_value upper_value
-            model_description$parameters = c(model_description$parameters, line[2])
-            if (length(line) > 2) {
-                # NA will be introduced if there is no limit
-                model_description$lower_values = c(model_description$lower_values, suppressWarnings(as.numeric(line[3])) );
-                model_description$upper_values = c(model_description$upper_values, suppressWarnings(as.numeric(line[4])) );
-            }
-            lnb = lnb + 1;
+        line = unlist(strsplit(" +|\t|;", file[lnb])) # PV fitted_value lower_value upper_value
+        model_description$parameters = c(model_description$parameters, line[2])
+        if (length(line) > 2) {
+            # NA will be introduced if there is no limit
+            model_description$lower_values = c(model_description$lower_values, suppressWarnings(as.numeric(line[3])) );
+            model_description$upper_values = c(model_description$upper_values, suppressWarnings(as.numeric(line[4])) );
         }
+        lnb = lnb + 1;
         # Parameters sets for the extreme values of the confidence interval for the parameter
-        if (grepl("^PL|^PH", file[lnb])) {
-            line = unlist(strsplit(",| |\t|;", file[lnb])) # One parameter set
-            model_description$param_range = rbind(model_description$param_range, line[2:length(line)]);
+        model_description$param_range[[id]] = c();
+        while (grepl("^PL|^PH", file[lnb])) {
+            line = unlist(strsplit(" +|\t|;", file[lnb])) # One parameter set
+            line = suppressWarnings(as.numeric( line[2:length(line)] ));
+            model_description$param_range[[id]] = rbind(model_description$param_range[[id]], line);
             lnb = lnb + 1;
         }
+        id = id + 1; # Parameter index
     }
 
     # Collect the experimental design to build the equations
     ## List of inhibited nodes by C++ index
     if (grepl("^IN", file[lnb])) {
-        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        line = unlist(strsplit(" +|\t|;", file[lnb]));
         inhib_nodes = as.numeric(line)[2:length(line)]
         lnb = lnb + 1;
     } else {
@@ -768,7 +833,7 @@ import_model <- function(file_name) {
     ## Inhibitions for each measurement
     inhibitions = c()
     while (grepl("^I", file[lnb])) {
-        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        line = unlist(strsplit(" +|\t|;", file[lnb]));
         line = as.numeric(line[2:length(line)]);
         lnb = lnb + 1;
 
@@ -776,41 +841,39 @@ import_model <- function(file_name) {
     }
     ## Index of the inhibited nodes
     if (grepl("^SN", file[lnb])) {
-        line = unlist(strsplit(",| |\t|;", file[lnb]));
+        line = unlist(strsplit(" +|\t|;", file[lnb]));
         stim_nodes = as.numeric(line)[2:length(line)]
         lnb = lnb + 1;
     }
     ## Stimuli for each measurement
     stimuli = c();
-    while (grepl("^I", file[lnb])) {
-        line = unlist(strsplit(",| |\t|;", file[lnb]));
+    while (grepl("^S", file[lnb])) {
+        line = unlist(strsplit(" +|\t|;", file[lnb]));
         line = as.numeric(line[2:length(line)]);
         lnb = lnb + 1;
 
         stimuli = rbind(stimuli, line);
     }
     ## Measured nodes with their unstimulated value
-    basal_activity = c();
     unstim_data = c();
-    while (grepl("^M", file[lnb])) {
-        line = unlist(strsplit(",| |\t|;", file[lnb]));
+    measured_nodes = c()
+    while (grepl("^MN", file[lnb])) {
+        line = unlist(strsplit(" +|\t|;", file[lnb]));
         lnb = lnb + 1;
 
-        basal_activity = c(basal_activity, line[2])
-        unstim_data = c(unstim_data, as.numeric(line[2]));
+        measured_nodes = c(measured_nodes, line[2]);
+        unstim_data = c(unstim_data, as.numeric(line[3]));
     }
 
     # Set up the experimental design and the model
-    model_description$basal = basal.activity;
-    expDes = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, inhibitions, stimuli, basal_activity)
+    expDes = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, inhibitions, stimuli, basal_activity)
     model_description$design = expDes;
     model_description$model = new(fitmodel::Model);
     model_description$model$setModel( expDes, model_description$structure );
 
     # Get the unstimulated data
-    data = new(fitmodel::Data);
-    data.set_unstim_data(unstim_data)
-    model_description$data = data;
+    model_description$data = new(fitmodel::Data);
+    model_description$data$set_unstim_data(matrix(rep(unstim_data, each = nrow(stim_nodes), nrow = nrow(stim_nodes)));
 
     return(model_description);
 }

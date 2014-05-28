@@ -15,6 +15,7 @@ public:
 
   std::vector<std::string> getNames();
   
+  // Why does this return a reference ?
   int_matrix &getAdjacencyMatrix();
 
   void setAdjacencyMatrix(const int_matrix &adj);
