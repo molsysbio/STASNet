@@ -4,7 +4,7 @@
 #include <fitmodel/generate_response.hpp>
 #include <fitmodel/fitmodel_in_CPP.hpp>
 #include <Rcpp.h>
-#include <boost/thread.hpp>
+//#include <boost/thread.hpp>
 
 int verbosity=0;
 bool debug=false;
@@ -128,6 +128,14 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     threshold_values.push_back(thresholds.pointwise_threshold);
     threshold_values.push_back(thresholds.simultaneous_threshold);
 
+    // Switch to a C++ array indexing to the R one
+    for (size_t i=0 ; i < thresholds.negative_uncertainty.size() ; i++) {
+        thresholds.negative_uncertainty[i] += 1;
+    }
+    for (size_t i=0 ; i < thresholds.positive_uncertainty.size() ; i++) {
+        thresholds.positive_uncertainty[i] += 1;
+    }
+
     ret["residuals"] = track;
     ret["explored"] = explored;
     ret["lower_pointwise"] = thresholds.ln_threshold;
@@ -138,8 +146,8 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     ret["path"] = paths[target-1];
     ret["pathid"] = target;
     ret["value"] = param_value;
-    ret["lower_error"] = thresholds.negative_uncertainty;
-    ret["upper_error"] = thresholds.positive_uncertainty;
+    ret["lower_error_index"] = thresholds.negative_uncertainty;
+    ret["upper_error_index"] = thresholds.positive_uncertainty;
 
     return ret;
 

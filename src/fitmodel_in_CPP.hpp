@@ -27,9 +27,9 @@ struct pl_analysis {
     bool lp_threshold;
     bool hp_threshold;
 
-    // Values for which the threshold is ascendingly reached
-    std::vector<double> negative_uncertainty;
-    std::vector<double> positive_uncertainty;
+    // Indexes for which the threshold is ascendingly reached
+    std::vector<size_t> negative_uncertainty;
+    std::vector<size_t> positive_uncertainty;
 
     pl_analysis() {
         ln_threshold = false;

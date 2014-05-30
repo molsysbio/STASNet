@@ -279,7 +279,7 @@ void profile_likelihood(const Data &data,
         residual_track.push_back(std::vector<double>());
     }
 	std::vector<double> dec_explored;
-    for (unsigned int i=1 ; i < total_steps / 2 ; i++) {
+    for (unsigned int i=0 ; i < std::floor(total_steps / 2) ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
@@ -300,15 +300,15 @@ void profile_likelihood(const Data &data,
         for (int j=0 ; j < parameters.size() ; j++) {
             dec_residual[j].push_back(parameters[j]);
         }
-        // In the row corresponding to the scanned parameter's values, we put the residual
+        // In the row corresponding to the scanned parameter's value, we put the residual
         dec_residual[keep_constant[0]].pop_back();
         dec_residual[keep_constant[0]].push_back(residual);
 
-        // Tell if the thresholds were reached and for which values
+        // Tell if the thresholds were reached and for which index (in the final array)
         if (first_low && residual > thresholds.pointwise_threshold) {
             thresholds.ln_threshold = true;
             first_low = false;
-            thresholds.negative_uncertainty.push_back(scanned_value);
+            thresholds.negative_uncertainty.push_back(std::floor(total_steps/2)-1-i);
         } else if (residual < thresholds.pointwise_threshold){
             first_low = true;
         }
@@ -339,7 +339,7 @@ void profile_likelihood(const Data &data,
     //step_size = std::max(std::abs(parameters[keep_constant[0]]) * 3 / total_steps, 0.01);
     //step_size = 0.01;
     //step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);
-    for (unsigned int i=0 ; i < total_steps / 2 ; i++) {
+    for (unsigned int i=0 ; i < std::floor(total_steps / 2) ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 
         fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
@@ -364,11 +364,11 @@ void profile_likelihood(const Data &data,
         residual_track[keep_constant[0]].pop_back();
         residual_track[keep_constant[0]].push_back(residual);
 
-        // Update if the threshold is reached for ascending value
+        // Update boolean and index if the thresholds are reached for ascending value
         if (first_low && residual > thresholds.pointwise_threshold) {
             thresholds.lp_threshold = true;
             first_low = false;
-            thresholds.positive_uncertainty.push_back(scanned_value);
+            thresholds.positive_uncertainty.push_back(std::floor(total_steps / 2) + i);
         } else if (residual < thresholds.pointwise_threshold){
             first_low = true;
         }
