@@ -6,6 +6,7 @@ getModelStructure <- function(links) {
 
 
 getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, measured.nodes, stimuli, inhibitor, basal.activity = c()) {
+    # Consistency checks
   if ( sum(is.na(match(as.character(stim.nodes),model.structure$names))) > 0 )
     stop("problem matching stim.nodes names");
   if ( sum(is.na(match(as.character(inhib.nodes),model.structure$names))) > 0 )
