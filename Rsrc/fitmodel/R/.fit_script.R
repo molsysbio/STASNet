@@ -79,10 +79,14 @@ conditions = paste( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", gsub(".tab
 plot_model_accuracy(model, conditions);
 print_parameters(model)
 
-# No need to plot the profiles to start building the network
-#profiles = profile_likelihood(model, nb_steps);
+# Perform the profile likelihood and add the info to the model
+profiles = profile_likelihood(model, nb_steps);
+model = addPLinfos(model, profiles);
 
-#ni_pf_plot(profiles, data_name=data_name
+export_model(model, paste0(conditions, ".mra"));
+
+ni_pf_plot(profiles, data_name=data_name
+
 get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
 
 

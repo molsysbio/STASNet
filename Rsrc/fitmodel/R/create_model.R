@@ -319,6 +319,7 @@ profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALS
                 }
                 last_correct = entry;
             }
+        #}}
         }
         }
 
@@ -469,7 +470,6 @@ classify_profiles <- function (profiles_list) {
     return(sorted_profiles);
 }
 
-# TODO
 # Add the information provided by the profile likelihood in the model_description object
 # ie the limits of the confidence interval and the corresponding sets of parameters
 addPLinfos <- function(model_description, profiles_list) {
@@ -482,6 +482,7 @@ addPLinfos <- function(model_description, profiles_list) {
             lidx = pr$lower_error_index[1];
             model_description$lower_values = c(model_description$lower_values, pr$explored[lidx]);
             model_description$param_range[[i]]$low_set = pr$residuals[,lidx];
+            model_description$param_range[[i]]$low_set[i] = pr$explored[lidx]
         } else {
             model_description$lower_values = c(model_description$lower_values, NA);
             model_description$param_range[[i]]$low_set = NA;
@@ -490,6 +491,7 @@ addPLinfos <- function(model_description, profiles_list) {
             hidx = pr$upper_error_index[1];
             model_description$upper_values = c(model_description$upper_values, pr$explored[hidx]);
             model_description$param_range[[i]]$high_set = pr$residuals[,hidx];
+            model_description$param_range[[i]]$high_set[i] = pr$explored[hidx]
         } else {
             model_description$upper_values = c(model_description$upper_values, NA);
             model_description$param_range[[i]]$high_set = NA;
@@ -667,7 +669,6 @@ pastetab <- function(...) {
     return(paste(..., sep="\t"))
 }
 
-# TO CHECK
 # Exports the model in a file 
 export_model <- function(model_description, file_name="model") {
     # Add an extension
@@ -707,25 +708,25 @@ export_model <- function(model_description, file_name="model") {
     for (i in 1:length(model_description$parameters)) {
         line = paste0("P ", model_description$parameters[i]);
         # Write the range provided by the profile likelihood if both limits are there
-        if (length(model_description$lower_values) == nb_params && length(model_description$upper_values) > nb_params) {
+        if (length(model_description$lower_values) == nb_params && length(model_description$upper_values) == nb_params) {
             line = paste(line, model_description$lower_values[i], model_description$upper_values[i], sep=" ")
         }
         writeLines(line, handle);
         # Write the parameters sets provided by the profile likelihood if it is there
         if (length(model_description$param_range) == length(model_description$parameters)) {
-            if (!is.na(model_description$param_range[[i]]$low_set)) {
+            if (!is.na(model_description$param_range[[i]]$low_set[1])) {
                 line = paste0(model_description$param_range[[i]]$low_set, collapse=" ");
             } else {
-                line = "NA"
+                line = "NA";
             }
             line = paste0("PL ", line);
             writeLines(line, handle);
-            if (!is.na(model_description$param_range[[i]]$high_set)) {
+            if (!is.na(model_description$param_range[[i]]$high_set[1])) {
                 line = paste0(model_description$param_range[[i]]$high_set, collapse=" ");
             } else {
                 line = "NA"
             }
-            line = paste0("PH ", line);
+            line = paste0("PU ", line);
             writeLines(line, handle);
         }
     }
@@ -753,14 +754,13 @@ export_model <- function(model_description, file_name="model") {
     close(handle)
 }
 
-# TO CHECK
 # Import model from a file
 import_model <- function(file_name) {
-# Fields not covered :
-#    model_description$bestfit = init_residual; # Not
-
     model_description = list()
-    # TODO : decide for a file extension
+# Fields not covered :
+    model_description$bestfit = 0;
+# --------------------
+
     if (!grepl(".mra", file_name)) {
         print("This file does not have the correct .mra extension. Trying to extract a model anyway...")
     }
@@ -787,9 +787,9 @@ import_model <- function(file_name) {
     nodes = c();
     basal_activity = c()
     while (grepl("^N", file[lnb])) {
-        line = unlist(strsplit(file[lnb], "( |\t)"))
+        line = unlist(strsplit(file[lnb], "( |\t)+"))
         nodes = c(nodes, line[2])
-        if (is.numeric(line[3]) == 1) {
+        if ( as.numeric(line[3]) == 1 ) {
             basal_activity = c(basal_activity, line[2])
         }
         lnb = lnb + 1;
@@ -842,7 +842,7 @@ import_model <- function(file_name) {
     id = 1;
     while (grepl("^P", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;")) # PV fitted_value lower_value upper_value
-        model_description$parameters = c(model_description$parameters, line[2])
+        model_description$parameters = c( model_description$parameters, as.numeric(line[2]) )
         if (length(line) > 2) {
             # NA will be introduced if there is no limit
             model_description$lower_values = c(model_description$lower_values, suppressWarnings(as.numeric(line[3])) );
@@ -850,11 +850,16 @@ import_model <- function(file_name) {
         }
         lnb = lnb + 1;
         # Parameters sets for the extreme values of the confidence interval for the parameter
-        model_description$param_range[[id]] = c();
-        while (grepl("^PL|^PH", file[lnb])) {
+        model_description$param_range[[id]] = list();
+        while (grepl("^PL|^PU", file[lnb])) {
             line = unlist(strsplit(file[lnb], " +|\t|;")) # One parameter set
             line = suppressWarnings(as.numeric( line[2:length(line)] ));
-            model_description$param_range[[id]] = rbind(model_description$param_range[[id]], line);
+            if (grepl("^PL", file[lnb])) {
+                model_description$param_range[[id]]$low_set = line;
+            }
+            if (grepl("^PU", file[lnb])) {
+                model_description$param_range[[id]]$high_set = line;
+            }
             lnb = lnb + 1;
         }
         id = id + 1; # Parameter index
@@ -927,52 +932,54 @@ simulateModel <- function(model_description, targets, readouts = "all") {
     # Get the experimental design constraints on the prediction capacity (index + 1 for the C++)
     stim_nodes = design$stim_nodes;
     inhib_nodes = design$inhib_nodes;
-    perturbables = nodes[ 1 + unique(c(design$measured_nodes, stim_nodes, inhib_nodes)) ];
+    inhibables = nodes[ 1 + unique(c(inhib_nodes)) ];
+    stimulables = nodes[ 1 + unique(c(stim_nodes)) ];
     perID = 1 + unique(c(design$measured_nodes, stim_nodes, inhib_nodes));
     measurables = nodes[ 1 + unique(c(design$measured_nodes)) ];
     measID = 1 + unique(c(design$measured_nodes));
 
-    # Get the names of the nodes in the network to stimulate and inhibit, and the matrix of the perturbation is MIDAS-like format
+    # Get the names of the nodes in the network to stimulate and inhibit, and the matrix of the perturbation
     if (is.matrix(targets)) {
         # Already in matrix form
-        inhibitions = gsub("i$", "", targets[grepl("i$", colnames(targets))] )
-        stimulations = targets[!grepl("i$", colnames(targets))]
+        inhibitors = gsub("i$", "", colnames(targets)[grepl("i$", colnames(targets))] )
+        stimulators = colnames(targets)[!grepl("i$", colnames(targets))]
         target_matrix = targets;
     } else if (is.list(targets)) { # TODO distinguish between numeric and character
         # List of perturbation giving nodes names in vectors, TODO
         target_names = unlist(targets)
-        inhibitions = unique(c( inhibitions, gsub("i$", "", target_names[grepl("i$", target_names)]) ));
-        stimulations = unique(c( stimulations, target_names[!grepl("i$", target_names)] ));
-        target_matrix = rep(0, length(c(stimulations, inhibitions)))
-        colnames(target_matrix) = c(stimulations, inhibitions);
+        inhibitors = unique(c( inhibitors, gsub("i$", "", target_names[grepl("i$", target_names)]) ));
+        stimulators = unique(c( stimulators, target_names[!grepl("i$", target_names)] ));
+        target_matrix = rep(0, length(c(stimulators, inhibitors)))
+        colnames(target_matrix) = c(stimulators, inhibitors);
 
         for (combination in targets) {
             line = 1; # TODO
         }
-        colnames(target_matrix) = c(stimulations, inhibitions);
     }
+    colnames(target_matrix) = c(stimulators, inhibitors);
 
     # Set the new experiment design that will be used for the simulation
+    # Remove the perturbations that cannot be used
     ## Set the inhibition matrices
     inhib_nodes = c();
-    inhibitors = c();
-    for (node in inhibitions) {
-        if (!(node %in% perturbables)) {
-            plot(paste0("Node ", node, " is not in the network and won't be used"))
+    inhibitions = c();
+    for (node in inhibitors) {
+        if (!(node %in% inhibables)) {
+            print(paste0("Node ", node, " is not inhibited in the network and won't be used"))
         } else {
-            inhib_nodes = cbind(inhib_nodes, which(nodes == node)-1)
-            inhibitors = cbind(inhibitors, target_matrix[, which(nodes == node)])
+            inhib_nodes = cbind(inhib_nodes, nodes[which(nodes == node)])
+            inhibitions = cbind(inhibitions, target_matrix[, which(colnames(target_matrix) == node)])
         }
     }
-
     ## Set the stimuli matrices
     stim_nodes = c();
-    for (node in stimulations) {
-        if (!(node %in% perturbables)) {
-            plot(paste0("Node ", node, " is not in the network and won't be used"))
+    stimulations = c();
+    for (node in stimulators) {
+        if (!(node %in% stimulables)) {
+            print(paste0("Node ", node, " is not stimulated in the network and won't be used"))
         } else {
-            stim_nodes = cbind(stim_nodes, which(nodes == node)-1)
-            stimulators = cbind(stimulators, target_matrix[, which(nodes == node)])
+            stim_nodes = cbind(stim_nodes, nodes[which(nodes == node)])
+            stimulations = cbind(stimulations, target_matrix[, which(colnames(target_matrix) == node)])
         }
     }
     ## Set the nodes to be measured
@@ -1001,22 +1008,33 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         }
     }
 
-    new_design = new(fitmodel::ExperimentalDesign)
-    new_design = getExperimentalDesign(model_description$model.structure,stim_nodes,inhib_nodes,measured_nodes,stimuli,inhibitor,model_description$basal);
+    new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimulations, inhibitions, model_description$basal);
 
     # Set up the model for the simulation
     model = new(fitmodel::Model)
     model$setModel( new_design, model_description$structure )
-    params = model$getParameterFromLocalResponse(model_description$model$getLocalResponse(model_description$parameters))
-    prediction = model$simulate(model_description$data, params)$prediction;
-    # Only unstim_data is required for the simulation
+    response = model_description$model$getLocalResponseFromParameter(model_description$parameters)
+    inhib_values = c()
+    for (inhibitor in inhib_nodes) {
+        if (inhibitor %in% inhibables) {
+            inhib_values = c(inhib_values, response$inhibitors[which(inhibables == inhibitor)])
+        } else {
+            inhib_values = c(inhib_values, -1)
+        }
+    }
+    params = model$getParameterFromLocalResponse(response$local_response, inhib_values)
+    
+    # Simulation, only unstim_data is required for the simulation, but it needs to be a matrix
+    new_data = new(fitmodel::Data)
+    new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
+    prediction = model$simulate(new_data, params)$prediction;
 
     rm(model) # Free the memory
     return(prediction);
 }
 
 # Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions
-get_matrix_combination <- function (perturbations, inhib_combo = 2, stim_combo = 1) {
+getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1) {
     stimulators = perturbations[!grepl("i$", perturbations)]
     if (stim_combo > length(stimulators) ) {
         stop ("Not enough stimulations to build the combinations")
