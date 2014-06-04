@@ -86,7 +86,7 @@ print_parameters(model)
 profiles = profileLikelihood(model, nb_steps);
 model = addPLinfos(model, profiles);
 
-export_model(model, paste0(conditions, ".mra"));
+exportModel(model, paste0(conditions, ".mra"));
 
 niPlotPL(profiles, data_name=data_name
 
