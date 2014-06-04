@@ -70,22 +70,25 @@ if (network == "") {
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
-model = create_model(network, data, basal_nodes, variation, nb_init=inits, cores=cores);
+model = createModel(network, data, basal_nodes, variation, nb_init=inits, cores=cores);
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
 power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
 conditions = paste( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", gsub(".tab", "", network), "_", inits%/%(1000^power_init), power[1+power_init] , sep="" );
-plot_model_accuracy(model, conditions);
+
+pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
+plotModelAccuracy(model, conditions);
+dev.off()
 print_parameters(model)
 
-# Perform the profile likelihood and add the info to the model
-profiles = profile_likelihood(model, nb_steps);
+# Perform the profile likelihood
+profiles = profileLikelihood(model, nb_steps);
 model = addPLinfos(model, profiles);
 
 export_model(model, paste0(conditions, ".mra"));
 
-ni_pf_plot(profiles, data_name=data_name
+niPlotPL(profiles, data_name=data_name
 
 get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
 

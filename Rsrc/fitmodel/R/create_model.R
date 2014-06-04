@@ -10,7 +10,7 @@ source("R/randomLHS.r"); # Latin Hypercube Sampling
 verbose = FALSE;
 debug = TRUE;
 
-create_model <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, nb_init=1000)
+createModel <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, nb_init=1000)
 {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
@@ -253,7 +253,7 @@ classic_initialisation <- function(model, data, samples) {
 }
 
 # Parallel initialisation of the parameters
-parallel_initialisation <- function(model, expdes, structure, data, samples, NB_THREADS) {
+parallel_initialisation <- function(model, expdes, structure, data, samples, NB_CORES) {
     # Put it under list format, as randomLHS only provides a matrix
     parallel_sampling = list()
     for (i in 1:dim(samples)[1]) {
@@ -261,7 +261,7 @@ parallel_initialisation <- function(model, expdes, structure, data, samples, NB_
     }
     # Parallel initialisations
     # The number of cores used depends on the ability of the detectCores function to detect them
-    parallel_results = mclapply(parallel_sampling, function(params, data, model) { model$fitmodel(data, params) }, data, model, mc.cores=NB_THREADS);
+    parallel_results = mclapply(parallel_sampling, function(params, data, model) { model$fitmodel(data, params) }, data, model, mc.cores=NB_CORES);
 
     # Reorder the results to get the same output as the linear function
     results = list()
@@ -277,8 +277,8 @@ parallel_initialisation <- function(model, expdes, structure, data, samples, NB_
 
 # Computes the profile likelihood and the parameters relationships of each parameters in the model
 # Returns a list with the profiles for each parameters
-profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALSE) {
-### Get the information from the model description
+profileLikelihood <- function(model_description, nb_points=10000, cores=1, in_file=FALSE) {
+    # Get the information from the model description
     model = model_description$model;
     model.structure = model_description$structure;
     data = model_description$data;
@@ -287,112 +287,49 @@ profile_likelihood <- function(model_description, nb_points=10000 , in_file=FALS
     init_residual = model_description$bestfit;
     print(paste(length(init_params), " paths to evaluate"));
 
-    profiles_list = list();
-    #if (MULTITHREAD) {
-##
-    #}
-    for (path in 1:length(init_params)) {
-        lprofile = model$profileLikelihood(data, init_params, path, nb_points);
-        # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
-        lprofile$residuals[path, lprofile$residuals[path,] > 1.1 * lprofile$thresholds[2]] = 1.1 * lprofile$thresholds[2];
-        # Simplify the name of the paths, keep the old one
-        lprofile$old_path = lprofile$path;
-        lprofile$path = simplify_path_name(lprofile$path);
-        if (FALSE) {
-        # Collapse the abscisse of the big residuals to the closest valid abscisse
-        last_correct = 0; to_correct = c();
-        for (entry in 1:length(lprofile$residuals[path,])) {
-            if (lprofile$residuals[path, entry] >= 1.1 * lprofile$thresholds[2]) {
-        # Collapsing flat zones does not work for some reason, the flat zones are identified but not collapsed
-        #for (entry in 1:(length(lprofile$residuals[path,])-1) ) {
-          #  if (abs(lprofile$residuals[path, entry] - lprofile$residuals[path, entry+1]) < 0.001) {
-                if (last_correct != 0) {
-                    lprofile$explored[entry] = lprofile$explored[last_correct];
-                } else {
-                    to_correct = c(to_correct, entry); # the abscisse can't be corrected as long as no valid abscisse has been encountered
-                }
-            } else if ( (entry+1) < length(lprofile$residuals[path,]) && lprofile$residuals[path, entry+1] < 1.1 * lprofile$thresholds[2] ) {
-                if (last_correct == 0) {
-                    for (i in to_correct) {
-                        lprofile$explored[i] = lprofile$explored[entry];
-                    }
-                }
-                last_correct = entry;
-            }
-        #}}
-        }
-        }
+    profiles = parallelPL(model, data, init_params, nb_points, cores)
 
-        print(paste0("Parameter ", lprofile$path, " decided (", path, "/", length(init_params), ")"));
-
-        profiles_list[[path]] = lprofile;
-    }
-
-    ### Print results
+    # Print results
     print(paste("Residual =", init_residual))
-    print_error_intervals(profiles_list)
+    print_error_intervals(profiles)
 
-    # Print the adjacency matrix and the inhibitors values
-    print("Response matrix : ");
-    print(model.structure$names)
-    local_response = model$getLocalResponseFromParameter(init_params);
-    print("Local response : ");
-    print(local_response$local_response)
-    print("Inhibitors :");
-    print(local_response$inhibitors);
-
-    return(profiles_list);
+    return(profiles);
 }
 
-# Plots heatmaps of the model prediction against the data weighted by the error
-plot_model_accuracy <- function(model_description, data_name = "default") {
-    # Calculate the mismatch
-    model = model_description$model;
-    data = model_description$data;
-    error = data$error;
-    stim_data = data$stim_data
-    init_params = model_description$parameter;
-
-    mismatch = (stim_data - model$simulate(data, init_params)$prediction) / error;
-
-    # Rebuild the conditions from the design
-    nodes = model_description$structure$names
-    design = model_description$design
-    treatments = c()
-    for (row in 1:nrow(mismatch)) {
-        stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1];
-        inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1];
-        if (length(inhib_names) > 0) {
-            paste(inhib_names, "i", sep="")
-        }
-        treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") );
+# Parallelise the profile likelihood
+parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
+    if (NB_CORES == 0) {
+        NB_CORES = detectCores()-1;
     }
-    print(treatments)
-    colnames(mismatch) = nodes[design$measured_nodes + 1];
-    rownames(mismatch) = treatments;
 
-    pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
-    bk = unique( c(seq(min(mismatch), 0, length=50), seq(0, max(mismatch), length=50)) )
-    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T)
-    dev.off()
+    profiles = mclapply(seq(length(init_params)), function(path, model, data, init_params) { profile = model$profileLikelihood(data, init_params, path, nb_points) ; print(paste0("Parameter ", path, "/", length(init_params), " decided")) ; return(profile) }, model, data, init_params, mc.cores=NB_CORES )
+    for (path in 1:length(init_params)) {
+        # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
+        # TODO : Integrate in the plot, not here
+        profiles[[path]]$residuals[path, profiles[[path]]$residuals[path,] > 1.1 * profiles[[path]]$thresholds[2]] = 1.1 * profiles[[path]]$thresholds[2];
+        # Simplify the name of the paths, keep the old one
+        profiles[[path]]$old_path = profiles[[path]]$path;
+        profiles[[path]]$path = simplify_path_name(profiles[[path]]$path);
+    }
+    return(profiles)
 }
 
 # Print each path value with its error
-print_error_intervals <- function(profiles_list) {
+print_error_intervals <- function(profiles) {
     print("Parameters :");
-    for (i in 1:length(profiles_list)) {
-        lidx = profiles_list[[i]]$lower_error_index[1];
-        hidx = profiles_list[[i]]$upper_error_index[1];
+    for (i in 1:length(profiles)) {
+        lidx = profiles[[i]]$lower_error_index[1];
+        hidx = profiles[[i]]$upper_error_index[1];
 
         # Print differently if there is non identifiability
-        if (profiles_list[[i]]$lower_pointwise && profiles_list[[i]]$upper_pointwise) {
-            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(", profiles_list[[i]]$explored[lidx], "-", profiles_list[[i]]$explored[hidx], ")"));
-        } else if (profiles_list[[i]]$lower_pointwise) {
-            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(", profiles_list[[i]]$explored[lidx], "- ni )"));
-        } else if (profiles_list[[i]]$upper_pointwise) {
-            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "( ni -", profiles_list[[i]]$explored[hidx], ")"));
+        if (profiles[[i]]$lower_pointwise && profiles[[i]]$upper_pointwise) {
+            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(", profiles[[i]]$explored[lidx], "-", profiles[[i]]$explored[hidx], ")"));
+        } else if (profiles[[i]]$lower_pointwise) {
+            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(", profiles[[i]]$explored[lidx], "- ni )"));
+        } else if (profiles[[i]]$upper_pointwise) {
+            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "( ni -", profiles[[i]]$explored[hidx], ")"));
         } else {
-            print(paste( profiles_list[[i]]$path, "=", profiles_list[[i]]$value, "(non identifiable)"));
+            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(non identifiable)"));
         }
     }
 }
@@ -452,11 +389,11 @@ simplify_path_name <- function (path_name) {
 }
 
 # Separates the profiles whether they are identifiables or not
-classify_profiles <- function (profiles_list) {
+classify_profiles <- function (profiles) {
     ni_profiles = list()
     i_profiles = list();
 
-    for (lprofile in profiles_list) {
+    for (lprofile in profiles) {
         # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
         if (lprofile$lower_pointwise && lprofile$upper_pointwise) {
             i_profiles[[length(i_profiles)+1]] <- lprofile;
@@ -472,11 +409,11 @@ classify_profiles <- function (profiles_list) {
 
 # Add the information provided by the profile likelihood in the model_description object
 # ie the limits of the confidence interval and the corresponding sets of parameters
-addPLinfos <- function(model_description, profiles_list) {
+addPLinfos <- function(model_description, profiles) {
     model_description$lower_values = c();
     model_description$upper_values = c();
-    for (i in 1:length(profiles_list)) {
-        pr = profiles_list[[i]];
+    for (i in 1:length(profiles)) {
+        pr = profiles[[i]];
         model_description$param_range[[i]] = list();
         if (pr$lower_pointwise) {
             lidx = pr$lower_error_index[1];
@@ -501,9 +438,9 @@ addPLinfos <- function(model_description, profiles_list) {
 }
 
 # Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
-ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
+niPlotPL <- function(profiles, init_residual=0, data_name="default") {
     # Sort the profiles to print differently whether they are identifiable or not
-    sorted_profiles = classify_profiles(profiles_list)
+    sorted_profiles = classify_profiles(profiles)
     i_profiles = sorted_profiles[[1]];
     ni_profiles = sorted_profiles[[2]];
 
@@ -588,8 +525,40 @@ ni_pf_plot <- function(profiles_list, init_residual=0, data_name="default") {
 
 }
 
+# Plots heatmaps of the model prediction against the data weighted by the error
+plotModelAccuracy <- function(model_description, data_name = "default") {
+    # Calculate the mismatch
+    model = model_description$model;
+    data = model_description$data;
+    error = data$error;
+    stim_data = data$stim_data
+    init_params = model_description$parameter;
+
+    mismatch = (stim_data - model$simulate(data, init_params)$prediction) / error;
+
+    # Rebuild the conditions from the design
+    nodes = model_description$structure$names
+    design = model_description$design
+    treatments = c()
+    for (row in 1:nrow(mismatch)) {
+        stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1];
+        inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1];
+        if (length(inhib_names) > 0) {
+            paste(inhib_names, "i", sep="")
+        }
+        treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") );
+    }
+    print(treatments)
+    colnames(mismatch) = nodes[design$measured_nodes + 1];
+    rownames(mismatch) = treatments;
+
+    bk = unique( c(seq(min(mismatch), 0, length=50), seq(0, max(mismatch), length=50)) )
+    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T)
+}
+
 # Selection of a minimal model
-select_minimal_model <- function(model_description, accuracy=0.95) {
+# TO CHECK
+selectMinimalModel <- function(model_description, accuracy=0.95) {
     model = model_description$model;
     init_params = model_description$parameters;
     initial_response = model$getLocalResponseFromParameter( init_params );
@@ -713,7 +682,7 @@ export_model <- function(model_description, file_name="model") {
         }
         writeLines(line, handle);
         # Write the parameters sets provided by the profile likelihood if it is there
-        if (length(model_description$param_range) == length(model_description$parameters)) {
+        if (length(model_description$param_range) == length(model_description$parameters) && length(model_description$param_range[[i]]) == 2) {
             if (!is.na(model_description$param_range[[i]]$low_set[1])) {
                 line = paste0(model_description$param_range[[i]]$low_set, collapse=" ");
             } else {
@@ -850,7 +819,9 @@ import_model <- function(file_name) {
         }
         lnb = lnb + 1;
         # Parameters sets for the extreme values of the confidence interval for the parameter
-        model_description$param_range[[id]] = list();
+        if (grepl("^PL|^PU", file[lnb])) {
+            model_description$param_range[[id]] = list();
+        }
         while (grepl("^PL|^PU", file[lnb])) {
             line = unlist(strsplit(file[lnb], " +|\t|;")) # One parameter set
             line = suppressWarnings(as.numeric( line[2:length(line)] ));
@@ -1007,30 +978,61 @@ simulateModel <- function(model_description, targets, readouts = "all") {
             }
         }
     }
-
     new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimulations, inhibitions, model_description$basal);
 
-    # Set up the model for the simulation
+    # Set up the model and the data for the simulation
     model = new(fitmodel::Model)
     model$setModel( new_design, model_description$structure )
-    response = model_description$model$getLocalResponseFromParameter(model_description$parameters)
-    inhib_values = c()
-    for (inhibitor in inhib_nodes) {
-        if (inhibitor %in% inhibables) {
-            inhib_values = c(inhib_values, response$inhibitors[which(inhibables == inhibitor)])
-        } else {
-            inhib_values = c(inhib_values, -1)
-        }
-    }
-    params = model$getParameterFromLocalResponse(response$local_response, inhib_values)
-    
-    # Simulation, only unstim_data is required for the simulation, but it needs to be a matrix
     new_data = new(fitmodel::Data)
     new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
-    prediction = model$simulate(new_data, params)$prediction;
+
+    # Compute the predictions
+    prediction = list()
+    ## Use the optimal fit
+    prediction$bestfit = model$simulate(new_data, getNewDesignResponse(model, model_description$model, model_description$parameters, design$inhib_nodes, inhib_nodes))$prediction;
+    ## Parameters sets provided by the profile likelihood
+    params_sets = list()
+    if (length(model_description$param_range) == length(model_description$parameters)) {
+        for (i in 1:length(model_description$param_range)) {
+            if (!is.na(model_description$param_range[[i]]$low_set)) {
+                params_sets = c(params_sets, getNewDesignResponse(model, model_description$model, model_description$param_range[[i]]$low_set, design$inhib_nodes, inhib_nodes));
+            }
+            if (!is.na(model_description$param_range[[i]]$high_set)) {
+                params_sets = c(params_sets, getNewDesignResponse(model, model_description$model, model_description$param_range[[i]]$high_set, design$inhib_nodes, inhib_nodes));
+            }
+        }
+    }
+    prediction$variants = list()
+    for (params in params_sets) {
+        prediction$variants = c(prediction$variants, model$simulate(new_data, params)$prediction);
+    }
 
     rm(model) # Free the memory
     return(prediction);
+}
+
+# Give a set of parameter usable by the new model from the parameters fitted in the old model
+getNewDesignResponse <- function(new_model, old_model, parameters, old_inhib, inhib_nodes, inhibition=-1, use_fitted_inhib=T) {
+    # Get the adjacency matrix and the inhibitions values
+    response = old_model$getLocalResponseFromParameter(parameters)
+    inhib_values = c()
+    for (inhibitor in inhib_nodes) {
+        if (use_fitted_inhib && inhibitor %in% old_inhib) {
+            inhib_values = c(inhib_values, response$inhibitors[which(old_inhib == inhibitor)])
+        } else {
+            # Possibility to define one inhibition for all or personnalised inhibitions
+            if (length(inhibition) == length(inhib_nodes)) {
+                cinh = inhibition[which(inhib_nodes == inhibitor)];
+            } else {
+                cinh = inhibition[1];
+            }
+            if (cinh > 0) {
+                cinh = log2(cinh);
+            }
+            inhib_values = c(inhib_values, cinh)
+        }
+    }
+    return(new_model$getParameterFromLocalResponse(response$local_response, inhib_values))
 }
 
 # Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions
