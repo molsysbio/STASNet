@@ -914,6 +914,13 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         inhibitors = gsub("i$", "", colnames(targets)[grepl("i$", colnames(targets))] )
         stimulators = colnames(targets)[!grepl("i$", colnames(targets))]
         target_matrix = targets
+        colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = inhibitors
+        colnames(target_matrix)[which( !grepl("i$", colnames(targets)) )] = stimulators
+    } else if (target == "all") {
+        inhibitors = model_description$structure$names[design$inhib_nodes + 1]
+        stimulators = model_description$structure$names[design$stim_nodes + 1]
+        target_matrix = cbind(design$inhibitor, design$stimuli)
+        colnames(target_matrix) = c(inhibitors, stimulators)
     } else if (is.list(targets)) { # TODO distinguish between numeric and character
         # List of perturbation giving nodes names in vectors, TODO
         target_names = unlist(targets)
@@ -926,7 +933,6 @@ simulateModel <- function(model_description, targets, readouts = "all") {
             line = 1; # TODO
         }
     }
-    colnames(target_matrix) = c(stimulators, inhibitors)
 
     # Set the new experiment design that will be used for the simulation
     # Remove the perturbations that cannot be used
@@ -1045,7 +1051,7 @@ getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_
 }
 
 # Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions
-getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1) {
+getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1, byStim=T) {
     stimulators = perturbations[!grepl("i$", perturbations)]
     if (stim_combo > length(stimulators) ) {
         stop ("Not enough stimulations to build the combinations")
@@ -1076,21 +1082,21 @@ getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1
     colnames(stim_matrix) = stimulators
 
     # Merge the two matrices to get all the combinations
-    perturbation_matrix = inhib_matrix
-    ## Start merging inhibitions only and stimulations only
-    for (i in 1:ncol(stim_matrix)) {
-        perturbation_matrix = cbind(perturbation_matrix, 0)
-    }
-    colnames(perturbation_matrix) = c(inhibitors, stimulators)
-    tmp = rep(0, nrow(stim_matrix))
-    tmp2 = c()
-    for (i in 1:ncol(inhib_matrix)) {
-        tmp2 = cbind(tmp2, tmp)
-    }
-    perturbation_matrix = rbind(perturbation_matrix, cbind(tmp2, stim_matrix))
-    ## Combination of perturbations and inhibitions
-    for (i in 1:nrow(inhib_matrix)) {
-        perturbation_matrix = rbind(perturbation_matrix, cbind( matrix(rep(inhib_matrix[i,], nrow(stim_matrix)), nrow(stim_matrix), ncol(inhib_matrix) , byrow=T), stim_matrix ))
+    ## Put a line of 0 to get the inhibition or stimulation alone
+    stim_matrix = rbind(rep(0, ncol(stim_matrix)), stim_matrix)
+    inhib_matrix = rbind(rep(0, ncol(inhib_matrix)), inhib_matrix)
+    ## Combination of perturbations and inhibitions, classified by inhibitions or by stimulations
+    perturbation_matrix = c()
+    if (byStim) {
+        for (i in 1:nrow(stim_matrix)) {
+            perturbation_matrix = rbind(perturbation_matrix, cbind( matrix(rep(stim_matrix[i,], nrow(inhib_matrix)), nrow(inhib_matrix), ncol(stim_matrix) , byrow=T), inhib_matrix ))
+        }
+        colnames(perturbation_matrix) = c(stimulators, inhibitors)
+    } else {
+        for (i in 1:nrow(inhib_matrix)) {
+            perturbation_matrix = rbind(perturbation_matrix, cbind( matrix(rep(inhib_matrix[i,], nrow(stim_matrix)), nrow(stim_matrix), ncol(inhib_matrix) , byrow=T), stim_matrix ))
+        }
+        colnames(perturbation_matrix) = c(inhibitors, stimulators)
     }
     rownames(perturbation_matrix) = NULL
 
@@ -1117,7 +1123,7 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
 # Plot the predictions by the model
 # One plot per measured node
 # Can plot with error bars if available, and give absolute value or log-fold change or a 
-plotModelSimulation <- function(model, targets, readouts="all", plotsPerFrame = 4, log_axis=F) {
+plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 4, log_axis=F) {
     if (log_axis) {
         ylog = "y"
     } else {
@@ -1141,7 +1147,7 @@ plotModelSimulation <- function(model, targets, readouts="all", plotsPerFrame = 
                 high_var = c(high_var, sort(variants, decreasing=T)[1])
                 limits = c( min(limits[1], low_var), max(limits[2], high_var) )
             }
-            barplot(prediction$bestfit[,node], ylim=limits, ylab="Activity", log=ylog)
+            barplot(prediction$bestfit[,node], ylim=limits, ylab="Activity", log=ylog, col="#008000", main=colnames(prediction$bestfit)[node])
             segments(bars, low_var, bars, high_var)
             space = abs(bars[2] - bars[1])/3
             segments(bars - space, low_var, bars + space, low_var)
@@ -1154,5 +1160,8 @@ plotModelSimulation <- function(model, targets, readouts="all", plotsPerFrame = 
     # TODO add error multiplier
 }
 
+# TODO Function to plot the simulation with the experimental data
+plotModelSimulation <- function(model, plotsPerFrame=4, log_axis=F) {
+}
 
 
