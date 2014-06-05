@@ -70,7 +70,7 @@ if (network == "") {
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
-model = createModel(network, data, basal_nodes, variation, nb_init=inits, cores=cores);
+model = createModel(network, data, basal_nodes, variation, inits=inits, cores=cores);
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
 power = c("", "k", "M", "G", "T", "P", "Y");

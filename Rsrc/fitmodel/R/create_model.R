@@ -10,7 +10,7 @@ source("R/randomLHS.r"); # Latin Hypercube Sampling
 verbose = FALSE
 debug = TRUE
 
-createModel <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, nb_init=1000) {
+createModel <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, inits=1000) {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
 # model.links should be an adjacency list file representing the network
@@ -191,21 +191,22 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     model = new(fitmodel::Model)
     model$setModel(expdes, model.structure)
 ## INITIAL FIT
-    nb_samples = nb_init
-    print (paste("Initializing the model parameters… (", nb_samples, " random samplings) with ", cores, " cores", sep=""))
-    samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()))
+    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
+    samples = qnorm(randomLHS(inits, model$nr_of_parameters()))
     # Parallelized version uses all cores but one to keep control
     if (cores == 0) {
         cores = detectCores()-1
     }
     results = parallel_initialisation(model, expdes, model.structure, data, samples, cores)
-# Choice of the best fit
+    # Choice of the best fit
     params = results$params
     residuals = results$residuals
+    hist(log(residuals), breaks="fd") # TODO find a less brutal way to do it (options, ...)
     if (debug) {
         # Print the 20 smallest residuals to check if the optimum has been found several times
         print(sort(residuals)[1:20])
     }
+
     init_params = params[,order(residuals)[1]]
     init_residual = residuals[order(residuals)[1]]
 
@@ -215,15 +216,18 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
 
 # Information required to run the model (including the model itself)
     model_description = list()
+    # Objects to build the model
     model_description$model = model
     model_description$design = expdes
     model_description$structure = model.structure
+    model_description$basal = basal_activity
     model_description$data = data
+    # Remember the optimal parameters
     model_description$parameters = init_params
     model_description$bestfit = init_residual
-    model_description$basal = basal_activity
+    # Name and infos of the model
     model_description$name = data.stimulation
-    model_description$infos = c(paste0(nb_samples, " samplings"), paste0(cores, " cores used"))
+    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals), collapse=" ") ))
     # Values that can't be defined without the profile likelihood
     model_description$param_range = list()
     model_description$lower_values = c()
@@ -233,6 +237,7 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
 }
 
 # Initialise the parameters with a one core processing
+# needs corrections, not used anyway
 classic_initialisation <- function(model, data, samples) {
     for (i in 1:nb_samples) {
         result = model$fitmodel( data, samples[i,] )
@@ -315,6 +320,7 @@ parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
 
 # Print each path value with its error
 print_error_intervals <- function(profiles) {
+# TODO contorl
     print("Parameters :")
     for (i in 1:length(profiles)) {
         lidx = profiles[[i]]$lower_error_index[1]
@@ -556,8 +562,8 @@ plotModelAccuracy <- function(model_description, data_name = "default") {
 }
 
 # Selection of a minimal model
-# TO CHECK
 selectMinimalModel <- function(model_description, accuracy=0.95) {
+    # Extra fitting informations from the model description
     model = model_description$model
     init_params = model_description$parameters
     initial_response = model$getLocalResponseFromParameter( init_params )
@@ -565,8 +571,11 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
     model_structure = model_description$structure
     adj = model_structure$adjacencyMatrix
     data = model_description$data
+    if (is.na(model_description$bestfit)) {stop("Data are recquired to reduce the model")}
 
     print("Performing model reduction…")
+    initresidual = model_description$bestfit
+    rank = model$modelRank()
     reduce=TRUE
     while (reduce) {
         links.to.test=which(adj==1)
@@ -581,7 +590,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
             newadj[i]=0
             model_structure$setAdjacencyMatrix( newadj )
             model$setModel ( expdes, model_structure )
-            paramstmp = model$getParameterFromLocalResponse(initial.response$local_response, initial.response$inhibitors)
+            paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
             result = model$fitmodel( data,paramstmp)
             response.matrix = model$getLocalResponseFromParameter( result$parameter )
             residuals = c(residuals,result$residuals);   
@@ -605,11 +614,12 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
         dr = rank - new_rank
         deltares = residuals[order.res[1]]-initresidual
         # Some boundary cases might give low improvement of the fit
-        if (deltares < 0) { deltares = -deltares; warning(paste("Negative delta residual :", deltares)) }
+        if (deltares < 0) { warning(paste("Negative delta residual :", deltares)) ; deltares = -deltares  }
         if (deltares < qchisq(accuracy, df=dr)) {
             adj[links.to.test[order.res[1]]]=0
             rank = new_rank
-            initial.response=params[,order.res[1]]
+            initial_response=params[,order.res[1]]
+            print(initial_response)
             print(paste0("remove ",
                       model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                       model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
@@ -617,14 +627,17 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
             print(paste( "residual = ", residuals[order.res[1]], ", Delta residual = ", residuals[order.res[1]]-initresidual, ",  p-value = ", pchisq(deltares, df=dr) ))
             print("------------------------------------------------------------------------------------------------------")
 
+            model_description$bestfit = sort(residuals)[1]
         } else {
           reduce=FALSE
         }
     }
-    #print(adj)
+    print("Reduction complete")
     # We recover the final model
-    model_description$model_structure$setAdjacencyMatrix(adj)
-    model_description$model$setModel(expdes, model_description$model_structure)
+    model_description$structure$setAdjacencyMatrix(adj)
+    model_description$model$setModel(expdes, model_description$structure)
+    model_description$parameters = model_description$model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+    model_description$infos = c(model_description$infos, "Reduced model")
 
     return(model_description)
 }
@@ -726,7 +739,7 @@ exportModel <- function(model_description, file_name="model") {
 importModel <- function(file_name) {
     model_description = list()
 # Fields not covered :
-    model_description$bestfit = 0
+    model_description$bestfit = NA # Used to indicate that it is an imported model
 # --------------------
 
     if (!grepl(".mra", file_name)) {
@@ -892,7 +905,6 @@ importModel <- function(file_name) {
     return(model_description)
 }
 
-# TO CHECK
 # Get the target simulations in a MIDAS design-like or list format
 # Returns a matrix in a MIDAS measure-like format
 simulateModel <- function(model_description, targets, readouts = "all") {
@@ -1161,7 +1173,7 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
 }
 
 # TODO Function to plot the simulation with the experimental data
-plotModelSimulation <- function(model, plotsPerFrame=4, log_axis=F) {
+plotModelSimulation <- function(model, data, plotsPerFrame=4, log_axis=F) {
 }
 
 
