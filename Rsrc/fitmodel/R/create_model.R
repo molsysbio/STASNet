@@ -10,10 +10,10 @@ source("R/randomLHS.r"); # Latin Hypercube Sampling
 verbose = FALSE
 debug = TRUE
 
-createModel <- function(model.links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, inits=1000) {
+createModel <- function(model_links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, inits=1000) {
 # Creates a parametrized model from an experiment file and the network structure
 # It requires the file network_reverse_engineering-X.X/r_binding/fitmodel/R/generate_model.R of the fitmodel package
-# model.links should be an adjacency list file representing the network
+# model_links should be an adjacency list file representing the network
 # Experiment file data.stimulation syntax should be as follows, with one line per replicate
 #          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -22,11 +22,11 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     ### READ DATA
     print("Reading data")
     # Creation of the model structure object
-    links = read.delim(model.links, header=FALSE)
-    model.structure=getModelStructure(links)
+    links = read.delim(model_links, header=FALSE)
+    model_structure=getModelStructure(links)
     model_graph = graph.edgelist(as.matrix(links))
     # Plot the network in a file
-    pdf(gsub(".tab$", ".pdf", model.links))
+    pdf(gsub(".tab$", ".pdf", model_links))
     plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
@@ -38,7 +38,7 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
         begin_measure = 4
         # Indicate where the conditions are
         conditions = c(1, 2)
-        data.values = data.file[, colnames(data.file) %in% model.structure$names]
+        data.values = data.file[, colnames(data.file) %in% model_structure$names]
     } else if (grepl(".csv$", data.stimulation)) {
         use_midas = TRUE
         data.file = read.delim(data.stimulation, sep=",")
@@ -52,7 +52,7 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
         data.values = data.file[,grepl("^DV", colnames(data.file))]
         colnames(data.file) = gsub("^[A-Z]{2}.", "", colnames(data.file))
         colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
-        data.values = data.values[, colnames(data.values) %in% model.structure$names]
+        data.values = data.values[, colnames(data.values) %in% model_structure$names]
     }
 
     # Means of basal activity of the network and of the blank fixation of the antibodies
@@ -80,10 +80,10 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
             variation.file = read.delim(data.variation, sep=",")
             pre_cv = variation.file[, grepl("^DV", colnames(variation.file))]
             colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
-            cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model.structure$names] ), by=data.file[,1:(begin_measure-1)], mean)
+            cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model_structure$names] ), by=data.file[,1:(begin_measure-1)], mean)
         } else {
             variation.file = read.delim(data.variation)
-            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model.structure$names]),by=data.file[,1:(begin_measure-1)],mean)
+            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model_structure$names]),by=data.file[,1:(begin_measure-1)],mean)
         }
         cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
         error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
@@ -142,12 +142,12 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     if (use_midas) {
         names = colnames(mean.values)[conditions]
         stim_names = names[grepl("[^i]$", names)]
-        stim.nodes = as.character( stim_names[ stim_names %in% model.structure$names] )
+        stim.nodes = as.character( stim_names[ stim_names %in% model_structure$names] )
         names = gsub("i$", "", names[grepl("i$", names)])
-        inhib.nodes = as.character( names[names %in% model.structure$names] )
+        inhib.nodes = as.character( names[names %in% model_structure$names] )
     } else {
-        stim.nodes = as.character(unique(mean.values$stimulator[mean.values$stimulator %in% model.structure$names]))
-        inhib.nodes = as.character(unique(mean.values$inhibitor[mean.values$inhibitor %in% model.structure$names]))
+        stim.nodes = as.character(unique(mean.values$stimulator[mean.values$stimulator %in% model_structure$names]))
+        inhib.nodes = as.character(unique(mean.values$inhibitor[mean.values$inhibitor %in% model_structure$names]))
     }
     measured.nodes=colnames(data.stim)
 
@@ -185,11 +185,11 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     }
 
 # Experimental design
-    expdes=getExperimentalDesign(model.structure,stim.nodes,inhib.nodes,measured.nodes,stimuli,inhibitor,basal_activity)
+    expdes=getExperimentalDesign(model_structure,stim.nodes,inhib.nodes,measured.nodes,stimuli,inhibitor,basal_activity)
 
 ### MODEL SETUP
     model = new(fitmodel::Model)
-    model$setModel(expdes, model.structure)
+    model$setModel(expdes, model_structure)
 ## INITIAL FIT
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
     samples = qnorm(randomLHS(inits, model$nr_of_parameters()))
@@ -197,7 +197,7 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     if (cores == 0) {
         cores = detectCores()-1
     }
-    results = parallel_initialisation(model, expdes, model.structure, data, samples, cores)
+    results = parallel_initialisation(model, expdes, model_structure, data, samples, cores)
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
@@ -219,7 +219,7 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     # Objects to build the model
     model_description$model = model
     model_description$design = expdes
-    model_description$structure = model.structure
+    model_description$structure = model_structure
     model_description$basal = basal_activity
     model_description$data = data
     # Remember the optimal parameters
@@ -227,13 +227,213 @@ createModel <- function(model.links="links", data.stimulation="data", basal_acti
     model_description$bestfit = init_residual
     # Name and infos of the model
     model_description$name = data.stimulation
-    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals), collapse=" ") ))
+    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ))
     # Values that can't be defined without the profile likelihood
     model_description$param_range = list()
     model_description$lower_values = c()
     model_description$upper_values = c()
 
     return(model_description)
+}
+
+# TO CHECK AND ADD
+# Extracts the data, the experimental design and the structure from the input files
+extractModelCore <- function(links, basal_activity, data_file, var_file="") {
+    ### READ DATA
+    print("Reading data")
+    # Creation of the model structure object
+    links = read.delim(model_links, header=FALSE)
+    model_structure=getModelStructure(links)
+    model_graph = graph.edgelist(as.matrix(links))
+    # Plot the network in a file # TODO find a better visualisation tool
+    pdf(paste0( "graph_", gsub(".tab$", ".pdf", model_links) ))
+    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
+    dev.off()
+
+    # Read the experiment design and extract the values
+    use_midas = FALSE
+    if (grepl(".data$", data.stimulation)) {
+        data_file = read.delim(data.stimulation)
+        data_file[data_file=="Medium"] = "DMSO"
+        begin_measure = 4
+        # Indicate where the conditions are
+        conditions = c(1, 2)
+        data.values = data_file[, colnames(data_file) %in% model_structure$names]
+    } else if (grepl(".csv$", data.stimulation)) {
+        use_midas = TRUE
+        data_file = read.delim(data.stimulation, sep=",")
+        begin_measure = which(grepl("^DA.", colnames(data_file)))
+        data_file = data_file[-begin_measure] # Delete the DA field which is not used
+        begin_measure = begin_measure[1] # If there were several DA fields
+        # Indicate where the conditions are
+        conditions = 2:(begin_measure-1)
+
+        # Extract the measurements of nodes in the network
+        data.values = data_file[,grepl("^DV", colnames(data_file))]
+        colnames(data_file) = gsub("^[A-Z]{2}.", "", colnames(data_file))
+        colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
+        data.values = data.values[, colnames(data.values) %in% model_structure$names]
+    }
+
+    # Means of basal activity of the network and of the blank fixation of the antibodies
+    unstim.values = colMeans(data.values[data_file$type=="c",])
+    lapply(unstim.values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are recquired to simulate the network")}})
+    blank.values = colMeans(data.values[data_file$type=="blank",])
+    blank.values[is.nan(blank.values)] = 0; # For conditions without blank values
+
+    # Calculates the mean and standard deviation for each condition 
+    mean.values = aggregate(as.list(data.values),by=data_file[,1:(begin_measure-1)],mean)
+    sd.values = aggregate(as.list(data.values),by=data_file[,1:(begin_measure-1)],sd)
+    print("Data used :")
+    print(mean.values)
+
+    # Separate values and perturbation
+    data.stim = mean.values[mean.values$type=="t",begin_measure:dim(mean.values)[2]]
+    data.perturb = mean.values[mean.values$type=="t", conditions]
+
+    ### CALCULATE ERROR MODEL
+    if (grepl("\\.cv$", var_file) || grepl("\\.var$", var_file)) {
+        # We use the CV file if there is one
+        # The format and the order of the conditions are assumed to be the same as the data file
+        print("Using var file")
+        if (use_midas) {
+            variation.file = read.delim(var_file, sep=",")
+            pre_cv = variation.file[, grepl("^DV", colnames(variation.file))]
+            colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
+            cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model_structure$names] ), by=data_file[,1:(begin_measure-1)], mean)
+        } else {
+            variation.file = read.delim(var_file)
+            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model_structure$names]),by=data_file[,1:(begin_measure-1)],mean)
+        }
+        cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
+        error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
+    } else {
+    # Define the lower and default error threshold
+        min.cv=0.1;     # parameters: minimal cv=0.1
+        default.cv=0.3; # parameters: default cv if there are only 2 replicates
+
+        # Calculate error percentage
+        cv.values = sd.values[begin_measure:dim(sd.values)[2]] / mean.values[begin_measure:dim(sd.values)[2]]
+        # Values to close to the blank are removed because the error is not due to antibody specific binding
+        cv.values[!mean.values[,begin_measure:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA
+            
+        # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
+        cv = colMeans(cv.values,na.rm=TRUE)
+        cv[cv<min.cv] = min.cv
+        cv[is.nan(cv)|is.na(cv)]=default.cv
+
+        if (FALSE) { #"Multiline comment"
+        for (i in 1:dim(cv.values)[2]) {
+            count = 0
+            for (j in 1:dim(cv.values)[1]) {
+                if (!is.na(cv[i][j]) | !is.nan(cv[i][j])) {
+                    count = count + 1
+                }
+            }
+            if (count <= 2) {
+                cv[i] = default.cv
+                print("Defaulted")
+            }
+        }
+        }
+
+        if (verbose) {
+            print("Error model :")
+            for (i in 1:length(cv)) {
+                print(paste(colnames(data.values)[i], " : ", cv[i]))
+            }
+        }
+        error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
+    }
+
+### SET UP DATA OBJECT
+
+    data=new(fitmodel::Data)
+    data$set_unstim_data (matrix(rep(unstim.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]))
+    data$set_scale( data$unstim_data )
+    data$set_stim_data( as.matrix(data.stim) )
+    data$set_error( as.matrix(error ))
+
+### EXTRACT EXPERIMENTAL DESIGN
+
+# Extraction of stimulated, inhibited and measured nodes
+    if (use_midas) {
+        names = colnames(mean.values)[conditions]
+        stim_names = names[grepl("[^i]$", names)]
+        stim.nodes = as.character( stim_names[ stim_names %in% model_structure$names] )
+        names = gsub("i$", "", names[grepl("i$", names)])
+        inhib.nodes = as.character( names[names %in% model_structure$names] )
+    } else {
+        stim.nodes = as.character(unique(mean.values$stimulator[mean.values$stimulator %in% model_structure$names]))
+        inhib.nodes = as.character(unique(mean.values$inhibitor[mean.values$inhibitor %in% model_structure$names]))
+    }
+    measured.nodes=colnames(data.stim)
+
+## Identification of nodes with basal activity
+    basal_activity=as.character(read.delim(basal_activity,header=FALSE)[,1])
+
+# Inhibition and stimulation vectors for each experiment
+    if (use_midas) {
+        stimuli = as.matrix(data.perturb[stim.nodes])
+    } else {
+        stimuli=matrix(0,ncol=length(stim.nodes),nrow=dim(data.perturb)[1])
+        for (i in 1:length(stim.nodes)) {
+            stimuli[grepl(stim.nodes[i], data.perturb$stimulator),i]=1
+        }
+    }
+    if (verbose) {
+        print("Stimulated nodes")
+        print(stim.nodes)
+        print(stimuli)
+    }
+    if (use_midas) {
+        inhibitor = as.matrix(data.perturb[paste(inhib.nodes, "i", sep="")])
+    } else {
+        inhibitor=matrix(0,ncol=length(inhib.nodes),nrow=dim(data.perturb)[1])
+        if (length(inhib.nodes) > 0) { # Usefull for artificial networks
+            for (i in 1:length(inhib.nodes)) {
+                inhibitor[grepl(inhib.nodes[i], data.perturb$inhibitor),i]=1
+            }
+        }
+    }
+    if (verbose) {
+        print("Inhibited nodes")
+        print(inhib.nodes)
+        print(inhibitor)
+    }
+
+# Experimental design
+    expdes=getExperimentalDesign(model_structure,stim.nodes,inhib.nodes,measured.nodes,stimuli,inhibitor,basal_activity)
+
+    core = list()
+    core$design = expdes
+    core$data = data
+    core$structure = model_structure
+}
+
+# Build a full model with complete data, but use parameters from a file
+rebuildModel <- function(model_file, data_file, var_file="") {
+
+}
+
+# Build a model and use the fit of another run, cannot use info after a model reduction
+# TODO write the function that import from the file then add the data to use the post-reduction
+addParameters <- function(model_file, links, basal_activity, data_file, var_file="") {
+    # Load one model from a model file and build the other one from the data
+    model = createModel(links, data_file, basal_activity, var_file, cores=1, inits=1)
+    m2 = importModel(model_file)
+
+    if (length(m2$parameters) != length(model$parameters)) {
+        stop("The models do not represent the same network")
+    }
+    model$parameters = m2$parameters
+    model$bestfit = model$model$fitmodel( model$data, model$parameters)
+    model$infos = m2$infos
+    model$param_range = m2$param_range
+    model$lower_values = m2$lower_values
+    model$upper_values = m2$upper_values
+
+    return(model)
 }
 
 # Initialise the parameters with a one core processing
@@ -284,7 +484,7 @@ parallel_initialisation <- function(model, expdes, structure, data, samples, NB_
 profileLikelihood <- function(model_description, nb_points=10000, cores=1, in_file=FALSE) {
     # Get the information from the model description
     model = model_description$model
-    model.structure = model_description$structure
+    model_structure = model_description$structure
     data = model_description$data
 
     init_params = model_description$parameters
@@ -443,7 +643,7 @@ addPLinfos <- function(model_description, profiles) {
 }
 
 # Plots the functionnal relation between each non identifiable parameter and the profile likelihood of all parameters
-niPlotPL <- function(profiles, init_residual=0, data_name="default") {
+niplotPL <- function(profiles, init_residual=0, data_name="default") {
     # Sort the profiles to print differently whether they are identifiable or not
     sorted_profiles = classify_profiles(profiles)
     i_profiles = sorted_profiles[[1]]
@@ -928,7 +1128,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         target_matrix = targets
         colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = inhibitors
         colnames(target_matrix)[which( !grepl("i$", colnames(targets)) )] = stimulators
-    } else if (target == "all") {
+    } else if (targets == "all") {
         inhibitors = model_description$structure$names[design$inhib_nodes + 1]
         stimulators = model_description$structure$names[design$stim_nodes + 1]
         target_matrix = cbind(design$inhibitor, design$stimuli)
@@ -1005,6 +1205,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
 
     # Compute the predictions
     prediction = list()
+    colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = paste0(inhibitors, "i")
     prediction$conditions = target_matrix
     ## Use the optimal fit
     old_inhib_nodes = model_description$structure$names[1+design$inhib_nodes]
@@ -1143,13 +1344,20 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
     }
     prediction = simulateModel(model, targets, readouts)
 
+    layout(matrix(1:4, nrow=2, byrow=T), widths=c(1, 8))
+    old_mar = par()$mar
     for (node in 1:ncol(prediction$bestfit)) {
+        # Blank plot
+        par(mar = c(1, 0, 4, 0))
+        eplot(1:2, 1:2)
+        # Collects the positions of the bars
+        par(mar = c(1, 0, 4, 4))
         bars = barplot(prediction$bestfit[,node], plot=F)
         limits = c(0, max(prediction$bestfit[,node]))
         if (length(prediction$variants) > 0) {
             low_var = c()
             high_var = c()
-            # Collect the extreme values and plot error bars
+            # Collect the extreme values
             for (perturbation in 1:nrow(prediction$bestfit)) {
                 variants = c()
                 for (set in 1:length(prediction$variants)) {
@@ -1159,6 +1367,7 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
                 high_var = c(high_var, sort(variants, decreasing=T)[1])
                 limits = c( min(limits[1], low_var), max(limits[2], high_var) )
             }
+            # Plot the bars with the errors
             barplot(prediction$bestfit[,node], ylim=limits, ylab="Activity", log=ylog, col="#008000", main=colnames(prediction$bestfit)[node])
             segments(bars, low_var, bars, high_var)
             space = abs(bars[2] - bars[1])/3
@@ -1167,13 +1376,33 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
         } else {
             barplot(prediction$bestfit[,node], ylab="Activity", log=ylog)
         }
+
+        # Write the conditions used
+        par(mar = c(0, 0, 0, 0))
+        eplot( xlim=c(0, 2), ylim=c(0, ncol(prediction$conditions)) )
+        text(1, 1:ncol(prediction$conditions), colnames(prediction$conditions))
+        par(mar = c(0, 0, 0, 4))
+        eplot( xlim=c(0, max(bars)), ylim=c(0, ncol(prediction$conditions)) )
+        barplot(prediction$bestfit[,node], plot=F)
+        for (pert in 1:ncol(prediction$conditions)) {
+            line = rep("-", nrow(prediction$conditions))
+            line[prediction$conditions[, pert] == 1] = "+"
+            #line = c(colnames(prediction$conditions)[pert], line)
+            text(bars, pert, line)
+        }
     }
+    par(mar=old_mar)
 
     # TODO add error multiplier
 }
 
 # TODO Function to plot the simulation with the experimental data
 plotModelSimulation <- function(model, data, plotsPerFrame=4, log_axis=F) {
+}
+
+# Plots an empty zone, usefull to write only text
+eplot <- function(xlim, ylim, ...) {
+    plot(1, xlim=xlim, ylim=ylim, type="n", axes=F, xlab=NA, ylab=NA, ...)
 }
 
 
