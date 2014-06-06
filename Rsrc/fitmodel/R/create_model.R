@@ -1344,14 +1344,12 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
     }
     prediction = simulateModel(model, targets, readouts)
 
-    layout(matrix(1:4, nrow=2, byrow=T), widths=c(1, 8))
+    ratio = 2/3
+    layout(matrix(1:2, nrow=2, byrow=T), heights=c(ratio, 1-ratio))
     old_mar = par()$mar
     for (node in 1:ncol(prediction$bestfit)) {
-        # Blank plot
-        par(mar = c(1, 0, 4, 0))
-        eplot(1:2, 1:2)
         # Collects the positions of the bars
-        par(mar = c(1, 0, 4, 4))
+        par(mar = c(1, 6, 4, 4))
         bars = barplot(prediction$bestfit[,node], plot=F)
         limits = c(0, max(prediction$bestfit[,node]))
         if (length(prediction$variants) > 0) {
@@ -1378,20 +1376,18 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
         }
 
         # Write the conditions used
-        par(mar = c(0, 0, 0, 0))
-        eplot( xlim=c(0, 2), ylim=c(0, ncol(prediction$conditions)) )
-        text(1, 1:ncol(prediction$conditions), colnames(prediction$conditions))
-        par(mar = c(0, 0, 0, 4))
-        eplot( xlim=c(0, max(bars)), ylim=c(0, ncol(prediction$conditions)) )
+        par(mar = c(0, 6, 0, 4), xpd=NA)
+        #eplot( xlim=c(0, max(bars)), ylim=c(0, ncol(prediction$conditions)) )
         barplot(prediction$bestfit[,node], plot=F)
         for (pert in 1:ncol(prediction$conditions)) {
             line = rep("-", nrow(prediction$conditions))
             line[prediction$conditions[, pert] == 1] = "+"
-            #line = c(colnames(prediction$conditions)[pert], line)
-            text(bars, pert, line)
+            line = c(colnames(prediction$conditions)[pert], line)
+            text(c(-1 + 3/nrow(prediction$conditions), bars), -pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), line)
         }
+        eplot( xlim=c(0, 1), ylim=c(0, 1) )
     }
-    par(mar=old_mar)
+    par(mar=old_mar, xpd=T)
 
     # TODO add error multiplier
 }
