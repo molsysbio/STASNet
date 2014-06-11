@@ -305,16 +305,27 @@ void profile_likelihood(const Data &data,
         dec_residual[keep_constant[0]].push_back(residual);
 
         // Tell if the thresholds were reached and for which index (in the final array)
-        if (first_low && residual > thresholds.pointwise_threshold) {
-            thresholds.ln_threshold = true;
-            first_low = false;
-            thresholds.negative_uncertainty.push_back(std::floor(total_steps/2)-1-i);
-        } else if (residual < thresholds.pointwise_threshold){
-            first_low = true;
-        }
         if (residual > thresholds.simultaneous_threshold && first_high) {
             thresholds.hn_threshold = true;
             first_high = false;
+            // If the residual reaches both thresholds at once, there is a bad fit at this point and the parameters would have no sense so we use the previous set
+            if (first_low) {
+                for (int j=0 ; j < parameters.size() ; j++) {
+                    parameters[j] = dec_residual[j][i-1];
+                }
+            }
+        }
+        if (first_low && residual > thresholds.pointwise_threshold) {
+            thresholds.ln_threshold = true;
+            first_low = false;
+            // If the residual went skyrocket over the threshold, use the index of the previous point below it
+            if (residual < thresholds.simultaneous_threshold) {
+                thresholds.negative_uncertainty.push_back(std::floor(total_steps/2)-1-i);
+            } else {
+                thresholds.negative_uncertainty.push_back(std::floor(total_steps/2)-1-i +1);
+            }
+        } else if (residual < thresholds.pointwise_threshold){
+            first_low = true;
         }
 
         scanned_value += step_size;
@@ -365,16 +376,27 @@ void profile_likelihood(const Data &data,
         residual_track[keep_constant[0]].push_back(residual);
 
         // Update boolean and index if the thresholds are reached for ascending value
-        if (first_low && residual > thresholds.pointwise_threshold) {
-            thresholds.lp_threshold = true;
-            first_low = false;
-            thresholds.positive_uncertainty.push_back(std::floor(total_steps / 2) + i);
-        } else if (residual < thresholds.pointwise_threshold){
-            first_low = true;
-        }
         if (first_high && residual > thresholds.simultaneous_threshold) {
             thresholds.hp_threshold = true;
             first_high = false;
+            // If the residual reaches both thresholds at once, there is a bad fit at this point and the parameters would have no sense so we use the previous set
+            if (first_low) {
+                for (int j=0 ; j < parameters.size() ; j++) {
+                    parameters[j] = residual_track[j][i-1];
+                }
+            }
+        }
+        if (first_low && residual > thresholds.pointwise_threshold) {
+            thresholds.lp_threshold = true;
+            first_low = false;
+            // Use the previous index if the residual goes skyrocketting
+            if (residual > thresholds.simultaneous_threshold) {
+                thresholds.positive_uncertainty.push_back(std::floor(total_steps / 2) + i);
+            } else {
+                thresholds.positive_uncertainty.push_back(std::floor(total_steps / 2) + i -1);
+            }
+        } else if (residual < thresholds.pointwise_threshold){
+            first_low = true;
         }
 
         scanned_value += step_size;
