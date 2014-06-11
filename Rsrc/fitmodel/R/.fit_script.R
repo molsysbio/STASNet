@@ -26,7 +26,7 @@ data = ""
 network = ""
 basal_nodes = ""
 variation = ""
-nb_steps = 10000
+nb_steps = 1000
 inits = 1000
 # Autodetection of the cores
 cores = 0
@@ -75,22 +75,41 @@ get_running_time(init_time, paste("to build the model with", inits, "initialisat
 
 power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
-conditions = paste( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", gsub(".tab", "", network), "_", inits%/%(1000^power_init), power[1+power_init] , sep="" );
+conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", inits%/%(1000^power_init), power[1+power_init]);
 
-pdf(paste0("accuracy_heatmap_", data_name, ".pdf"))
+pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
 plotModelAccuracy(model, conditions);
 dev.off()
 print_parameters(model)
 
 # Perform the profile likelihood
-profiles = profileLikelihood(model, nb_steps);
+profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));
 model = addPLinfos(model, profiles);
-
-exportModel(model, paste0(conditions, ".mra"));
-
-niPlotPL(profiles, data_name=data_name
+niplotPL(profiles, data_name=data_name)
 
 get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
+
+exportModel(model, paste0(conditions, ".mra"));
+# Plot the simulation for all combinations of inhibitors 
+pdf(paste0("combos_", conditions, ".pdf"))
+plotModelPrediction(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
+dev.off()
+# Plot the simulated conditions
+pdf(paste0("all_", conditions, ".pdf"))
+plotModelPrediction(model, "all")
+dev.off()
+
+# Reduce the model and see what changed
+model = selectMinimalModel(model)
+exportModel(model, paste0(conditions, "_reduced.mra"));
+# Plot the simulated conditions
+pdf(paste0("reduced_all_", conditions, ".pdf"))
+plotModelPrediction(model, "all")
+dev.off()
+niplotPL(profiles, data_name=paste0("reduced_", data_name))
+
+print("Finished")
+
 
 
 # IDEAS :

@@ -1,9 +1,6 @@
 # .gitignore
 # tells git which files shouldn't be tracked nor shown as being untracked
 *.[oa]
-*.swp
-*.swo
-.nfs00000000000059f400000711
 *.lo
 *.la
 *.libs
@@ -12,5 +9,9 @@
 .RData*
 small_network/
 feed_forward_simple/
-src
-
+src/levmar-2.5/.deps
+src/levmar-2.5/Makefile
+# Vim swap files
+*.swn
+*.swp
+*.swo
