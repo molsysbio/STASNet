@@ -95,7 +95,7 @@ extractModelCore <- function(links, basal_activity, data_filename, var_file="") 
         # Indicate where the conditions are
         conditions = c(1, 2)
         data.values = data_file[, colnames(data_file) %in% model_structure$names]
-    } else if (grepl(".csv$", data_file)) {
+    } else if (grepl(".csv$", data_filename)) {
         use_midas = TRUE
         data_file = read.delim(data_filename, sep=",")
         begin_measure = which(grepl("^DA.", colnames(data_file)))
@@ -247,13 +247,14 @@ extractModelCore <- function(links, basal_activity, data_filename, var_file="") 
     return(core)
 }
 
-# Build a full model with complete data, but use parameters from a file
+# Build a model from a file, and import data for this model
 rebuildModel <- function(model_file, data_file, var_file="") {
     model = importModel(model_file)
     links = matrix(rep(model$structure$names, 2), ncol=2)
     core = extractModelCore(links, model$basal, data_file, var_file)
 
     model$data = core$data
+    model$bestfit = model$fitmodel(data, model$parameters)
 
     return(model)
 }
@@ -360,10 +361,8 @@ parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
     return(profiles)
 }
 
-# Print each path value with its error
+# Print each path value with its error from the profile likelihood
 print_error_intervals <- function(profiles) {
-# TODO contorl
-    print("Parameters :")
     for (i in 1:length(profiles)) {
         lidx = profiles[[i]]$lower_error_index[1]
         hidx = profiles[[i]]$upper_error_index[1]
@@ -381,15 +380,35 @@ print_error_intervals <- function(profiles) {
     }
 }
 
-# Print the value of each path
-print_parameters <- function(model_description) {
+# Print the value of each path from the model, and add the profile likelihood infos if they are provided
+printParameters <- function(model_description) {
     model = model_description$model
     parameters = model_description$parameters
 
     print("Parameters :")
     paths = model$getParametersLinks()
-    for (i in 1:length(paths)) {
-        print (paste(simplify_path_name(paths[i]), ":", parameters[i]))
+    if (length(model_description) > 0) {
+        for (i in 1:length(paths)) {
+            text = paste(simplify_path_name(paths[i]), "=", parameters[i])
+            if (is.na(model$lower_values[i])) {
+                if (is.na(model$upper_values[i])) {
+                    text = paste(text, "(non identifiable)")
+                } else {
+                    text = paste(text, "( ni - ", model$upper_values[i], ")")
+                }
+            } else {
+                text = paste(text, "(", model$lower_values[i])
+                if (is.na(model$upper_values[i])) {
+                    text = paste(text, "- ni )")
+                } else {
+                    text = paste(text, "-", model$upper_values[i], ")")
+                }
+            }
+        }
+    } else {
+        for (i in 1:length(paths)) {
+            print (paste(simplify_path_name(paths[i]), ":", parameters[i]))
+        }
     }
 }
 
