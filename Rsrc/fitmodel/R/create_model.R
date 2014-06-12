@@ -12,7 +12,8 @@ debug = TRUE
 
 # Creates a parameterised model from experiment files and the network structure
 createModel <- function(model_links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, inits=1000) {
-    core = extractModelCore(model_links, basal_activity, data.stimulation, data.variation)
+# model_links must be the name of a file containing the list of the links of the network
+    core = extractModelCore(read.delim(model_links, header=FALSE), as.character(read.delim(basal_file,header=FALSE)[,1]), data.stimulation, data.variation)
     expdes = core$design
     data = core$data
     model_structure = core$structure
@@ -68,17 +69,15 @@ createModel <- function(model_links="links", data.stimulation="data", basal_acti
 }
 
 # Extracts the data, the experimental design and the structure from the input files
-extractModelCore <- function(links, basal_file, data_file, var_file="") {
-# links must be the name of a file containing the list of the links of the network
+extractModelCore <- function(links, basal_activity, data_filename, var_file="") {
+# links must be a matrix of links [node1, node2]
 # Experiment file dta_file syntax should be as follows, with one line per replicate
 #          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------
 # stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
 
     ### READ DATA
-    print("Reading data")
     # Creation of the model structure object
-    links = read.delim(links, header=FALSE)
     model_structure=getModelStructure(links)
     model_graph = graph.edgelist(as.matrix(links))
     # Plot the network in a file # TODO find a better visualisation tool
@@ -86,10 +85,11 @@ extractModelCore <- function(links, basal_file, data_file, var_file="") {
     plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
+    print("Reading data")
     # Read the experiment design and extract the values
     use_midas = FALSE
-    if (grepl(".data$", data_file)) {
-        data_file = read.delim(data_file)
+    if (grepl(".data$", data_filename)) {
+        data_file = read.delim(data_filename)
         data_file[data_file=="Medium"] = "DMSO"
         begin_measure = 4
         # Indicate where the conditions are
@@ -97,7 +97,7 @@ extractModelCore <- function(links, basal_file, data_file, var_file="") {
         data.values = data_file[, colnames(data_file) %in% model_structure$names]
     } else if (grepl(".csv$", data_file)) {
         use_midas = TRUE
-        data_file = read.delim(data_file, sep=",")
+        data_file = read.delim(data_filename, sep=",")
         begin_measure = which(grepl("^DA.", colnames(data_file)))
         data_file = data_file[-begin_measure] # Delete the DA field which is not used
         begin_measure = begin_measure[1] # If there were several DA fields
@@ -205,9 +205,6 @@ extractModelCore <- function(links, basal_file, data_file, var_file="") {
     }
     measured.nodes=colnames(data.stim)
 
-## Identification of nodes with basal activity
-    basal_activity=as.character(read.delim(basal_file,header=FALSE)[,1])
-
 # Inhibition and stimulation vectors for each experiment
     if (use_midas) {
         stimuli = as.matrix(data.perturb[stim.nodes])
@@ -252,7 +249,13 @@ extractModelCore <- function(links, basal_file, data_file, var_file="") {
 
 # Build a full model with complete data, but use parameters from a file
 rebuildModel <- function(model_file, data_file, var_file="") {
+    model = importModel(model_file)
+    links = matrix(rep(model$structure$names, 2), ncol=2)
+    core = extractModelCore(links, model$basal, data_file, var_file)
 
+    model$data = core$data
+
+    return(model)
 }
 
 # Build a model and use the fit of another run, cannot use info after a model reduction
