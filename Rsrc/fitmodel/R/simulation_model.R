@@ -25,7 +25,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         target_matrix = targets
         colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = inhibitors
         colnames(target_matrix)[which( !grepl("i$", colnames(targets)) )] = stimulators
-    } else if (targets == "all") {
+    } else if (targets[1] == "all") {
         inhibitors = model_description$structure$names[design$inhib_nodes + 1]
         stimulators = model_description$structure$names[design$stim_nodes + 1]
         target_matrix = cbind(design$inhibitor, design$stimuli)
@@ -241,7 +241,7 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
         ylog = ""
     }
     if (targets[1] == "all") {
-        return(plot_data_simulation)
+        # TODO return(plot_data_simulation)
     }
 
     prediction = simulateModel(model, targets, readouts)
@@ -277,6 +277,7 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
             segments(bars - space, high_var, bars + space, high_var)
         } else {
             barplot(prediction$bestfit[,node], ylab="Activity", log=ylog)
+            low_var=0;
         }
 
         # Write the conditions used
@@ -289,7 +290,6 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
             #line = c(colnames(prediction$conditions)[pert], line)
             text(bars, -pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), line)
             text(-1 + 3/nrow(prediction$conditions), min(0, low_var)-pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), colnames(prediction$conditions)[pert], pos=2)
-# -1 + 3/nrow(prediction$conditions
         }
         eplot( xlim=c(0, 1), ylim=c(0, 1) )
     }

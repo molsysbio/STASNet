@@ -12,9 +12,18 @@ verbose = FALSE
 debug = TRUE
 
 # Creates a parameterised model from experiment files and the network structure
-createModel <- function(model_links="links", data.stimulation="data", basal_file = "basal.dat", data.variation="", cores=1, inits=1000) {
-# model_links must be the name of a file containing the list of the links of the network
-    core = extractModelCore(read.delim(model_links, header=FALSE), as.character(read.delim(basal_file,header=FALSE)[,1]), data.stimulation, data.variation)
+createModel <- function(model_links="links", data.stimulation="data", basal_file = "basal.dat", data.variation="", cores=1, inits=1000, init_distribution=F) {
+
+    # Creation of the model structure object
+    links = read.delim(model_links, header=FALSE)
+    model_structure=getModelStructure(links)
+    # Plot the network in a file # TODO find a better visualisation tool
+    model_graph = graph.edgelist(as.matrix(links))
+    pdf(paste0( "graph_", gsub("/(\\w+/)+(\\w+).tab$", "\\2.pdf", model_links) ))
+    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
+    dev.off()
+
+    core = extractModelCore(model_structure, as.character(read.delim(basal_file,header=FALSE)[,1]), data.stimulation, data.variation)
     expdes = core$design
     data = core$data
     model_structure = core$structure
@@ -34,7 +43,7 @@ createModel <- function(model_links="links", data.stimulation="data", basal_file
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
-    hist(log(residuals), breaks="fd") # TODO find a less brutal way to do it (options, ...)
+    if (init_distribution) { hist(log(residuals), breaks="fd") }
     if (debug) {
         # Print the 20 smallest residuals to check if the optimum has been found several times
         print(sort(residuals)[1:20])
@@ -70,22 +79,13 @@ createModel <- function(model_links="links", data.stimulation="data", basal_file
 }
 
 # Extracts the data, the experimental design and the structure from the input files
-extractModelCore <- function(links, basal_activity, data_filename, var_file="") {
+extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="") {
 # links must be a matrix of links [node1, node2]
 # Experiment file dta_file syntax should be as follows, with one line per replicate
 #          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------
 # stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
-
     ### READ DATA
-    # Creation of the model structure object
-    model_structure=getModelStructure(links)
-    model_graph = graph.edgelist(as.matrix(links))
-    # Plot the network in a file # TODO find a better visualisation tool
-    pdf(paste0( "graph_", gsub(".tab$", ".pdf", links) ))
-    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
-    dev.off()
-
     print("Reading data")
     # Read the experiment design and extract the values
     use_midas = FALSE
@@ -250,12 +250,15 @@ extractModelCore <- function(links, basal_activity, data_filename, var_file="") 
 
 # Build a model from a file, and import data for this model
 rebuildModel <- function(model_file, data_file, var_file="") {
+    if (!grep(".mra$", model_file)) {
+        stop("The model file does not have the mra extension")
+    }
     model = importModel(model_file)
-    links = matrix(rep(model$structure$names, 2), ncol=2)
-    core = extractModelCore(links, model$basal, data_file, var_file)
+    #links = matrix(rep(model$structure$names, 2), ncol=2)
+    core = extractModelCore(model$structure, model$basal, data_file, var_file)
 
     model$data = core$data
-    model$bestfit = model$fitmodel(data, model$parameters)
+    model$bestfit = model$model$fitmodel(model$data, model$parameters)
 
     return(model)
 }

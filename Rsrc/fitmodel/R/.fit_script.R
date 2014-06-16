@@ -59,7 +59,6 @@ for (argument in commandArgs()) {
 if (cores == 0) {
     cores = detectCores() - 1;
 }
-
 if (network == "") {
     stop("A network structure (adjacency list, .tab) file is required.")
 } else if (data == "") {
@@ -80,7 +79,7 @@ conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", inits%/%(
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
 plotModelAccuracy(model, conditions);
 dev.off()
-print_parameters(model)
+printParameters(model)
 
 # Perform the profile likelihood
 profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));
@@ -100,13 +99,18 @@ plotModelPrediction(model, "all")
 dev.off()
 
 # Reduce the model and see what changed
-model = selectMinimalModel(model)
-exportModel(model, paste0(conditions, "_reduced.mra"));
+print("Reduction of the model...")
+reduced_model = selectMinimalModel(model)
+exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
+# Profile likelihood on the reduced model
+reduced_profiles = profileLikelihood(reduced_model, nb_steps, cores=min(cores, length(reduced_model$parameters)));
+reduced_model = addPLinfos(reduced_model, reduced_profiles)
+exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
+niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
 # Plot the simulated conditions
 pdf(paste0("reduced_all_", conditions, ".pdf"))
-plotModelPrediction(model, "all")
+plotModelPrediction(reduced_model, "all")
 dev.off()
-niplotPL(profiles, data_name=paste0("reduced_", data_name))
 
 print("Finished")
 

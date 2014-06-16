@@ -8,21 +8,21 @@ printParameters <- function(model_description) {
 
     print("Parameters :")
     paths = model$getParametersLinks()
-    if (length(model_description) > 0) {
+    if (length(model_description$lower_values) > 0) {
         for (i in 1:length(paths)) {
             text = paste(simplify_path_name(paths[i]), "=", parameters[i])
-            if (is.na(model$lower_values[i])) {
-                if (is.na(model$upper_values[i])) {
+            if (is.na(model_description$lower_values[i])) {
+                if (is.na(model_description$upper_values[i])) {
                     text = paste(text, "(non identifiable)")
                 } else {
-                    text = paste(text, "( ni - ", model$upper_values[i], ")")
+                    text = paste(text, "( ni - ", model_description$upper_values[i], ")")
                 }
             } else {
-                text = paste(text, "(", model$lower_values[i])
-                if (is.na(model$upper_values[i])) {
+                text = paste(text, "(", model_description$lower_values[i])
+                if (is.na(model_description$upper_values[i])) {
                     text = paste(text, "- ni )")
                 } else {
-                    text = paste(text, "-", model$upper_values[i], ")")
+                    text = paste(text, "-", model_description$upper_values[i], ")")
                 }
             }
         }
@@ -122,12 +122,13 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
             adj[links.to.test[order.res[1]]]=0
             rank = new_rank
             initial_response=params[,order.res[1]]
-            print(initial_response)
-            print(paste0("remove ",
+            initresidual = residuals[order.res[1]]
+            #print(initial_response)
+            print(paste0("Remove ",
                       model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                       model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
 
-            print(paste( "residual = ", residuals[order.res[1]], ", Delta residual = ", residuals[order.res[1]]-initresidual, ",  p-value = ", pchisq(deltares, df=dr) ))
+            print(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", deltares, ",  p-value = ", pchisq(deltares, df=dr) ))
             print("------------------------------------------------------------------------------------------------------")
 
             model_description$bestfit = sort(residuals)[1]
