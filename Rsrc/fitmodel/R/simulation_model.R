@@ -240,9 +240,13 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
     } else {
         ylog = ""
     }
+    if (targets[1] == "all") {
+        return(plot_data_simulation)
+    }
+
     prediction = simulateModel(model, targets, readouts)
 
-    ratio = 2/3
+    ratio = 2/3 # Display height ratio between the plot and its annotation
     layout(matrix(1:2, nrow=2, byrow=T), heights=c(ratio, 1-ratio))
     old_mar = par()$mar
     for (node in 1:ncol(prediction$bestfit)) {
@@ -253,7 +257,7 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
         if (length(prediction$variants) > 0) {
             low_var = c()
             high_var = c()
-            # Collect the extreme values
+            # Collect the extreme values for each condition, and the global extremes to be sure everything gets included in the plot
             for (perturbation in 1:nrow(prediction$bestfit)) {
                 variants = c()
                 for (set in 1:length(prediction$variants)) {
@@ -284,7 +288,7 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
             line[prediction$conditions[, pert] == 1] = "+"
             #line = c(colnames(prediction$conditions)[pert], line)
             text(bars, -pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), line)
-            text(-1 + 3/nrow(prediction$conditions), -pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), colnames(prediction$conditions)[pert], pos=2)
+            text(-1 + 3/nrow(prediction$conditions), min(0, low_var)-pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), colnames(prediction$conditions)[pert], pos=2)
 # -1 + 3/nrow(prediction$conditions
         }
         eplot( xlim=c(0, 1), ylim=c(0, 1) )
@@ -299,7 +303,8 @@ plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 
 }
 
 # TODO Function to plot the simulation with the experimental data
-plotModelSimulation <- function(model, data, plotsPerFrame=4, log_axis=F) {
+# can it be integrated in the other function ?
+plot_data_simulation <- function(model, data, plotsPerFrame=4, log_axis=F) {
 }
 
 # Plots an empty zone, usefull to write only text

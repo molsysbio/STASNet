@@ -12,7 +12,7 @@ verbose = FALSE
 debug = TRUE
 
 # Creates a parameterised model from experiment files and the network structure
-createModel <- function(model_links="links", data.stimulation="data", basal_activity = "basal.dat", data.variation="", cores=1, inits=1000) {
+createModel <- function(model_links="links", data.stimulation="data", basal_file = "basal.dat", data.variation="", cores=1, inits=1000) {
 # model_links must be the name of a file containing the list of the links of the network
     core = extractModelCore(read.delim(model_links, header=FALSE), as.character(read.delim(basal_file,header=FALSE)[,1]), data.stimulation, data.variation)
     expdes = core$design
