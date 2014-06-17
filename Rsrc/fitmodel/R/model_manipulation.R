@@ -60,7 +60,7 @@ plotModelAccuracy <- function(model_description, data_name = "default") {
     colnames(mismatch) = nodes[design$measured_nodes + 1]
     rownames(mismatch) = treatments
 
-    bk = unique( c(seq(min(mismatch), 0, length=50), seq(0, max(mismatch), length=50)) )
+    bk = unique( c(seq(min(mismatch, na.rm=T), 0, length=50), seq(0, max(mismatch, na.rm=T), length=50)) )
     pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T)
 }
 
