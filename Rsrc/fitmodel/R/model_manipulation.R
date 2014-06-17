@@ -138,10 +138,14 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
     }
     print("Reduction complete")
     # We recover the final model
+    ## Basal activity and data do not change
     model_description$structure$setAdjacencyMatrix(adj)
     model_description$model$setModel(expdes, model_description$structure)
     model_description$parameters = model_description$model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
     model_description$infos = c(model_description$infos, "Reduced model")
+    model_description$param_range = list()
+    model_description$lower_values = c()
+    model_description$upper_values = c()
 
     return(model_description)
 }

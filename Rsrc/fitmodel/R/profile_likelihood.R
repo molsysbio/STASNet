@@ -106,6 +106,7 @@ print_error_intervals <- function(profiles) {
 addPLinfos <- function(model_description, profiles) {
     model_description$lower_values = c()
     model_description$upper_values = c()
+    model_description$param_range=list()
     for (i in 1:length(profiles)) {
         pr = profiles[[i]]
         model_description$param_range[[i]] = list()

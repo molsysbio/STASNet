@@ -54,6 +54,12 @@ for (argument in commandArgs()) {
             cores = 2
             stop("Incorrect number of cores (use -c#)")
         }
+    } else if (grepl("^-s", argument)) {
+        nb_steps = as.numeric(gsub("^-s", "", argument))
+        if (is.na(nb_steps)) {
+            nb_steps = 1000
+            print("Incorrect number of steps, performing with 1000")
+        }
     }
 }
 if (cores == 0) {
@@ -101,7 +107,6 @@ dev.off()
 # Reduce the model and see what changed
 print("Reduction of the model...")
 reduced_model = selectMinimalModel(model)
-exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
 # Profile likelihood on the reduced model
 reduced_profiles = profileLikelihood(reduced_model, nb_steps, cores=min(cores, length(reduced_model$parameters)));
 reduced_model = addPLinfos(reduced_model, reduced_profiles)
