@@ -19,7 +19,10 @@ createModel <- function(model_links="links", data.stimulation="data", basal_file
     model_structure=getModelStructure(links)
     # Plot the network in a file # TODO find a better visualisation tool
     model_graph = graph.edgelist(as.matrix(links))
-    pdf(paste0( "graph_", gsub("/(\\w+/)+(\\w+).tab$", "\\2.pdf", model_links) ))
+    #pdf(paste0( "graph_", gsub("/(\\w+/)+(\\w+).tab$", "\\2.pdf", model_links) ))
+    name = unlist(strsplit(model_links, "/"))
+    name = name[length(name)]
+    pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
     plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
@@ -76,6 +79,76 @@ createModel <- function(model_links="links", data.stimulation="data", basal_file
     model_description$upper_values = c()
 
     return(model_description)
+}
+
+# Detect the format of the structure file and extract the structure of the network
+extractStructure = function(model_links, names="") {
+    # Read the file, and extract the matrix corresponding to it
+    structure_file = readLines(model_links)
+    splitlist = strsplit(structure_file, ",|->|;|\\ |\t")
+    if (length(splitlist) < 3) {
+        stop("This is a trivial network, you don't need a simulation !")
+    }
+    struct_matrix = c()
+    for (i in 1:length(splitlist)) {
+        struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[i]])) )
+    }
+
+    # Detect if it is an list of links or an adjacency matrix
+    if (ncol(struct_matrix) == 2) {
+        # If it is a list of links and the number of links is indicated at the beginning, remove it 
+        if (suppressWarnings( is.na(as.numeric(struct_matrix[1, 1])) )) {
+            struct_matrix = struct_matrix[,-1]
+        }
+        links_list = struct_matrix
+    } else {
+        # Remove the number of nodes
+        if ( length(unique(struct_matrix[1,])) == 1 && struct_matrix[1, 1] != 1) {
+            struct_matrix = struct_matrix[,-1]
+        }
+        # Set the column names if they are present, otherwise use the names from another file, and in last resort use numbers
+        if (suppressWarnings( is.na(as.numeric(struct_matrix[1,1])) )) {
+            colnames(struct_matrix) = struct_matrix[1,]
+            struct_matrix = struct_matrix[-1,]
+            if (suppressWarnings( is.na(as.numeric(struct_matrix[1,1])) )) {
+                struct_matrix = struct_matrix[,-1]
+            }
+            rownames(struct_matrix) = colnames(struct_matrix)
+        } else if (length(name) == ncol(struct_matrix)) {
+            colnames(struct_matrix) = names
+            rownames(struct_matrix) = names
+        } else {
+            print("No names were provided for the nodes, using numbers instead")
+            colnames(struct_matrix) = 1:ncol(struct_matrix)
+            rownames(struct_matrix) = 1:ncol(struct_matrix)
+        }
+        # Check that the dimensions are correct
+        if ( ncol(struct_matrix) != nrow(struct_matrix) ) {
+            stop("The adjacency matrix is not square. Abort...")
+        }
+
+        links_list = c();
+        for (i in 1:nrow(struct_matrix)) {
+            for (j in 1:ncol(struct_matrix)) {
+                if (as.numeric(struct_matrix[i,j]) == 1) {
+                    links_list = rbind(links_list, c(colnames(struct_matrix)[j], rownames(struct_matrix)[i]))
+                }
+            }
+        }
+
+    }
+
+    # Plot the graph of the network
+    model_graph = graph.edgelist(as.matrix(links_list))
+    name = unlist(strsplit(model_links, "/"))
+    name = name[length(name)]
+    pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
+    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
+    dev.off()
+    
+    model_structure=getModelStructure(links_list)
+
+    return(model_structure)
 }
 
 # Extracts the data, the experimental design and the structure from the input files
