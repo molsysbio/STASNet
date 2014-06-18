@@ -174,9 +174,9 @@ niplotPL <- function(profiles, init_residual=0, data_name="default") {
                 }
                 #print (limy)
                 ### Modification of limy if it reaches Inf, should not have to be done
-                if (abs(limy[2]) == Inf) { limy[2] = 10000; print("...")}
-                if (abs(limy[1]) == Inf) { limy[1] = 0}
-
+                if (!is.finite(limy[1]) ) {limy[1] = 0}
+                if (!is.finite(limy[2]) ) {limy[2] = 10000; print(paste("Error in high lim value :", ni_profiles[[ni]]$thresholds[2]))}
+                
                 plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1, ylim = limy)
                 # Print labels on the right and bottom
                 if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }

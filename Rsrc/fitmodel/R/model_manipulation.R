@@ -25,6 +25,7 @@ printParameters <- function(model_description) {
                     text = paste(text, "-", model_description$upper_values[i], ")")
                 }
             }
+            print(text)
         }
     } else {
         for (i in 1:length(paths)) {

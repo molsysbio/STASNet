@@ -38,12 +38,13 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 ## INITIAL FIT
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
-    samples = qnorm(randomLHS(inits, model$nr_of_parameters()))
+    samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=3)
     # Parallelized version uses all cores but one to keep control
     if (cores == 0) {
         cores = detectCores()-1
     }
     results = parallel_initialisation(model, expdes, model_structure, data, samples, cores)
+    # results = deep_initialisation(model, expdes, model_structure, data, cores)
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
@@ -53,7 +54,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
         print(sort(residuals)[1:20])
     }
 
-    init_params = params[,order(residuals)[1]]
+    init_params = params[order(residuals)[1],]
     init_residual = residuals[order(residuals)[1]]
 
     print("Model simulation with optimal parameters :")
@@ -80,6 +81,70 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_description$upper_values = c()
 
     return(model_description)
+}
+
+deep_initialisation <- function (model, expdes, structure, data, NB_CORES, depth=3, sample_size=100) {
+    if (depth < 1) { # We do at least one initialisation
+        depth=1
+    }
+    kept = matrix(0, ncol=model$nr_of_parameters)
+    for (i in 1:depth) {
+        # Create the new samples, with a random initialisation shifted by the previous steps local minimum
+        # We reduce the exploration range at each step
+        samples = c()
+        for (j in 1:nrow(kept)) {
+            samples = rbind(samples, qnorm(randomLHS(inits, model$nr_of_parameters()), sd=3/depth + as.matrix( rep(kept[j,], inits), byrow=T, ncol=ncol(kept) )) )
+        }
+        results = parallel_initialisation(model, expdes, model_structure, data, samples, cores)
+        # Keep the 10% best parameters sets for the next iteration
+        kept = results$params[order(results$residuals)[1:floor(0.1*sample_size)],]
+    }
+
+    return result # Return the last set of fit
+
+}
+
+# Parallel initialisation of the parameters
+parallel_initialisation <- function(model, expdes, structure, data, samples, NB_CORES) {
+    # Put it under list format, as randomLHS only provides a matrix
+    parallel_sampling = list()
+    for (i in 1:dim(samples)[1]) {
+        parallel_sampling[[i]] = samples[i,]
+    }
+    # Parallel initialisations
+    # The number of cores used depends on the ability of the detectCores function to detect them
+    parallel_results = mclapply(parallel_sampling, function(params, data, model) { model$fitmodel(data, params) }, data, model, mc.cores=NB_CORES)
+
+    # Reorder the results to get the same output as the linear function
+    results = list()
+    results$residuals = c()
+    results$params = c()
+    for (entry in parallel_results) {
+        results$residuals = c(results$residuals, entry$residuals)
+        results$params = rbind(results$params, entry$parameter)
+    }
+
+    return(results)
+}
+
+# Initialise the parameters with a one core processing
+# needs corrections, not used anyway
+classic_initialisation <- function(model, data, samples) {
+    for (i in 1:nb_samples) {
+        result = model$fitmodel( data, samples[i,] )
+        residuals = c(residuals,result$residuals)
+        params = cbind(params,result$parameter)
+        if (i %% (nb_samples/20) == 0) {
+            print(paste(i %/% (nb_samples/20), "/ 20 initialization done."))
+        }
+    }
+    if (debug) {
+        print(sort(residuals))
+    }
+    results = list()
+    results$residuals = resisuals
+    results$params = params
+    return(results)
 }
 
 # Detect the format of the structure file and extract the structure of the network
@@ -335,47 +400,4 @@ rebuildModel <- function(model_file, data_file, var_file="") {
     model$bestfit = model$model$fitmodel(model$data, model$parameters)
 
     return(model)
-}
-
-# Initialise the parameters with a one core processing
-# needs corrections, not used anyway
-classic_initialisation <- function(model, data, samples) {
-    for (i in 1:nb_samples) {
-        result = model$fitmodel( data, samples[i,] )
-        residuals = c(residuals,result$residuals)
-        params = cbind(params,result$parameter)
-        if (i %% (nb_samples/20) == 0) {
-            print(paste(i %/% (nb_samples/20), "/ 20 initialization done."))
-        }
-    }
-    if (debug) {
-        print(sort(residuals))
-    }
-    results = list()
-    results$residuals = resisuals
-    results$params = params
-    return(results)
-}
-
-# Parallel initialisation of the parameters
-parallel_initialisation <- function(model, expdes, structure, data, samples, NB_CORES) {
-    # Put it under list format, as randomLHS only provides a matrix
-    parallel_sampling = list()
-    for (i in 1:dim(samples)[1]) {
-        parallel_sampling[[i]] = samples[i,]
-    }
-    # Parallel initialisations
-    # The number of cores used depends on the ability of the detectCores function to detect them
-    parallel_results = mclapply(parallel_sampling, function(params, data, model) { model$fitmodel(data, params) }, data, model, mc.cores=NB_CORES)
-
-    # Reorder the results to get the same output as the linear function
-    results = list()
-    results$residuals = c()
-    results$params = c()
-    for (entry in parallel_results) {
-        results$residuals = c(results$residuals, entry$residuals)
-        results$params = cbind(results$params, entry$parameter)
-    }
-
-    return(results)
 }

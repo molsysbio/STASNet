@@ -63,39 +63,37 @@ void generate_response( GiNaC::matrix &response,
           response(c,0)=0;
           
           for (size_t k=0; k<exp_design.stimuli.shape()[1]; k++) {   // Add stimuli
-	        if (exp_design.stimuli[j][k] == 1) { 
-	          int s_temp= exp_design.stim_nodes[k];    
-	          GiNaC::ex Rtmp=R(exp_design.measured_nodes[i],s_temp);
-	          for (size_t l=0;l<exp_design.inhibitor.shape()[1];l++){
-	            if (exp_design.inhibitor[j][l] == 1) { 
-	              int i_temp = exp_design.inhib_nodes[l];	   
-	              for ( int m=0; m<size; m++) {                // adds the effect of the inhibitor
-		            if (r_idx[m][i_temp] > -1) { 
-		              Rtmp = Rtmp.
-		                subs(x[r_idx[m][i_temp]]==x[r_idx[m][i_temp]]*
-			             (exp(-pow(pow(x[inh_idx[l]],2),0.5))));
-		            }
-	              }
+            if (exp_design.stimuli[j][k] == 1) { 
+	            int s_temp= exp_design.stim_nodes[k];    
+	            GiNaC::ex Rtmp=R(exp_design.measured_nodes[i],s_temp);
+	            for (size_t l=0;l<exp_design.inhibitor.shape()[1];l++){    // Add the effect of the inhibitor
+	                if (exp_design.inhibitor[j][l] == 1) { 
+	                    int i_temp = exp_design.inhib_nodes[l];	   
+	                    for ( int m=0; m<size; m++) {
+		                    if (r_idx[m][i_temp] > -1) { 
+		                        Rtmp = Rtmp.subs(x[r_idx[m][i_temp]]==x[r_idx[m][i_temp]] *
+			                    (exp(-pow(pow(x[inh_idx[l]],2),0.5)))); // We force the inhibitor to have a negative effect
+		                    }
+	                    }
+	                }
 	            }
-	          }
-	          response(c,0)+=Rtmp;
+	            response(c,0)+=Rtmp;
 	        }
           }
 
           for (size_t k=0;k<exp_design.inhibitor.shape()[1];k++){      // Basal inhibition
       	        if (exp_design.inhibitor[j][k] == 1) {
-	          int i_temp = exp_design.inhib_nodes[k];
-	          GiNaC::ex Rtmp2=0;
-	          for (int l=0; l<size;l++){                                        
-	            if ((r_idx[l][i_temp] > -1) & (exp_design.basal_activity[i_temp]==1)) { 
-	              Rtmp2+=R(exp_design.measured_nodes[i],l)
-		        *x[r_idx[l][i_temp]]*
-		        (-pow(pow(x[inh_idx[k]],2),0.5));// !!! for multiple inhibitors acting in the same path this equation is incorrect!
-	              }
-	          }
-	         
-	          response(c,0) += Rtmp2;
-	        }
+	                int i_temp = exp_design.inhib_nodes[k];
+	                GiNaC::ex Rtmp2=0;
+	                for (int l=0; l<size;l++){                                        
+	                    if ((r_idx[l][i_temp] > -1) & (exp_design.basal_activity[i_temp]==1)) { 
+	                        Rtmp2 += R(exp_design.measured_nodes[i],l)
+		                    * x[r_idx[l][i_temp]] *
+		                    (-pow(pow(x[inh_idx[k]],2),0.5));// !!! for multiple inhibitors acting in the same path this equation is incorrect!
+	                    }
+	                }
+	                response(c,0) += Rtmp2;
+	            }
           }
           
           // Basal nodes can only be modulated if they are directly stimulated.
