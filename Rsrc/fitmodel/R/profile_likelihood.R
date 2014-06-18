@@ -167,7 +167,7 @@ niplotPL <- function(profiles, init_residual=0, data_name="default") {
 
                 par(mar=margin)
                 if (j == ni) {
-                    limy = c( range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,])[1], ni_profiles[[ni]]$thresholds[2] * 1.1, na.rm=T)
+                    limy = c( range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], na.rm=T)[1], ni_profiles[[ni]]$thresholds[2] * 1.1)
                 }
                 else {
                     limy = range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], na.rm=T)

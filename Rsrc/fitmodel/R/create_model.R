@@ -12,7 +12,7 @@ verbose = FALSE
 debug = TRUE
 
 # Creates a parameterised model from experiment files and the network structure
-createModel <- function(model_links="links", data.stimulation="data", basal_file = "basal.dat", data.variation="", cores=1, inits=1000, init_distribution=F) {
+createModel <- function(model_links, data.stimulation, basal_file, data.variation="", cores=1, inits=1000, init_distribution=F) {
 
     # Creation of the model structure object
     links = read.delim(model_links, header=FALSE)
@@ -26,11 +26,12 @@ createModel <- function(model_links="links", data.stimulation="data", basal_file
     plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
-    core = extractModelCore(model_structure, as.character(read.delim(basal_file,header=FALSE)[,1]), data.stimulation, data.variation)
+# TODO extraction of the basal activity with different format
+    basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    core = extractModelCore(model_structure, basal_activity , data.stimulation, data.variation)
     expdes = core$design
     data = core$data
     model_structure = core$structure
-    basal_activity = core$basal
 
 ### MODEL SETUP
     model = new(fitmodel::Model)
