@@ -177,6 +177,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
     // Build the new independent parameters ("singletons") from the reduced matrix
     parameterlist singletons;
     for (size_t i=0 ; i < rank_ ; i++) {
+        // Extract the link composition
         GiNaC::ex independent = 1;
         for (size_t j=0 ; j < symbols_.size() ; j++) {
             if (parameter_dependency_matrix_[i][j] == 1) {
@@ -185,11 +186,12 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
                 independent /= symbols_[j];
             }
         }
+        // Create the corresponding parameter
         MathTree::parameter::Ptr par(new MathTree::parameter);
         par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
-        singletons.push_back(std::make_pair(par, independent));
 
-        // Add the new parameter
+        // Link the parameter and the expression and add them to the corresponding vectors
+        singletons.push_back(std::make_pair(par, independent));
         parameters_.push_back(par);
         paths_.push_back(independent);
         if (verbosity > 8) {
@@ -197,6 +199,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
         }
 
         // Add the new parameters to the matrices (can be duplicate of old parameters, not important)
+        // Necessary for the conversions between links and independent paths
         //
         // Reduced matrix
         parameter_dependency_matrix_.resize(boost::extents[parameter_dependency_matrix_.shape()[0]+1][parameter_dependency_matrix_.shape()[1]+1]);
@@ -208,7 +211,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
         for (size_t col=0 ; col < symbols_.size() ; col++) {
             parameter_dependency_matrix_[parameter_dependency_matrix_.shape()[0]-1][col] = parameter_dependency_matrix_[i][col];
         }
-        // An independent parameter only depend on itself
+        // An independent parameter only depends on itself
         for (size_t l=symbols_.size() ; l < (parameter_dependency_matrix_.shape()[1]-1) ; l++) {
             parameter_dependency_matrix_[parameter_dependency_matrix_.shape()[0]-1][l] = 0;
         }
@@ -232,7 +235,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
     }
 
     size_t ipi;
-    // Put the expression of k in paths in a matrix
+    // Put the expression of k in term of paths in a matrix
     // Express the old parameters as combination of the new ones
     int_matrix p_from_k_unreduced;
     p_from_k_unreduced.resize(boost::extents[independent_parameters_.size()][2*independent_parameters_.size()]);
@@ -241,7 +244,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
             p_from_k_unreduced[i][j] = parameter_dependency_matrix_[i][symbols_.size() + independent_parameters_[j]];
             p_from_k_unreduced[i][independent_parameters_.size() + j] = 0;
         }
-        // Identity, will contain expression of paths in k after reduction
+        // Identity, will contain expression of paths in terms of k after reduction
         p_from_k_unreduced[i][independent_parameters_.size() + i] =- 1;
     }
 
@@ -258,7 +261,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         ipi = independent_parameters_[i];
 
-        // Find which singletons are in the old parameter
+        // Find which singletons (k) are in the old parameter
         MathTree::mul::Ptr tmp (new MathTree::mul);
         for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
             if (p_from_k[i][independent_parameters_.size() + j] == 1) {
@@ -292,6 +295,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
 
 }
 
+// Compares pairs, first by the first term, then by the second if the first are equals
 template<class T> struct rev_index_cmp {
     rev_index_cmp(const T arr) : arr(arr) {}
     bool operator()(const size_t a, const size_t b) const
@@ -306,6 +310,7 @@ template<class T> struct rev_index_cmp {
 };
 
 // Simplify the parameters that contain other parameters so that they are totally independent
+// NOT USED, the validity of the approach must be confirmed
 void Model::simplify_independent_parameters_using_subtraction(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector) {
  
     double eps = 0.0000001;
@@ -319,25 +324,27 @@ void Model::simplify_independent_parameters_using_subtraction(std::vector< std::
     size_t previous_size = parameters_.size();
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         ipi = independent_parameters_[i];
-       index[i] = i;
-       bool first = true;
-       first_one.second.push_back(0);
-       // Copy the independent parameters composition
-       for (size_t j=0 ; j < symbols_.size() ; j++) {
-           independent_matrix[i][j] = parameter_dependency_matrix_unreduced_[ipi][j];
-           if (independent_matrix[i][j] == 1) {
-               if (first) {
-                   first_one.first.push_back(j);
-                   first = false;
-               }
-               first_one.second[i]++;
+        index[i] = i;
+        bool first = true;
+        first_one.second.push_back(0);
+        // Copy the independent parameters composition
+        for (size_t j=0 ; j < symbols_.size() ; j++) {
+            independent_matrix[i][j] = parameter_dependency_matrix_unreduced_[ipi][j];
+            // Extract the number of links in the path, and the column of the first one in the matrix
+            // Will be used to sort the matrix, first by the first column, then by the complexity
+            if (independent_matrix[i][j] == 1) {
+                if (first) {
+                    first_one.first.push_back(j);
+                    first = false;
+                }
+                first_one.second[i]++;
             }
         }
-       // Put the identity matrix at the end of the matrix
-       for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
-           independent_matrix[i][symbols_.size() + j] = 0;
-       }
-       independent_matrix[i][symbols_.size() + i] = 1;
+        // Put the identity matrix at the end of the matrix
+        for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
+            independent_matrix[i][symbols_.size() + j] = 0;
+        }
+        independent_matrix[i][symbols_.size() + i] = 1;
     }
     // Sort the reduced parameters so that the matrix is in row echelon form
     std::sort(index, index + independent_parameters_.size(), rev_index_cmp< std::pair< std::vector<size_t>, std::vector<size_t> > >(first_one));
@@ -445,7 +452,6 @@ void Model::simplify_independent_parameters_using_subtraction(std::vector< std::
  
 }
 
-
 // Locate the sums to the power of -1 (denominators) from the GiNaC expression
 void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
     MathTree::math_item::Ptr tmp;
@@ -532,7 +538,6 @@ void Model::getConstraints( parameterlist &params, std::vector<MathTree::math_it
 }
 
 void Model::predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const {
-
 
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
 
@@ -696,6 +701,17 @@ void Model::showParameterDependencyMatrix() {
         output += "\n";
     }
     std::cout << output << std::endl;
+}
+
+std::vector< std::vector<int> > Model::getUnreducedParameterDependencyMatrix() {
+    std::vector< std::vector<int> > return_matrix;
+    for (size_t i=0 ; i < parameter_dependency_matrix_unreduced_.shape()[0] ; i++) {
+        return_matrix.push_back(std::vector<int>());
+        for (size_t j=0 ; j < parameter_dependency_matrix_unreduced_.shape()[1] ; j++) {
+            return_matrix[i].push_back(parameter_dependency_matrix_unreduced_[i][j]);
+        }
+    }
+    return return_matrix;
 }
 
 // Displays G before the reduction pb because it is modified directly by the reduction

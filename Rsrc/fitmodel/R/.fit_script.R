@@ -30,6 +30,7 @@ nb_steps = 1000
 inits = 1000
 # Autodetection of the cores
 cores = 0
+reduction = TRUE
 
 # Collect the filenames based on their extension
 for (argument in commandArgs()) {
@@ -60,6 +61,8 @@ for (argument in commandArgs()) {
             nb_steps = 1000
             print("Incorrect number of steps, performing with 1000")
         }
+    } else if (grepl("^-nr$", argument)) {
+        reduction = FALSE
     }
 }
 if (cores == 0) {
@@ -77,6 +80,7 @@ if (network == "") {
 power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
 conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", data_name), "_", inits%/%(1000^power_init), power[1+power_init]);
+conditions = gsub(" ", "_", conditions)
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
@@ -106,18 +110,22 @@ pdf(paste0("all_", conditions, ".pdf"))
 plotModelPrediction(model, "all")
 dev.off()
 
+if (reduction) {
 # Reduce the model and see what changed
-print("Reduction of the model...")
-reduced_model = selectMinimalModel(model)
+    print("Reduction of the model...")
+    reduced_model = selectMinimalModel(model)
 # Profile likelihood on the reduced model
-reduced_profiles = profileLikelihood(reduced_model, nb_steps, cores=min(cores, length(reduced_model$parameters)));
-reduced_model = addPLinfos(reduced_model, reduced_profiles)
-exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
-niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
+    reduced_profiles = profileLikelihood(reduced_model, nb_steps, cores=min(cores, length(reduced_model$parameters)));
+    reduced_model = addPLinfos(reduced_model, reduced_profiles)
+    exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
+    niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
 # Plot the simulated conditions
-pdf(paste0("reduced_all_", conditions, ".pdf"))
-plotModelPrediction(reduced_model, "all")
-dev.off()
+    pdf(paste0("reduced_all_", conditions, ".pdf"))
+    plotModelPrediction(reduced_model, "all")
+    dev.off()
+
+    get_running_time(init_time, "with the model reduction");
+}
 
 print("Finished")
 

@@ -47,6 +47,7 @@ public:
   void getParametersLinks(std::vector<std::string> &description);
   void showParameterDependencyMatrix();
   void showGUnreduced();
+  std::vector< std::vector<int> > getUnreducedParameterDependencyMatrix();
 
   int find_parameter(std::string name) ;
   // TODO Maps identifiable parameters to a set of possible original parameters

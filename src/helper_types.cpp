@@ -168,9 +168,6 @@ bool Data::read_from_stream(std::istream &is) {
 }
 
 
-
-
-
 bool Data::data_consistent(const ExperimentalDesign &expdesign) const {
   return ( (unstim_data.shape()[0]==stim_data.shape()[0]) &&
 	   (unstim_data.shape()[1]==stim_data.shape()[1]) &&

@@ -100,7 +100,7 @@ deep_initialisation <- function (model, expdes, structure, data, NB_CORES, depth
         kept = results$params[order(results$residuals)[1:floor(0.1*sample_size)],]
     }
 
-    return result # Return the last set of fit
+    return(result) # Return the last set of fit
 
 }
 

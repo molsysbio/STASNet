@@ -44,6 +44,7 @@ public:
   
   void showParameterDependencyMatrix();
   void showGUnreduced();
+  SEXP getUnreducedPDM();
   SEXP getParametersNames();
 
 private:

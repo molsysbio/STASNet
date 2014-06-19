@@ -15,7 +15,6 @@ ModelWrapper::~ModelWrapper() {
   if (model!=NULL) delete model;
 }
 
-
 void ModelWrapper::printResponse() {
     if (model == NULL) throw(std::logic_error("Model not set"));
     model-> printResponse();
@@ -48,7 +47,7 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
     throw (std::invalid_argument("inhib_nodes and inhibitor don't match"));
   if (exp.stimuli.shape()[0] != exp.inhibitor.shape()[0]) 
     throw (std::invalid_argument("number of stimuli and inhibitors don't match"));
-    return true;
+  return true;
 }
 
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
@@ -223,7 +222,6 @@ SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, c
 }
 */
 
-
 SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {
   
     if ( model == NULL ) 
@@ -244,7 +242,6 @@ SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {
     return ret;
     
 }
-
 
 std::vector<double> ModelWrapper::getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib) {
   
@@ -285,6 +282,17 @@ void ModelWrapper::showGUnreduced() {
     model->showGUnreduced();
 }
 
+SEXP ModelWrapper::getUnreducedPDM() {
+    std::vector< std::vector<int> > Gu = model->getUnreducedParameterDependencyMatrix();
+    Rcpp::NumericMatrix Gunreduced(Gu.size(), Gu[0].size());
+    for (int i=0 ; i < Gu.size() ; i++) {
+        for (int j=0 ; j < Gu[0].size() ; j++) {
+            Gunreduced(i,j) = Gu[i][j];
+        }
+    }
+    return Gunreduced;
+}
+
 SEXP ModelWrapper::getParametersNames() {
     std::vector<std::string> tmp;
     model->getParametersLinks(tmp);
@@ -311,8 +319,10 @@ RCPP_MODULE(ModelEx) {
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
     //.method( "parallelPL", &parallelPL )
     .method( "getParametersLinks", &ModelWrapper::getParametersLinks )
-    .method( "showParameterDependencyMatrix", &ModelWrapper::showParameterDependencyMatrix )
+    .method( "showPDM", &ModelWrapper::showParameterDependencyMatrix )
+    .method( "showUnreducedPDM", &ModelWrapper::showGUnreduced )
     .method( "getParametersNames", &ModelWrapper::getParametersNames )
+    .method( "getUnreducedPDM", &ModelWrapper::getUnreducedPDM )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }
