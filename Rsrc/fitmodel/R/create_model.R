@@ -397,7 +397,7 @@ rebuildModel <- function(model_file, data_file, var_file="") {
     core = extractModelCore(model$structure, model$basal, data_file, var_file)
 
     model$data = core$data
-    model$bestfit = model$model$fitmodel(model$data, model$parameters)
+    model$bestfit = model$model$fitmodel(model$data, model$parameters)$residuals
 
     return(model)
 }
