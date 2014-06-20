@@ -46,7 +46,6 @@ std::ostream &operator<<(std::ostream &os, const std::vector<double> &a) {
   return os;
 }
 
-
 // Helper function to output a int matrix
 std::ostream &operator<<(std::ostream &os, const int_matrix &a) {
 
