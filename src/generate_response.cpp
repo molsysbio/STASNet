@@ -102,24 +102,22 @@ void generate_response( GiNaC::matrix &response,
 	                GiNaC::ex Rtmp2=0;
                     bool first = false;
 	                for (int l=0; l<size;l++){                                        
-                        // Propagate the effect on the downstream node to the measured node
+                        // Propagate the effect from the nodes downstream to the inhibited node to the measured node
 	                    if (exp_design.basal_activity[i_temp]==1) { 
                             if (r_idx[l][i_temp] > -1) {
-                                if (l == i) {
-	                                Rtmp2 += R(exp_design.measured_nodes[i],i_temp) *
-		                            (-pow(pow(x[inh_idx[k]],2),0.5)); // Force the inhibitor effect to be negative
-                                } else {
-	                                Rtmp2 += R(exp_design.measured_nodes[i],l) *
-		                            x[r_idx[l][i_temp]] *
-		                            (-pow(pow(x[inh_idx[k]],2),0.5)); // Force the inhibitor effect to be negative
+                                // Add the dampening factors to the propagation
+                                // The dampening of the directly inhibited links will only take place in case of feed-back
+                                GiNaC::ex Rtmp3 = R(exp_design.measured_nodes[i],l);
+                                for (size_t m=0 ; m < inhibited_links.size() ; m++) {
+                                    Rtmp3 = Rtmp3.subs(inhibited_links[m].first == inhibited_links[m].second);
                                 }
+                                // Negative perturbation due to the inhibition
+	                            Rtmp2 += Rtmp3 * x[r_idx[l][i_temp]] *
+		                        (-pow(pow(x[inh_idx[k]],2),0.5)); // Force the inhibitor effect to be negative
                             }
 	                    }
 	                }
                     // Substitute the inhibited links (r by r*i)
-                    for (size_t l=0 ; l < inhibited_links.size() ; l++) {
-                        Rtmp2 = Rtmp2.subs(inhibited_links[l].first == inhibited_links[l].second);
-                    }
 	                response(c,0) += Rtmp2;
 	            }
           }
