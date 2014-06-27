@@ -38,13 +38,14 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 ## INITIAL FIT
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
-    samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=3)
+    #samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
+    samples = sampleWithCorrelation(model, core, inits)$samples
     # Parallelized version uses all cores but one to keep control
     if (cores == 0) {
         cores = detectCores()-1
     }
-    results = parallel_initialisation(model, expdes, model_structure, data, samples, cores)
-    # results = deep_initialisation(model, expdes, model_structure, data, cores)
+    results = parallel_initialisation(model, expdes, data, samples, cores)
+    # results = deep_initialisation(model, expdes, data, cores)
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
@@ -83,7 +84,116 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     return(model_description)
 }
 
-deep_initialisation <- function (model, expdes, structure, data, NB_CORES, depth=3, sample_size=100) {
+# TODO put it in deep_initialisation
+# Produces random samples for the deep initialisation with some parameters inferred from correlations in the measurements
+sampleWithCorrelation <- function(model, core, nb_samples, correlated="", sd=2) {
+    if (!is.list(correlated)) {
+        correlated = correlate_parameters(model, core$design, core$data, core$structure)
+    }
+    random_samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()-length(correlated$list)), sd=sd)
+    samples = c()
+    j=1
+    for (i in 1:model$nr_of_parameters()) {
+        if (i %in% correlated$list) {
+            samples = cbind(samples, rep(correlated$values[which(correlated$list==i)], times=nb_samples))
+        } else {
+            samples = cbind(samples, random_samples[,j])
+            j = j+1
+        }
+    }
+
+    cor_samples = list()
+    cor_samples$samples = samples
+    cor_samples$cor = correlated
+    return(cor_samples)
+}
+
+# Perform correlations for easily identifiable links, and perform a random sampling for the others
+correlate_parameters <- function(model, expdes, data, model_structure) {
+    # Collect the nodes that can be identified by correlation
+    measured_nodes = expdes$measured_nodes+1;
+    print(model_structure$names[measured_nodes]) ; print(measured_nodes) # DEBUG
+    valid_nodes = c()
+    upstreams = list()
+    for (node in measured_nodes) {
+        valid = TRUE
+        senders = c()
+        for (sender in 1:length(model_structure$names)) {
+            if (model_structure$adjacencyMatrix[node, sender] == 1) {
+                # All sender nodes must be measured for the input links to be indentifiable
+                if (sender %in% measured_nodes) {
+                    senders = c(senders, sender)
+                } else {
+                    valid = FALSE
+                    print(paste(model_structure$names[node], "excluded because", model_structure$names[sender], "is not measured"))
+                    break
+                }
+            }
+        }
+        if (valid) {
+            upstreams[[node]] = senders
+            valid_nodes = c(valid_nodes, node)
+        }
+    }
+
+    # Collect the values and perform the correlation
+    params_matrix = matrix(0, ncol=length(model_structure$names), nrow=length(model_structure$names))
+    for (node in valid_nodes) {
+        use = rep(TRUE, times=nrow(expdes$inhibitor))
+        # We do not use the conditions where one of the sender nodes is inhibited (since it decorelates the measurements)
+        for ( sender in which((expdes$inhib_nodes+1) %in% upstreams[[node]]) ) {
+            for ( i in 1:nrow(expdes$inhibitor) ) {
+                if (expdes$inhibitor[i, sender] == 1) {
+                    use[i] = FALSE
+                }
+            }
+        }
+
+        # Collect the measured data and perform the regression
+        node_mes = which( measured_nodes == node)
+        measurements = log(data$stim_data[use, node_mes] / data$unstim_data[1, node_mes] )
+        regression = paste0("glm(measurements[,", 1, '] ~ ')
+        first = TRUE
+        for (sender in upstreams[[node]] ) {
+            mes_index = which(measured_nodes==sender)
+            measurements = cbind(measurements, log(data$stim_data[use, mes_index] / data$unstim_data[1,mes_index]) )
+            if (first) {
+                first = FALSE
+            } else {
+                regression = paste0(regression, "+")
+            }
+            regression = paste0(regression, "measurements[,", 1+which(upstreams[[node]] == sender), "]")
+        }
+        regression = paste0(regression, ")")
+        result = eval(parse(text=regression))
+        for (sender in 1:length(upstreams[[node]])) {
+            params_matrix[ node, upstreams[[node]][sender] ] = result$coefficients[sender+1]
+            # TODO add the information on the quality of the fit
+        }
+    }
+    if (debug) {
+        print(model_structure$names)
+        print(params_matrix)
+    }
+
+    # Each link identified by correlation will correspond to one parameter
+    # We identify which parameter it is and return it with its value
+    params_vector = model$getParameterFromLocalResponse( params_matrix, rep(0, times=ncol(expdes$inhibitor)) )
+    correlated = list()
+    correlated$list = c()
+    correlated$values = c()
+    for ( param in 1:length(params_vector) ) {
+        if (!is.nan(params_vector[param]) && params_vector[param] != 0) {
+            correlated$list = c(correlated$list, param)
+            correlated$values = c(correlated$values, params_vector[param])
+        }
+    }
+    return(correlated)
+}
+
+# TODO integrate it into the creation function
+# Explore the parameter space with series of random initialisations and selection after each step of the best fits
+deep_initialisation <- function (model, expdes, data, NB_CORES, depth=3, sample_size=100) {
     if (depth < 1) { # We do at least one initialisation
         depth=1
     }
@@ -95,7 +205,7 @@ deep_initialisation <- function (model, expdes, structure, data, NB_CORES, depth
         for (j in 1:nrow(kept)) {
             samples = rbind(samples, qnorm(randomLHS(inits, model$nr_of_parameters()), sd=3/depth + as.matrix( rep(kept[j,], inits), byrow=T, ncol=ncol(kept) )) )
         }
-        results = parallel_initialisation(model, expdes, model_structure, data, samples, cores)
+        results = parallel_initialisation(model, expdes, data, samples, cores)
         # Keep the 10% best parameters sets for the next iteration
         kept = results$params[order(results$residuals)[1:floor(0.1*sample_size)],]
     }
@@ -105,7 +215,7 @@ deep_initialisation <- function (model, expdes, structure, data, NB_CORES, depth
 }
 
 # Parallel initialisation of the parameters
-parallel_initialisation <- function(model, expdes, structure, data, samples, NB_CORES) {
+parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
     # Put it under list format, as randomLHS only provides a matrix
     parallel_sampling = list()
     for (i in 1:dim(samples)[1]) {
