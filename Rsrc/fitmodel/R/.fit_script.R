@@ -22,6 +22,8 @@ get_running_time <- function(init_time, text="") {
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
 
+reduction = F
+
 data = ""
 network = ""
 basal_nodes = ""
@@ -30,7 +32,6 @@ nb_steps = 1000
 inits = 1000
 # Autodetection of the cores
 cores = 0
-reduction = TRUE
 
 # Collect the filenames based on their extension
 for (argument in commandArgs()) {

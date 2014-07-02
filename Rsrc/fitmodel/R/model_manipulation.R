@@ -97,8 +97,8 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
             paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
             result = model$fitmodel( data,paramstmp)
             response.matrix = model$getLocalResponseFromParameter( result$parameter )
-            residuals = c(residuals,result$residuals);   
-            params = cbind(params,c(response.matrix))
+            residuals = c(residuals, result$residuals);   
+            params = cbind(params, c(response.matrix))
             new_rank = model$modelRank()
             ranks = c(ranks, new_rank)
 
