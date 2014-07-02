@@ -794,6 +794,11 @@ void Model::print_dot_file(std::ostream &os, const std::vector<double> &d, const
             }*/
 }
 
+// Print the equation for condition r and measurements c
+void Model::printEquation(const size_t r, const size_t c) {
+    std::cout << response_[r*exp_design_.stimuli.shape()[0] + c] << std::endl;
+}
+
 
 
 

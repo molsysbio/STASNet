@@ -79,6 +79,7 @@ public:
       
     //    exit(0);
   }
+  void printEquation(const size_t r, const size_t c);
 
   size_t modelRank() const { return rank_; }
 

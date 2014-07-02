@@ -47,6 +47,8 @@ public:
   SEXP getUnreducedPDM();
   SEXP getParametersNames();
 
+  void printEquation(const size_t r, const size_t c);
+
 private:
   GiNaC::matrix response_full_model; 
   std::vector <GiNaC::symbol> symbols_full_model;  

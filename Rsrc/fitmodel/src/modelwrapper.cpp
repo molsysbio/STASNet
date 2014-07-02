@@ -302,6 +302,11 @@ SEXP ModelWrapper::getParametersNames() {
     return ret;
 }
 
+// Converts R index to C++ index
+void ModelWrapper::printEquation(const size_t r, const size_t c) {
+    model->printEquation(r-1, c-1);
+}
+
 
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
@@ -323,6 +328,7 @@ RCPP_MODULE(ModelEx) {
     .method( "showUnreducedPDM", &ModelWrapper::showGUnreduced )
     .method( "getParametersNames", &ModelWrapper::getParametersNames )
     .method( "getUnreducedPDM", &ModelWrapper::getUnreducedPDM )
+    .method( "getEquation", &ModelWrapper::printEquation )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
 }
