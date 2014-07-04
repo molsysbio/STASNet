@@ -10,6 +10,7 @@
 #include <boost/numeric/ublas/io.hpp>   
 #include <boost/bind.hpp>   
 #include <boost/math/distributions/chi_squared.hpp>
+#include <boost/math/distributions/normal.hpp>
 #include <levmar-2.5/levmar.h>               // to include Marquardt-Levenberg fitting (lsqnonlin in matlab)(written for C)
 #include <float.h>                       // needed to declare the lower and upper bounds to plus and mimnus infinity DBL_MAX and -DBL_MAX
 //#include<cstring>    // include these two if you want to view some ginac expressions in matlab (mex)
@@ -45,14 +46,14 @@ public:
       direct_pass=false;
       // some sanity checks.
       if (params_.size()!=model_->nr_of_parameters()) {
-	std::cerr << "Problem: params is not of same size as model params! aborting!!!" << std::endl; exit(-1); 
+	    std::cerr << "Problem: params is not of same size as model params! aborting!!!" << std::endl; exit(-1); 
       }
       mask_=std::vector<bool>(model_->nr_of_parameters(),false);
       for (std::vector<size_t>::iterator iter=fixed_params_.begin(); iter!=fixed_params_.end(); iter++) {
-	if (*iter>=model_->nr_of_parameters()) {
-	  std::cerr << "Problem: some non-existing parameters have been declared fixed. aborting!!!" << std::endl; exit(-1); 
-	}
-	mask_[*iter]=true;
+	    if (*iter>=model_->nr_of_parameters()) {
+	      std::cerr << "Problem: some non-existing parameters have been declared fixed. aborting!!!" << std::endl; exit(-1); 
+	    }
+	    mask_[*iter]=true;
       }
     }
   }
@@ -62,17 +63,17 @@ public:
       model_->eval(p,datax,data_); 
     else
       {
-	double pall[model_->nr_of_parameters()];
-	size_t j=0;
-	for (size_t i=0; i<model_->nr_of_parameters(); i++) {
-	  if (mask_[i]) {
-	    pall[i]=params_[i];
-	  } else {
-	    pall[i]=p[j++];
-	    if (j>=(size_t)m) { std::cerr << "Problem: some problem in parameter sorting. aborting!!!" << std::endl; exit(-1); }
-	  }
-	}
-	model_->eval(pall,datax,data_);
+	    double pall[model_->nr_of_parameters()];
+	    size_t j=0;
+	    for (size_t i=0; i<model_->nr_of_parameters(); i++) {
+	      if (mask_[i]) {
+	        pall[i]=params_[i];
+	      } else {
+	        pall[i]=p[j++];
+	        if (j>=(size_t)m) { std::cerr << "Problem: some problem in parameter sorting. aborting!!!" << std::endl; exit(-1); }
+	      }
+	    }
+	    model_->eval(pall,datax,data_);
       }
   }
 
@@ -123,7 +124,8 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
   opts[1]=1E-30; // Gradient value
   opts[2]=1E-200; // Parameters variation
   opts[3]=1E-17; // Residual variation
-  opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used  
+  opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used
+  unsigned int max_steps = 10000;
 
   std::vector<double> parameters_fixed;
   if (keep_constant.size()>0) {
@@ -136,10 +138,10 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
   double parameters[model->nr_of_parameters()];
   if (keep_constant.size()>0) {
     lpi.convert_to_variable_params(parameters,param);
-    dlevmar_dif(levmar_wrapper,parameters,datax,model->nr_of_parameters(),number_of_measurements,10000,opts,info,NULL,NULL,(void *)&lpi);
+    dlevmar_dif(levmar_wrapper,parameters,datax,model->nr_of_parameters(),number_of_measurements,max_steps,opts,info,NULL,NULL,(void *)&lpi);
     lpi.convert_from_variable_params(param,parameters);
   } else {
-     dlevmar_dif(levmar_wrapper,param,datax,model->nr_of_parameters(),number_of_measurements,10000,opts,info,NULL,NULL,(void *)&lpi);
+     dlevmar_dif(levmar_wrapper,param,datax,model->nr_of_parameters(),number_of_measurements,max_steps,opts,info,NULL,NULL,(void *)&lpi);
   }   
 
   std::string termination_why;
@@ -171,7 +173,6 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
   
    return info[1];
 }
-
 
 void fitmodel( std::vector <double> &bestfit,
 	       double * bestresid,
@@ -237,6 +238,99 @@ void fitmodel( std::vector <double> &bestfit,
      }
    }
 
+}
+
+// Perform simulated annealing to find the global optimum for the model
+void simulated_annealing(const Model *model, const Data *data, std::vector<double> &bestfit, double &bestresid, int max_it, int max_depth) {
+    
+    // Parameters with a suspected value will be reseted to this value between each fit
+    std::vector<double> fixed_params;
+    std::vector<int> fixed_index, var_index;
+    if (bestfit.size() == model->nr_of_parameters()) {
+        for (size_t i=0 ; i < bestfit.size() ; i++) {
+            if (bestfit[i] != 0) {
+                fixed_index.push_back(i);
+                fixed_params.push_back(bestfit[i]);
+            } else {
+                var_index.push_back(i);
+            }
+        }
+    } else {
+        bestfit.resize(model->nr_of_parameters());
+    }
+    if (max_it == 0) {
+        max_it = pow(2, model->nr_of_parameters());
+    }
+    if (max_depth == 0) {
+        max_depth = max_it;
+    }
+
+    // Find the order of magnitude of the steps and calculate the parameters from it
+    double exploration[10];
+    std::vector<size_t> index(10);
+    std::vector< std::vector<double> > parameters = LHSampling(model->nr_of_parameters(), 10);
+    double test_params[model->nr_of_parameters()];
+    std::cout << "Annealing init steps :" << std::endl;
+    for (size_t i=0 ; i < 10 ; i++) {
+        index.push_back(i);
+        std::copy(parameters[i].begin(), parameters[i].end(), test_params);
+        //exploration[i] = model->score(static_cast<double*>(parameters[i].begin()), data);
+        exploration[i] = model->score(test_params, data);
+        std::cout << exploration[i] << std::endl;
+    }
+    std::sort(index.begin(), index.end(), rev_index_cmp<double*>(exploration));
+    std::copy(parameters[index[0]].begin(), parameters[index[0]].end(), test_params);
+    std::copy(test_params, test_params + model->nr_of_parameters(), bestfit.begin());
+    double temperature = exploration[index[4]] - exploration[index[0]];
+    const double threshold = temperature/10;
+    double cooling = std::exp(std::log(threshold/temperature) / max_depth);
+
+    // Simulated annealing procedure
+    unsigned int no_change = 0;
+    double p[model->nr_of_parameters()];
+    double new_p[model->nr_of_parameters()];
+    double residual = exploration[index[0]], new_residual;
+    bestresid = residual;
+    while (temperature > threshold && no_change < max_it) {
+        // New step reset the fixed parameters and make a step on the other dimensions
+        for (size_t i=0 ; i < fixed_index.size() ; i++) {
+            new_p[fixed_index[i]] = p[i];
+        }
+        for (size_t i=0 ; i < var_index.size() ; i++) {
+            new_p[var_index[i]] = p[i] + boost::math::quantile( boost::math::normal(0, 2), uniform_sampling(10) );
+        }
+        new_residual = model->score(p, data);
+        while (uniform_sampling(10) > std::exp((residual - new_residual)/temperature) && no_change < max_it) {
+            no_change++;
+            // Try a different step
+            for (size_t i=0 ; i < fixed_index.size() ; i++) {
+                new_p[fixed_index[i]] = p[i];
+            }
+            for (size_t i=0 ; i < var_index.size() ; i++) {
+                new_p[var_index[i]] = p[i] + boost::math::quantile( boost::math::normal(0, 2), uniform_sampling(10) );
+            }
+            new_residual = model->score(p, data);
+        }
+        if (no_change < max_it) {
+            no_change = 0;
+            temperature *= cooling;
+        }
+        // Collect the new position and residual
+        residual = new_residual;
+        for (size_t i=0 ; i < var_index.size() ; i++) {
+            p[var_index[i]] = new_p[var_index[i]];
+        }
+        // Update the bestfit if a better solution is found
+        if (residual < bestresid) {
+            bestresid = residual;
+            std::copy(p, p+model->nr_of_parameters(), bestfit.begin());
+        }
+    }
+    if (no_change < max_it) {
+        printf("Simulated annealing terminated because no new valid move has been found.");
+    } else {
+        printf("Simulated annealing cooling completed.");
+    }
 }
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter

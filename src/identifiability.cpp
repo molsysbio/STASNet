@@ -110,16 +110,6 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
 
 }
 
-template<class T> struct index_cmp {
-  index_cmp(const T arr) : arr(arr) {}
-  bool operator()(const size_t a, const size_t b) const
-  {
-      return arr[a] > arr[b]; // Normal sort
-      //return arr[b] > arr[a]; // Reverted sort
-  }
-  const T arr;
-};
-
 // Resorts the parameter_dependency_matrix_unreduced and the parameterlist on rows
 void sort ( int_matrix &old_pdmu,
         parameterlist &param) {

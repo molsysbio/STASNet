@@ -12,6 +12,27 @@
 #include <limits>
 #include "mathtree.hpp"
 
+std::vector< std::vector<double> > LHSampling (const int sample_size, const int nb_samples, const int decimals=10);
+double uniform_sampling(double precision=10000);
+
+// Functors to sort indexes of an array with std::sort
+template<class T> struct index_cmp {
+  index_cmp(const T arr) : arr(arr) {}
+  bool operator()(const size_t a, const size_t b) const
+  {
+      return arr[a] > arr[b]; // Normal sort
+  }
+  const T arr;
+};
+template<class T> struct rev_index_cmp {
+  rev_index_cmp(const T arr) : arr(arr) {}
+  bool operator()(const size_t a, const size_t b) const
+  {
+      return arr[a] < arr[b]; // Reverted sort
+  }
+  const T arr;
+};
+
 // ---------------------------------
 // typedefs for divers matrix type 
 
@@ -45,6 +66,7 @@ void print_matrix(const Matrix &m) {
     }
 }
 
+// Converts any data type into a string
 template <typename T>
 std::string to_string(const T &a) {
     std::ostringstream oss;

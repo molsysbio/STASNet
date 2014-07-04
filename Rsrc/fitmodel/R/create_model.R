@@ -19,15 +19,23 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_structure=getModelStructure(links)
     # Plot the network in a file # TODO find a better visualisation tool
     model_graph = graph.edgelist(as.matrix(links))
-    #pdf(paste0( "graph_", gsub("/(\\w+/)+(\\w+).tab$", "\\2.pdf", model_links) ))
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
-    pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
+    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
     plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
 # TODO extraction of the basal activity with different format
     basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    # Create a valid basal activity list from a list of the nodes that do not have basal activity
+# TODO Find a day to switch
+# IDEA Consider it is basal if more than 2/3 of the nodes and not basal if less than 1/3, ask otherwise
+#   basal = c()
+#   for (node in model_structure$names) {
+#       if (!(node %in% no_basal)) {
+#           basal = c(basal, node)
+#       }
+#   }
     core = extractModelCore(model_structure, basal_activity , data.stimulation, data.variation)
     expdes = core$design
     data = core$data
@@ -42,18 +50,26 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     if (cores == 0) { cores = detectCores()-1 }
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
     # Different sampling methods
-    if (method == "default") {
-        samples = sampleWithCorrelation(model, core, inits, plot=init_distribution)$samples
+    if (method == "default" || method == "correlation") {
+        samples = sampleWithCorrelation(model, core, inits, plot=init_distribution, sd=2)$samples
         results = parallel_initialisation(model, expdes, data, samples, cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
         results = parallel_initialisation(model, expdes, data, samples, cores)
     } else if (method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
+    } else if (method == "annealing" || method == "SA") {
+        results = annealingFit(data, correlate_parameters(model, core, plot=init_distribution)$values, inits)
+    } else {
+        stop("The selected initialisation method does not exist (valids are correlation, random, explore, and annealing)")
     }
+    print("Initial fits completed")
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
+    write("All residuals : ")
+    write(residuals, stderr())
+    print(paste( sum(is.na(residuals)), "NA and ", sum(is.infinite(residuals)), "infinite residuals" ))
     if (init_distribution) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
     if (debug) {
         # Print the 20 smallest residuals to check if the optimum has been found several times
@@ -96,7 +112,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 #' @param shift A vector giving the shift to be applied to the normal distribution. Must have the same size as the number of parameters
 sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="", sd=2, plot=F) {
     if (!is.list(correlated)) {
-        correlated = correlate_parameters(model, core$design, core$data, core$structure, plot)
+        correlated = correlate_parameters(model, core, plot)
     }
     random_samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()-length(correlated$list)), sd=sd)
     samples = c()
@@ -122,8 +138,11 @@ sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="
 }
 
 # Indentify the links that can be deduced by a simple correlation, calculate them, and return their index and the corresponding parameter vector with the other values set to 0
-correlate_parameters <- function(model, expdes, data, model_structure, plot=F) {
+correlate_parameters <- function(model, core, plot=F) {
     print("Looking for identifiable correlations...")
+    expdes = core$design
+    model_structure = core$structure
+    data = core$data
     # Collect the nodes that can be identified by correlation
     measured_nodes = expdes$measured_nodes+1;
     valid_nodes = c()
@@ -268,7 +287,13 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
     }
     # Parallel initialisations
     # The number of cores used depends on the ability of the detectCores function to detect them
-    parallel_results = mclapply(parallel_sampling, function(params, data, model) { model$fitmodel(data, params) }, data, model, mc.cores=NB_CORES)
+    fitmodel_wrapper <- function(params, data, model) {
+        init = proc.time()[3]
+        result = model$fitmodel(data, params)
+        write(paste(signif(proc.time()[3]-init, 3), "s for the descent"), stderr())
+        return(result)
+    }
+    parallel_results = mclapply(parallel_sampling, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
 
     # Reorder the results to get the same output as the linear function
     results = list()

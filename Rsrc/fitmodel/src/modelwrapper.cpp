@@ -100,6 +100,26 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
     return ret;
 }
 
+SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth) {
+
+    if (parameters.size() != model->nr_of_parameters()) {
+        parameters.resize(model->nr_of_parameters());
+    }
+    
+    // Find an approximation of the optimum with the simulated annealing
+    double residual;
+    ::simulated_annealing(model, &data, parameters, residual, max_it, max_depth);
+
+    // Ajust the gradient descent
+    double_matrix predictions;
+    ::fitmodel(parameters, &residual, predictions, model, &data);
+    Rcpp::List ret;
+    Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
+    ret["parameter"]=pars;
+    ret["residuals"]=residual;
+    return ret;
+}
+
 // Computes the profile likelihood of one parameter and the functionnal relationships of the others with this parameter
 SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000) {
     if ( parameters.size() != model->nr_of_parameters() ) 
@@ -319,6 +339,7 @@ RCPP_MODULE(ModelEx) {
     .method( "modelRank", &ModelWrapper::modelRank )
     .method( "nr_of_parameters", &ModelWrapper::nr_of_parameters )
     .method( "fitmodel", &ModelWrapper::fitmodel )
+    .method( "annealingFit", &ModelWrapper::annealingFit )
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)

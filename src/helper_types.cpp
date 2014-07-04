@@ -3,13 +3,53 @@
 #include "model.hpp"
 #include <fstream>
 
+// Performs a Latin Hypercube Sampling on [0, 1]
+std::vector< std::vector<double> > LHSampling (const int sample_size, const int nb_samples, const int decimals) {
+    // Remember which "band" is filled for each dimension
+    std::vector< std::vector<bool> > dimension_filled;
+    std::vector< std::vector<double> > sampling;
+    for (int i=0 ; i < sample_size ; i++) {
+        dimension_filled.push_back(std::vector<bool>(nb_samples, false));
+        sampling.push_back(std::vector<double>(nb_samples));
+    }
+
+    int part = 0;
+    double precision = pow(10, decimals);
+    for (int i=0 ; i < nb_samples ; i++) {
+        for (int j=0 ; j < sample_size ; j++) {
+            part = std::floor(rand() % nb_samples);
+            // Change the "band" if the selected one has already been sampled
+            // Select randomly if there is "enough" available choices or simply shift on the ring
+            if (i > (double)(0.5 * nb_samples)) {
+                while (dimension_filled[j][part]) {
+                    part = std::floor(rand() % nb_samples);
+                }
+            } else {
+                while (dimension_filled[j][part]) {
+                    part = ++part % nb_samples;
+                }
+            }
+            dimension_filled[j][part] = true;
+            sampling[i].push_back( (double)(rand() % (int)precision) / (precision * nb_samples) + (double)(part/nb_samples) );
+        }
+    }
+
+    return sampling;
+}
+
+// Provides a random number between 0 and 1
+double uniform_sampling(double precision) {
+    if (precision > 1) {
+        return (double)(rand() % (int)precision) / precision;
+    }
+}
 
 template<typename T> 
 void convert_negatives_into_NaN(boost::multi_array< T, 2 > &a) {
   for (size_t i=0; i<a.shape()[0]; i++) {
     for (size_t j=0; j<a.shape()[1]; j++) {
       if (a[i][j]<0) { 
-	a[i][j]=std::numeric_limits<T>::quiet_NaN();
+	    a[i][j]=std::numeric_limits<T>::quiet_NaN();
       }
     }
   }

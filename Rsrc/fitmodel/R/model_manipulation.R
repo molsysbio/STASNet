@@ -35,7 +35,7 @@ printParameters <- function(model_description) {
 }
 
 # Plots heatmaps of the model prediction against the data weighted by the error
-plotModelAccuracy <- function(model_description, data_name = "default") {
+accuracyPlot <- function(model_description, data_name = "default") {
     # Calculate the mismatch
     model = model_description$model
     data = model_description$data

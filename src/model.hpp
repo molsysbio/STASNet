@@ -29,9 +29,10 @@ public:
 
 public:
 
+  // Evaluation of the model
   void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;
   void eval(const double *p, double *datax, const Data *data) const;
-
+  double score(const double *p, const Data *data) const;
   //  evaluates the model with parameters p  and returns datax.
   // This is to be called from the optimiser
   inline void eval(const double *p,double *datax,int m, int n, const Data *data) const {

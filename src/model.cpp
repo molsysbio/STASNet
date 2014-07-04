@@ -296,8 +296,8 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
 }
 
 // Compares pairs, first by the first term, then by the second if the first are equals
-template<class T> struct rev_index_cmp {
-    rev_index_cmp(const T arr) : arr(arr) {}
+template<class T> struct pair_rev_index_cmp {
+    pair_rev_index_cmp(const T arr) : arr(arr) {}
     bool operator()(const size_t a, const size_t b) const
     {
         if (arr.first[a] != arr.first[b]) {
@@ -347,7 +347,7 @@ void Model::simplify_independent_parameters_using_subtraction(std::vector< std::
         independent_matrix[i][symbols_.size() + i] = 1;
     }
     // Sort the reduced parameters so that the matrix is in row echelon form
-    std::sort(index, index + independent_parameters_.size(), rev_index_cmp< std::pair< std::vector<size_t>, std::vector<size_t> > >(first_one));
+    std::sort(index, index + independent_parameters_.size(), pair_rev_index_cmp< std::pair< std::vector<size_t>, std::vector<size_t> > >(first_one));
     int_matrix reduction_matrix;
     reduction_matrix.resize(boost::extents[independent_parameters_.size()][symbols_.size() + independent_parameters_.size()]);
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
@@ -599,6 +599,33 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
             }
         }
     }
+}
+
+// Calculates the residual for the set of paramters p
+double Model::score(const double *p, const Data *data) const {
+    int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0]; 
+
+    // Data and simulation normalised by the error
+    double simData[number_of_measurements];
+    eval(p, simData, data);
+    double datax[number_of_measurements];
+    for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
+        for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
+            if (std::isnan(data->error[j][i])) {
+	            datax[i*data->stim_data.shape()[0]+j]=0;
+            } else {
+	            datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
+            }
+        }
+    }
+    assert(data->stim_data.shape()[1]*data->stim_data.shape()[0] == (size_t)number_of_measurements);
+
+    // Sum of squares
+    double residual = 0;
+    for (size_t i=0 ; i < number_of_measurements ; i++) {
+        residual += pow(simData[i] - datax[i], 2);
+    }
+    return residual;
 }
 
 size_t Model::nr_of_parameters() const { return independent_parameters_.size(); }
