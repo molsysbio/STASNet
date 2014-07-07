@@ -67,7 +67,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
-    write("All residuals : ")
+    write("All residuals : ", stderr())
     write(residuals, stderr())
     print(paste( sum(is.na(residuals)), "NA and ", sum(is.infinite(residuals)), "infinite residuals" ))
     if (init_distribution) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
@@ -280,9 +280,11 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
 
 # Parallel initialisation of the parameters
 parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
-    # Put it under list format, as randomLHS only provides a matrix
+    # Put the samples under list format, as mclapply only take "one dimension" objects
     parallel_sampling = list()
-    for (i in 1:dim(samples)[1]) {
+    nb_samples = dim(samples)[1]
+    length(parallel_sampling) = nb_samples # Avoid to resize the list multiple times
+    for (i in 1:nb_samples) {
         parallel_sampling[[i]] = samples[i,]
     }
     # Parallel initialisations
@@ -293,18 +295,67 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         write(paste(signif(proc.time()[3]-init, 3), "s for the descent"), stderr())
         return(result)
     }
-    parallel_results = mclapply(parallel_sampling, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
 
-    # Reorder the results to get the same output as the linear function
-    results = list()
-    results$residuals = c()
-    results$params = c()
-    for (entry in parallel_results) {
-        results$residuals = c(results$residuals, entry$residuals)
-        results$params = rbind(results$params, entry$parameter)
+    # Since the aggregation in the end of the parallel calculations takes a lot of time for a big list, we calculate by block and take the best result of each block
+    if (nb_samples > 10000) {
+        print("Using the block version for the parallel initialisation")
+        best_results = list()
+        best_results$residuals = c()
+        best_results$params = c()
+        for (i in 1:(nb_samples %/% 10000)) {
+            parallel_results = mclapply(parallel_sampling[ (10000*(i-1)+1):(10000*i) ], fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+
+            # Reorder the results to get the same output as the linear function
+            results = list()
+            results$residuals = c()
+            results$params = c()
+            for (entry in parallel_results) {
+                results$residuals = c(results$residuals, entry$residuals)
+                results$params = rbind(results$params, entry$parameter)
+            }
+            # Only keep the best fits
+            best = order(results$residuals)[1:20]
+            write(paste(sum(is.na(results$residuals)), "NAs"), stderr())
+            best_results$residuals = c(best_results$residuals, results$residuals[best])
+            best_results$params = rbind(best_results$params, results$params[best,])
+            # We make it so that the size of best_results never execeeds 10000
+            if (i %% 500 == 0) {
+                best = order(best_results$residuals)[1:20]
+                best_results$residuals = best_results$residuals[best]
+                best_results$params = best_results$params[best,]
+            }
+        }
+        # The last block is smaller
+        if (nb_samples %% 10000 != 0) {
+            parallel_results = mclapply(parallel_sampling[(nb_samples %/% 10000):nb_samples], fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+
+            results = list()
+            results$residuals = c()
+            results$params = c()
+            for (entry in parallel_results) {
+                results$residuals = c(results$residuals, entry$residuals)
+                results$params = rbind(results$params, entry$parameter)
+            }
+
+            best = order(results$residuals)[1:20]
+            best_results$residuals = c(best_results$residuals, results$residuals[best])
+            best_results$params = rbind(best_results$params, results$params[best,])
+        }
+    } else {
+        parallel_results = mclapply(parallel_sampling, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+
+        # Reorder the best_results to get the same output as the linear function
+        best_results = list()
+        best_results$residuals = c()
+        best_results$params = c()
+        for (entry in parallel_best_results) {
+            best_results$residuals = c(best_results$residuals, entry$residuals)
+            best_results$params = rbind(best_results$params, entry$parameter)
+        }
     }
 
-    return(results)
+
+    return(best_results)
 }
 
 # Initialise the parameters with a one core processing

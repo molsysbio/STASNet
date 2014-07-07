@@ -91,7 +91,7 @@ dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
-plotModelAccuracy(model, conditions);
+accuracyPlot(model, conditions);
 dev.off()
 printParameters(model)
 
@@ -103,9 +103,9 @@ exportModel(model, paste0(conditions, ".mra"));
 niplotPL(profiles, data_name=data_name)
 
 # Plot the simulation for all combinations of inhibitors 
-pdf(paste0("combos_", conditions, ".pdf"))
-plotModelPrediction(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
-dev.off()
+#pdf(paste0("combos_", conditions, ".pdf"))
+#plotModelPrediction(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
+#dev.off()
 # Plot the simulated conditions
 pdf(paste0("all_", conditions, ".pdf"))
 plotModelPrediction(model, "all")
