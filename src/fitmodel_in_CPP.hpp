@@ -7,11 +7,11 @@
 #include "model.hpp"
 
 void fitmodel( std::vector<double> &bestfit,
-	       double  * bestresid,
-	       double_matrix &prediction,
-	       const Model * model,	       
-	       const Data * data,
-	       std::vector<size_t> keep_constant = std::vector<size_t>());
+           double  * bestresid,
+           double_matrix &prediction,
+           const Model * model,        
+           const Data * data,
+           std::vector<size_t> keep_constant = std::vector<size_t>());
 
 void simulated_annealing(const Model *model, const Data *data, std::vector<double> &bestfit, double &bestresid, int max_it=0, int max_depth=0);
 
@@ -43,14 +43,14 @@ struct pl_analysis {
 typedef struct pl_analysis pl_analysis;
 
 void profile_likelihood( const Data &data,
-			std::vector<double> parameters,
+            std::vector<double> parameters,
             const std::vector<size_t> keep_constant,
-	        std::vector< std::vector<double> > &residual_track,
+            std::vector< std::vector<double> > &residual_track,
             std::vector<double> &explored,
             const double param_value,
-			const Model *model,
+            const Model *model,
             pl_analysis &thresholds,
-			const unsigned int total_steps);
+            const unsigned int total_steps);
 
 double choose_step_size(const Data &data,
                         const std::vector<double> parameters,

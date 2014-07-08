@@ -292,7 +292,9 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
     fitmodel_wrapper <- function(params, data, model) {
         init = proc.time()[3]
         result = model$fitmodel(data, params)
-        write(paste(signif(proc.time()[3]-init, 3), "s for the descent"), stderr())
+        if (verbose) {
+            write(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals), stderr())
+        }
         return(result)
     }
 
@@ -348,7 +350,7 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         best_results = list()
         best_results$residuals = c()
         best_results$params = c()
-        for (entry in parallel_best_results) {
+        for (entry in parallel_results) {
             best_results$residuals = c(best_results$residuals, entry$residuals)
             best_results$params = rbind(best_results$params, entry$parameter)
         }

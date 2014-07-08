@@ -578,10 +578,13 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
                 datax[i*rows+j]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
             }
 
-            if (std::isnan(data->error[j][i])) {
+            if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*rows+j]=0;
             } else if ((std::isnan(datax[i*rows+j])) || 
              (std::isinf(datax[i*rows+j])) ) {
+                if (verbosity > 10) {
+                    std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << model_eqns_[i*rows+j][0]->eval() << std::endl;
+                }
                 datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
             } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
     // to exclude extreme values, where the algorithm can't find a way out somehow 
@@ -590,15 +593,17 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
         }
     }
 
+    /* Buggy, bipasses sanity checks and forbid single positive feedback or entangled negative feedback
     double penelty=getPeneltyForConstraints(p);
     if (penelty>1) {
-        //      std::cerr << "P:" << penelty << " " ;
+        std::cerr << "Penelty = " << penelty << std::endl ;
         for (unsigned int i=0; i<cols;i++) { 
             for (unsigned int j=0; j<rows;j++) {
                 datax[i*rows+j]=datax[i*rows+j]+100000*penelty*data->stim_data[j][i]/data->error[j][i];
             }
         }
     }
+    */
 }
 
 // Calculates the residual for the set of paramters p
@@ -611,7 +616,7 @@ double Model::score(const double *p, const Data *data) const {
     double datax[number_of_measurements];
     for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
         for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
-            if (std::isnan(data->error[j][i])) {
+            if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
 	            datax[i*data->stim_data.shape()[0]+j]=0;
             } else {
 	            datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];

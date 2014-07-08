@@ -33,7 +33,7 @@ std::ostream & operator<<(std::ostream &os, std::vector<GiNaC::symbol> &v) {
 
 // This class wraps all stuff that the optimiser needs to know about the model:
 // i.e. the model itself, which parameters to vary, and which are constant
-// since the optimizer thinks that all parmeters can be optimized, we have to
+// since the optimizer thinks that all parameters can be optimized, we have to
 // convert from a vector of variable parameters to all parameters and back.
 class levmar_pass_info {
 public: 
@@ -46,14 +46,14 @@ public:
       direct_pass=false;
       // some sanity checks.
       if (params_.size()!=model_->nr_of_parameters()) {
-	    std::cerr << "Problem: params is not of same size as model params! aborting!!!" << std::endl; exit(-1); 
+        std::cerr << "Problem: params is not of same size as model params! aborting!!!" << std::endl; exit(-1); 
       }
       mask_=std::vector<bool>(model_->nr_of_parameters(),false);
       for (std::vector<size_t>::iterator iter=fixed_params_.begin(); iter!=fixed_params_.end(); iter++) {
-	    if (*iter>=model_->nr_of_parameters()) {
-	      std::cerr << "Problem: some non-existing parameters have been declared fixed. aborting!!!" << std::endl; exit(-1); 
-	    }
-	    mask_[*iter]=true;
+      if (*iter>=model_->nr_of_parameters()) {
+        std::cerr << "Problem: some non-existing parameters have been declared fixed. aborting!!!" << std::endl; exit(-1); 
+      }
+      mask_[*iter]=true;
       }
     }
   }
@@ -61,20 +61,19 @@ public:
   void eval(const double *p,double *datax, int m, int n) const {
     if (direct_pass) 
       model_->eval(p,datax,data_); 
-    else
-      {
-	    double pall[model_->nr_of_parameters()];
-	    size_t j=0;
-	    for (size_t i=0; i<model_->nr_of_parameters(); i++) {
-	      if (mask_[i]) {
-	        pall[i]=params_[i];
-	      } else {
-	        pall[i]=p[j++];
-	        if (j>=(size_t)m) { std::cerr << "Problem: some problem in parameter sorting. aborting!!!" << std::endl; exit(-1); }
-	      }
-	    }
-	    model_->eval(pall,datax,data_);
+    else {
+      double pall[model_->nr_of_parameters()];
+      size_t j=0;
+      for (size_t i=0; i<model_->nr_of_parameters(); i++) {
+        if (mask_[i]) {
+          pall[i]=params_[i];
+        } else {
+          pall[i]=p[j++];
+          if (j>=(size_t)m) { std::cerr << "Problem: some problem in parameter sorting. aborting!!!" << std::endl; exit(-1); }
+        }
       }
+      model_->eval(pall,datax,data_);
+    }
   }
 
   // These two functions trust that the sizes of arrays are correct !
@@ -91,9 +90,9 @@ public:
     size_t j=0;
     for (size_t i=0; i<model_->nr_of_parameters(); i++) {
       if (mask_[i]) {
-	pall[i]=params_[i];
+        pall[i]=params_[i];
       } else {
-	pall[i]=pvar[j++];
+        pall[i]=pvar[j++];
       }
     }
   }
@@ -141,7 +140,7 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
     dlevmar_dif(levmar_wrapper,parameters,datax,model->nr_of_parameters(),number_of_measurements,max_steps,opts,info,NULL,NULL,(void *)&lpi);
     lpi.convert_from_variable_params(param,parameters);
   } else {
-     dlevmar_dif(levmar_wrapper,param,datax,model->nr_of_parameters(),number_of_measurements,max_steps,opts,info,NULL,NULL,(void *)&lpi);
+    dlevmar_dif(levmar_wrapper,param,datax,model->nr_of_parameters(),number_of_measurements,max_steps,opts,info,NULL,NULL,(void *)&lpi);
   }   
 
   std::string termination_why;
@@ -175,12 +174,12 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
 }
 
 void fitmodel( std::vector <double> &bestfit,
-	       double * bestresid,
-	       double_matrix &prediction,
-	       const Model *model,
-	       const Data  *data, 
-	       std::vector<size_t> keep_constant
-	       ) {
+         double * bestresid,
+         double_matrix &prediction,
+         const Model *model,
+         const Data  *data, 
+         std::vector<size_t> keep_constant
+         ) {
   
   size_t number_of_parameters=model->nr_of_parameters();
   
@@ -199,15 +198,15 @@ void fitmodel( std::vector <double> &bestfit,
     for (size_t tmp=0; tmp<number_of_parameters; tmp++) p[tmp]=0.39;            
   }
 
-  //  define the measurement value to compare with measured value divided by the error
+  //  define the measurement value to compare with simulated values divided by the error
   int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0]; 
   double datax[number_of_measurements];
   for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
     for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
-      if (std::isnan(data->error[j][i])) {
-	    datax[i*data->stim_data.shape()[0]+j]=0;
+      if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
+        datax[i*data->stim_data.shape()[0]+j]=0;
       } else {
-	    datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
+        datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
       }
     }
   }
@@ -216,6 +215,7 @@ void fitmodel( std::vector <double> &bestfit,
   // Can't fit if the system is non identifiable
   if (model->modelRank()!=model->nr_of_parameters()) {
     *bestresid=1000000000000000.0;
+    std::cout << "The system is non identifiable, you need less links or more conditions" << std::endl;
     return;
   }
 
@@ -335,14 +335,14 @@ void simulated_annealing(const Model *model, const Data *data, std::vector<doubl
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter
 void profile_likelihood(const Data &data,
-	const std::vector<double> bestfit,
-	const std::vector<size_t> keep_constant,
-	std::vector< std::vector<double> > &residual_track,
-	std::vector<double> &explored,
-	const double param_value,
-	const Model *model,
+  const std::vector<double> bestfit,
+  const std::vector<size_t> keep_constant,
+  std::vector< std::vector<double> > &residual_track,
+  std::vector<double> &explored,
+  const double param_value,
+  const Model *model,
     pl_analysis &thresholds,
-	const unsigned int total_steps = 10000) {
+  const unsigned int total_steps = 10000) {
 
     double residual;
     double_matrix prediction;
@@ -367,12 +367,12 @@ void profile_likelihood(const Data &data,
     double step_size = std::min(-std::abs(parameters[keep_constant[0]]) * 3 / total_steps, -0.01);
     /*double step_size = -0.01;
     step_size = choose_step_size(data, parameters, param_value, keep_constant, model, boost::math::quantile( boost::math::chi_squared(1), decision), residual, step_size);*/
-	std::vector< std::vector<double> > dec_residual;
+  std::vector< std::vector<double> > dec_residual;
     for (int i=0 ; i < parameters.size() ; i++) {
         dec_residual.push_back(std::vector<double>());
         residual_track.push_back(std::vector<double>());
     }
-	std::vector<double> dec_explored;
+  std::vector<double> dec_explored;
     for (unsigned int i=0 ; i < std::floor(total_steps / 2) ; i++) {
         parameters[keep_constant[0]] = scanned_value;
 
