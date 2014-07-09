@@ -134,6 +134,11 @@ addPLinfos <- function(model_description, profiles) {
 
 # Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
 niplotPL <- function(profiles, init_residual=0, data_name="default") {
+    # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
+    for (profile in profiles) {
+        residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[1]
+        profile$residuals[ profile$old_path, profile$residuals[profile$old_path,] > residual_limit ] = residual_limit
+    }
     # Sort the profiles to print differently whether they are identifiable or not
     sorted_profiles = classify_profiles(profiles)
     i_profiles = sorted_profiles[[1]]
@@ -198,13 +203,14 @@ niplotPL <- function(profiles, init_residual=0, data_name="default") {
     par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) )
     if (nbid > 0) {
         for (id in 1:nbid) {
-            # Plot the profile likelihood
+            # Plot the profile likelihood with the thresholds and a mark for the optimum
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"))
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
+            lines( rep(i_profiles[[id]]$value, 100), seq( min( i_profiles[[id]]$residuals[i_profiles[[id]]$pathid] ), i_profiles[[id]]$thresholds[1], length.out=100 ))
             if (init_residual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * init_residual, col="red"); }
 
-            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid], na.rm=T) )
+            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid,], na.rm=T) )
             # Plot the functionnal relation
             for (i in 1:dim(i_profiles[[id]]$residuals)[1]) {
                 if (i != i_profiles[[id]]$pathid) {
