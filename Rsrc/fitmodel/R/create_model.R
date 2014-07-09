@@ -468,6 +468,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         # Indicate where the conditions are
         conditions = c(1, 2)
         data.values = data_file[, colnames(data_file) %in% model_structure$names]
+        not_included = colnames(data_file)[!(colnames(data_file) %in% model_structure$names)]
     } else if (grepl(".csv$", data_filename)) {
         use_midas = TRUE
         data_file = read.delim(data_filename, sep=",")
@@ -482,11 +483,16 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         colnames(data_file) = gsub("^[A-Z]{2}.", "", colnames(data_file))
         colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
         data.values = data.values[, colnames(data.values) %in% model_structure$names]
+        not_included = colnames(data.values)[!(colnames(data.values) %in% model_structure$names)]
+    }
+    # Warn for the measured not that have not been found in the network
+    if (length(not_included) > 0) {
+        print(paste(not_included , "measurement is not in the network structure (could be a mispelling)" ))
     }
 
     # Means of basal activity of the network and of the blank fixation of the antibodies
     unstim.values = colMeans(data.values[data_file$type=="c",])
-    lapply(unstim.values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are recquired to simulate the network")}})
+    lapply(unstim.values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are required to simulate the network")}})
     blank.values = colMeans(data.values[data_file$type=="blank",])
     blank.values[is.nan(blank.values)] = 0; # For conditions without blank values
 
