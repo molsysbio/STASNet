@@ -81,9 +81,10 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     init_params = params[best,]
     init_residual = residuals[best]
 
-    print("Model simulation with optimal parameters :")
-    print(model$simulate(data, init_params)$prediction)
-
+    if (verbose) {
+        print("Model simulation with optimal parameters :")
+        print(model$simulate(data, init_params)$prediction)
+    }
 
 # Information required to run the model (including the model itself)
     model_description = list()
@@ -187,7 +188,7 @@ correlate_parameters <- function(model, core, plot=F) {
         measurements = log(data$stim_data[use, node_mes] / data$unstim_data[1, node_mes] )
         regression = paste0("lm(measurements[,", 1, '] ~ ')
         first = TRUE
-        condition = paste("Correlation between", model_structure$names[node], "and")
+        condition = paste(model_structure$names[node], "and")
         for (sender in upstreams[[node]] ) {
             mes_index = which(measured_nodes==sender)
             measurements = cbind(measurements, log(data$stim_data[use, mes_index] / data$unstim_data[1,mes_index]) )
@@ -203,7 +204,7 @@ correlate_parameters <- function(model, core, plot=F) {
         # Perform the regression and put the values in the adjacency matrix
         regression = paste0(regression, ")")
         result = eval(parse(text=regression))
-        condition = paste(condition, ". R^2 =", signif(summary(result)$r.squared, 2) )
+        condition = paste(condition, ".\n R^2 =", signif(summary(result)$r.squared, 2) )
         for (sender in 1:length(upstreams[[node]])) {
             params_matrix[ node, upstreams[[node]][sender] ] = result$coefficients[sender+1]
             # TODO add the information on the quality of the fit
@@ -237,10 +238,12 @@ correlate_parameters <- function(model, core, plot=F) {
     correlated = list()
     correlated$list = c()
     correlated$values = c()
+    links = model$getParametersLinks()
     for ( param in 1:length(params_vector) ) {
         if (!is.nan(params_vector[param]) && params_vector[param] != 0) {
             correlated$list = c(correlated$list, param)
             correlated$values = c(correlated$values, params_vector[param])
+            print(paste0("Correlated link ", simplify_path_name(links[param]), " = ", params_vector[param]))
         }
     }
     return(correlated)
@@ -482,8 +485,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         data.values = data_file[,grepl("^DV", colnames(data_file))]
         colnames(data_file) = gsub("^[A-Z]{2}.", "", colnames(data_file))
         colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
-        data.values = data.values[, colnames(data.values) %in% model_structure$names]
         not_included = colnames(data.values)[!(colnames(data.values) %in% model_structure$names)]
+        data.values = data.values[, colnames(data.values) %in% model_structure$names]
     }
     # Warn for the measured not that have not been found in the network
     if (length(not_included) > 0) {
@@ -517,10 +520,21 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
             variation.file = read.delim(var_file, sep=",")
             pre_cv = variation.file[, grepl("^DV", colnames(variation.file))]
             colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
+            # Check that the number of samples is the same for the measurements and the variation
+            if (nrow(pre_cv) != nrow(data_file)) { stop("Different number of experiments for the variation and the measurement files") }
+            # Check that the names in the measurements file and in the variation file match
+            matchError = FALSE
+            for (name in colnames(pre_cv)) {
+                if (!(name %in% colnames(data_file))) {
+                    matchError = TRUE
+                    write(paste0(name, " from the variation file is not in the measurement file"), stderr())
+                }
+            }
+            if (matchError) { stop("Names of the variation and measurement files do not match") }
             cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model_structure$names] ), by=data_file[,1:(begin_measure-1)], mean)
         } else {
             variation.file = read.delim(var_file)
-            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model_structure$names]),by=data_file[,1:(begin_measure-1)],mean)
+            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model_structure$names]),by=data_file[,1:(begin_measure-1)], mean)
         }
         cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
         error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
