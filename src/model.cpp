@@ -452,26 +452,13 @@ void Model::simplify_independent_parameters_using_subtraction(std::vector< std::
  
 }
 
-// Locate the sums to the power of -1 (denominators) from the GiNaC expression
+// Locate the sums to the power of -1 (denominators) from the GiNaC expression for the constraints analysis
 void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
     MathTree::math_item::Ptr tmp;
     if (GiNaC::is_a<GiNaC::power>(e)) {
         if (e.nops()==2) { // Sanity check
             if (e.op(1)==-1) {
                 if (GiNaC::is_a<GiNaC::add>(e.op(0))) {
-                /* Commented by Mathurin 2014/05/02 because multiple feedback loops cause +1 to appear by multiplication like (a-1)(b-1)
-                    for (size_t i=0; i<e.op(0).nops(); ++i) {
-                        if (GiNaC::is_a<GiNaC::numeric>(e.op(0).op(i))) {
-                            if (GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double()!=-1) {
-                                std::cout << "Was soll das ? " << 
-                                GiNaC::ex_to<GiNaC::numeric>(e.op(0).op(i)).to_double() << " " << e.op(0) << std::endl;
-                                //exit(-1); // commented by Mathurin 2014/04/28 because it caused unwanted stops (the minus sign is on the other terms)
-                            }
-                            
-                        }
-                    }
-                    */
-
                     // Add each sum once to the set
                     std::vector<GiNaC::ex>::iterator iter=set.begin();
                     while ( !((iter==set.end()) || ((*iter) == e.op(0)))) {
@@ -537,6 +524,7 @@ void Model::getConstraints( parameterlist &params, std::vector<MathTree::math_it
     }
 }
 
+// Give the value of the model for each condition for the set of parameters p
 void Model::predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const {
 
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
@@ -560,6 +548,7 @@ void Model::predict(const std::vector<double> &p, double_matrix &datax, const Da
     }
 }
 
+// Give the value of the model for each condition for the set of parameters p normalised by the error for the fit
 void Model::eval(const double *p,double *datax, const Data *data ) const {
 
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
@@ -570,13 +559,18 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
         parameters_[independent_parameters_[i]]->set_parameter(p[i]);
     }
         
+    double penelty=getPeneltyForConstraints(p);
     for (unsigned int i=0; i<cols;i++) { 
         for (unsigned int j=0; j<rows;j++) {
-            if (linear_approximation_) {
+            if (penelty>1) {
+                // Positive feedback loops create forking, so we eliminate the parameters sets which involve such feedback
+                datax[i*rows+j] = 100000*penelty*data->stim_data[j][i]/data->error[j][i];
+            } else if (linear_approximation_) {
                 datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
             } else {
                 datax[i*rows+j]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
             }
+//}
 
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*rows+j]=0;
@@ -593,20 +587,9 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
         }
     }
 
-    /* Buggy, bipasses sanity checks and forbid single positive feedback or entangled negative feedback
-    double penelty=getPeneltyForConstraints(p);
-    if (penelty>1) {
-        std::cerr << "Penelty = " << penelty << std::endl ;
-        for (unsigned int i=0; i<cols;i++) { 
-            for (unsigned int j=0; j<rows;j++) {
-                datax[i*rows+j]=datax[i*rows+j]+100000*penelty*data->stim_data[j][i]/data->error[j][i];
-            }
-        }
-    }
-    */
 }
 
-// Calculates the residual for the set of paramters p
+// Calculates the residual for the set of parameters p
 double Model::score(const double *p, const Data *data) const {
     int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0]; 
 
