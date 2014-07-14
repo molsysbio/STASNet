@@ -59,7 +59,17 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     } else if (method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
-        results = annealingFit(data, correlate_parameters(model, core, plot=init_distribution)$values, inits)
+        correlation = parametersFromCorrelation(model, core, plot=init_distribution)
+        # Perform several annealing to select the best
+        results = list()
+        results$residuals = c()
+        results$params = c()
+        for (i in 1:10) {
+            annealing = simulatedAnnealing(model, data, correlation, inits)
+            results$residuals = c(results$residuals, annealing$residuals)
+            results$params = rbind(results$params, annealing$parameter)
+        }
+        print(results)
     } else {
         stop("The selected initialisation method does not exist (valids are correlation, random, explore, and annealing)")
     }
@@ -67,8 +77,8 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
-    write("All residuals : ", stderr())
-    write(residuals, stderr())
+    #write("All residuals : ", stderr())
+    #write(residuals, stderr())
     print(paste( sum(is.na(residuals)), "NA and ", sum(is.infinite(residuals)), "infinite residuals" ))
     if (init_distribution) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
     if (debug) {
@@ -77,9 +87,11 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
         print(sort(residuals)[1:20])
     }
     best = order(residuals)[1]
-
     init_params = params[best,]
     init_residual = residuals[best]
+
+    print(init_params)
+    print(init_residual)
 
     if (verbose) {
         print("Model simulation with optimal parameters :")
@@ -136,6 +148,22 @@ sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="
     cor_samples$cor = correlated
     print("Sampling terminated.")
     return(cor_samples)
+}
+
+# Gives a parameter vector with a value for correlated parameters and 0 otherwise
+parametersFromCorrelation <- function(model, core, plot=F) {
+    correlated = correlate_parameters(model, core, plot)
+    param_vector = c()
+    j = 1
+    for (i in 1:model$nr_of_parameters()) {
+        if (i %in% correlated$list) {
+            param_vector = c(param_vector, correlated$values[j])
+            j = j + 1
+        } else {
+            param_vector = c(param_vector, 0)
+        }
+    }
+    return(param_vector)
 }
 
 # Indentify the links that can be deduced by a simple correlation, calculate them, and return their index and the corresponding parameter vector with the other values set to 0
@@ -363,6 +391,11 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
     return(best_results)
 }
 
+# Wrapper for the C++ function because Rcpp does not take into account optionnal arguments (and R crashes if there is not exactly the correct number of arguments)
+simulatedAnnealing <- function(model, data, correlated_parameters, max_it=0, max_depth=0) {
+    return(model$annealingFit(data, correlated_parameters, max_it, max_depth))
+}
+
 # Initialise the parameters with a one core processing
 # needs corrections, not used anyway
 classic_initialisation <- function(model, data, samples) {
@@ -471,7 +504,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         # Indicate where the conditions are
         conditions = c(1, 2)
         data.values = data_file[, colnames(data_file) %in% model_structure$names]
-        not_included = colnames(data_file)[!(colnames(data_file) %in% model_structure$names)]
+        not_included = (colnames(data_file)[!(colnames(data_file) %in% model_structure$names)])[-(1:(begin_measure-1))]
     } else if (grepl(".csv$", data_filename)) {
         use_midas = TRUE
         data_file = read.delim(data_filename, sep=",")

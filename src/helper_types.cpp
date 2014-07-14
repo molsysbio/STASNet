@@ -1,28 +1,35 @@
 #include "helper_types.hpp"
 #include <boost/lexical_cast.hpp>
+#include <boost/math/distributions/normal.hpp>
 #include "model.hpp"
 #include <fstream>
 
-// Performs a Latin Hypercube Sampling on [0, 1]
+// Performs a Latin Hypercube Sampling on ]0, 1[
+// Each element of the return vector is a sample
 std::vector< std::vector<double> > LHSampling (const int sample_size, const int nb_samples, const int decimals) {
     // Remember which "band" is filled for each dimension
     std::vector< std::vector<bool> > dimension_filled;
+    dimension_filled.resize(sample_size);
+    for (int j=0 ; j < sample_size ; j++) {
+        dimension_filled[j] = std::vector<bool>(nb_samples, false);
+    }
+    // Will contain the samples
     std::vector< std::vector<double> > sampling;
-    for (int i=0 ; i < sample_size ; i++) {
-        dimension_filled.push_back(std::vector<bool>(nb_samples, false));
-        sampling.push_back(std::vector<double>(nb_samples));
+    sampling.resize(nb_samples);
+    for (int i=0 ; i < nb_samples ; i++) {
+        sampling[i] = std::vector<double>(sample_size, 0);
     }
 
     int part = 0;
     double precision = pow(10, decimals);
     for (int i=0 ; i < nb_samples ; i++) {
         for (int j=0 ; j < sample_size ; j++) {
-            part = std::floor(rand() % nb_samples);
+            part = rand() % nb_samples;
             // Change the "band" if the selected one has already been sampled
             // Select randomly if there is "enough" available choices or simply shift on the ring
-            if (i > (double)(0.5 * nb_samples)) {
+            if (i < (double)(0.5 * nb_samples)) {
                 while (dimension_filled[j][part]) {
-                    part = std::floor(rand() % nb_samples);
+                    part = rand() % nb_samples;
                 }
             } else {
                 while (dimension_filled[j][part]) {
@@ -30,17 +37,28 @@ std::vector< std::vector<double> > LHSampling (const int sample_size, const int 
                 }
             }
             dimension_filled[j][part] = true;
-            sampling[i].push_back( (double)(rand() % (int)precision) / (precision * nb_samples) + (double)(part/nb_samples) );
+            sampling[i][j] = (double)(part + uniform_sampling(precision)) / nb_samples;
         }
     }
 
     return sampling;
 }
 
-// Provides a random number between 0 and 1
+// Perform LHS on a normal distribution
+std::vector< std::vector<double> > normalLHS (const int sample_size, const int nb_samples, const int sd, const double decimals) {
+    std::vector< std::vector<double> > sampling = LHSampling(sample_size, nb_samples, decimals);
+    for (size_t i=0 ; i < sample_size ; i++) {
+        for (size_t j=0 ; j < sample_size ; j++) {
+            sampling[i][j] = boost::math::quantile(boost::math::normal(0, sd), sampling[i][j]);
+        }
+    }
+    return sampling;
+}
+
+// Provides a random number in ]0, 1[
 double uniform_sampling(double precision) {
     if (precision > 1) {
-        return (double)(rand() % (int)precision) / precision;
+        return ((double)(rand() % ((int)precision-1)) + 1.0) / precision;
     }
 }
 

@@ -136,8 +136,8 @@ addPLinfos <- function(model_description, profiles) {
 niplotPL <- function(profiles, init_residual=0, data_name="default") {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
     for (profile in profiles) {
-        residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[1]
-        profile$residuals[ profile$old_path, profile$residuals[profile$old_path,] > residual_limit ] = residual_limit
+        residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[2]
+        profile$residuals[ profile$pathid, profile$residuals[profile$pathid,] > residual_limit ] = residual_limit
     }
     # Sort the profiles to print differently whether they are identifiable or not
     sorted_profiles = classify_profiles(profiles)
@@ -207,7 +207,8 @@ niplotPL <- function(profiles, init_residual=0, data_name="default") {
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"))
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
-            lines( rep(i_profiles[[id]]$value, 100), seq( min( i_profiles[[id]]$residuals[i_profiles[[id]]$pathid] ), i_profiles[[id]]$thresholds[1], length.out=100 ))
+            pl_range = range(i_profiles[[id]]$residuals[i_profiles[[id]]$pathid,])
+            lines( rep(i_profiles[[id]]$value, 2), c( pl_range[1]-0.1*(pl_range[1]-i_profiles[[id]]$threshold[1]), pl_range[1]+0.1*(pl_range[1]-i_profiles[[id]]$threshold[1]) ), col="red")
             if (init_residual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * init_residual, col="red"); }
 
             plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid,], na.rm=T) )

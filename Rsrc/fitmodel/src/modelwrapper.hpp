@@ -27,7 +27,7 @@ public:
   void setModel(ExperimentalDesign exp, ModelStructure mod);
 
   SEXP fitmodel(Data data, std::vector<double> parameters);
-  SEXP annealingFit(Data data, std::vector<double> parameters, int max_it=0, int max_depth=0);
+  SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth);
 
   SEXP simulate(Data data, std::vector<double> parameters);
 

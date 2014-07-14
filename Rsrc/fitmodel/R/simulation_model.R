@@ -43,7 +43,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         }
     }
 
-    # Set the new experiment design that will be used for the simulation
+    # Set the new experimental design that will be used for the simulation
     # Remove the perturbations that cannot be used
     ## Set the inhibition matrices
     inhib_nodes = c()

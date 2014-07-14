@@ -30,6 +30,7 @@ basal_nodes = ""
 variation = ""
 nb_steps = 1000
 inits = 1000
+method = "default"
 # Autodetection of the cores
 cores = 0
 
@@ -64,6 +65,8 @@ for (argument in commandArgs()) {
         }
     } else if (grepl("^-nr$", argument)) {
         reduction = FALSE
+    } else if (grepl("^-m", argument)) {
+        method = gsub("^-m", "", argument)
     }
 }
 if (cores == 0) {
@@ -86,14 +89,16 @@ conditions = gsub(" ", "_", conditions)
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0("distribution_", conditions, ".pdf"))
-model = createModel(network, data, basal_nodes, variation, inits=inits, cores=cores, init_distribution=T);
+model = createModel(network, data, basal_nodes, variation, inits=inits, cores=cores, init_distribution=T, method=method);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
+    print("it works")
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
 accuracyPlot(model, conditions);
 dev.off()
 printParameters(model)
+    print("it works")
 
 # Perform the profile likelihood
 profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));

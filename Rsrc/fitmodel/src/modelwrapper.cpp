@@ -108,7 +108,9 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
     
     // Find an approximation of the optimum with the simulated annealing
     double residual;
+    std::cout << "Starting simulated annealing" << std::endl;
     ::simulated_annealing(model, &data, parameters, residual, max_it, max_depth);
+    std::cerr << "really in" << std::endl;
 
     // Ajust the gradient descent
     double_matrix predictions;

@@ -13,6 +13,7 @@
 #include "mathtree.hpp"
 
 std::vector< std::vector<double> > LHSampling (const int sample_size, const int nb_samples, const int decimals=10);
+std::vector< std::vector<double> > normalLHS (const int sample_size, const int nb_samples, const int sd=1, const double decimals=10);
 double uniform_sampling(double precision=10000);
 
 // Functors to sort indexes of an array with std::sort
