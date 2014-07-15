@@ -242,8 +242,9 @@ void fitmodel( std::vector <double> &bestfit,
 
 // Perform simulated annealing to find the global optimum for the model
 void simulated_annealing(const Model *model, const Data *data, std::vector<double> &bestfit, double &bestresid, int max_it, int max_depth) {
-    std::srand(std::time(NULL)); // Initialise the random generator, as there is no main function to do it
-    
+     // Initialise the random generator, as there is no main function to do it, problem for parallelised version
+    std::srand(std::time(NULL)*getpid()); // WARNING, getpid is only provided for Unix environments
+
     // Parameters with a suspected value will be reseted to this value between each fit
     std::vector<double> fixed_params;
     std::vector<int> fixed_index, var_index;

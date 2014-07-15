@@ -59,17 +59,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     } else if (method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
-        correlation = parametersFromCorrelation(model, core, plot=init_distribution)
-        # Perform several annealing to select the best
-        results = list()
-        results$residuals = c()
-        results$params = c()
-        for (i in 1:10) {
-            annealing = simulatedAnnealing(model, data, correlation, inits)
-            results$residuals = c(results$residuals, annealing$residuals)
-            results$params = rbind(results$params, annealing$parameter)
-        }
-        print(results)
+        results = parallelAnnealing(model, core, inits, cores, init_distribution)
     } else {
         stop("The selected initialisation method does not exist (valids are correlation, random, explore, and annealing)")
     }
@@ -118,6 +108,32 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_description$upper_values = c()
 
     return(model_description)
+}
+
+# Perform several simulated annealing, one per core
+parallelAnnealing <- function(model, core, max_it, nb_cores, do_plot=F) {
+    correlation = parametersFromCorrelation(model, core, plot=do_plot)
+    correlation_list = list()
+    for (i in 1:nb_cores) {
+        correlation_list[[i]] = correlation
+    }
+    # Perform several annealing to select the best
+    annealings = mclapply(correlation_list, simulated_annealing_wrapper, model, core$data, max_it, 0, mc.cores=nb_cores)
+    results = list()
+    results$residuals = c()
+    results$params = c()
+    for (annealing in annealings) {
+        results$residuals = c(results$residuals, annealing$residuals)
+        results$params = rbind(results$params, annealing$parameter)
+    }
+
+    return(results)
+}
+
+# Wrapper for the C++ function because Rcpp does not take into account optionnal arguments (and R crashes if there is not exactly the correct number of arguments)
+# and for the parallelisation
+simulated_annealing_wrapper <- function(correlated_parameters, model, data, max_it=0, max_depth=0) {
+    return(model$annealingFit(data, correlated_parameters, max_it, max_depth))
 }
 
 # TODO put it in deep_initialisation
@@ -389,11 +405,6 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
 
 
     return(best_results)
-}
-
-# Wrapper for the C++ function because Rcpp does not take into account optionnal arguments (and R crashes if there is not exactly the correct number of arguments)
-simulatedAnnealing <- function(model, data, correlated_parameters, max_it=0, max_depth=0) {
-    return(model$annealingFit(data, correlated_parameters, max_it, max_depth))
 }
 
 # Initialise the parameters with a one core processing
