@@ -61,7 +61,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     } else if (method == "annealing" || method == "SA") {
         results = parallelAnnealing(model, core, inits, cores, init_distribution)
     } else {
-        stop("The selected initialisation method does not exist (valids are correlation, random, explore, and annealing)")
+        stop("The selected initialisation method does not exist (valid methods are correlation, random, explore, and annealing)")
     }
     print("Initial fits completed")
     # Choice of the best fit

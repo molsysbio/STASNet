@@ -23,6 +23,7 @@
 #include "helper_types.hpp"
 
 extern int verbosity;
+extern bool debug;
 
 // convenience function to print GiNaC::symbolic vectors
 std::ostream & operator<<(std::ostream &os, std::vector<GiNaC::symbol> &v) {             
@@ -272,7 +273,7 @@ void simulated_annealing(const Model *model, const Data *data, std::vector<doubl
     size_t hypercube_samples = 100;
     double exploration[hypercube_samples];
     std::vector<size_t> index(hypercube_samples);
-    std::vector< std::vector<double> > parameters = normalLHS(model->nr_of_parameters(), hypercube_samples, 1);
+    std::vector< std::vector<double> > parameters = normalLHS(hypercube_samples, model->nr_of_parameters(), 1);
     double test_params[model->nr_of_parameters()];
     std::cout << "Annealing init steps :" << std::endl;
     for (size_t i=0 ; i < hypercube_samples ; i++) {
@@ -300,36 +301,31 @@ void simulated_annealing(const Model *model, const Data *data, std::vector<doubl
     bestresid = residual;
     while (temperature > threshold && no_change < max_it) {
         depth ++;
-        // New step reset the fixed parameters and make a step on the other dimensions
-        // First try from 0, see if we have a better direction
-        for (size_t i=0 ; i < fixed_index.size() ; i++) {
-            new_p[fixed_index[i]] = bestfit[index[i]];
-        }
-        for (size_t i=0 ; i < var_index.size() ; i++) {
-            new_p[var_index[i]] = bestfit[index[i]] + boost::math::quantile( boost::math::normal(0, 1.0), uniform_sampling() );
-        }
-        // MAYBE USE LHS INSTEAD
-        new_residual = model->score(p, data);
-        min_new = new_residual;
-        while (uniform_sampling() > std::exp((bestresid - new_residual)/temperature) && no_change < max_it) {
-            no_change++;
+        std::vector< std::vector<double> > random_steps = normalLHS(max_it, var_index.size(), 1);
+        do {
+            // New step reset the fixed parameters and make a step on the other dimensions
             // Try a different step from the current best
             for (size_t i=0 ; i < fixed_index.size() ; i++) {
                 new_p[fixed_index[i]] = p[index[i]];
             }
             for (size_t i=0 ; i < var_index.size() ; i++) {
-                new_p[var_index[i]] = p[index[i]] + boost::math::quantile( boost::math::normal(0, 1.0), uniform_sampling() );
+                new_p[var_index[i]] = p[index[i]] + random_steps[no_change][i];
             }
             new_residual = model->score(new_p, data);
             min_new = std::min(new_residual, min_new);
+            no_change++;
+        } while (no_change < max_it && uniform_sampling() > std::exp((bestresid - new_residual)/temperature));
+        if (debug) {
+            std::cout << "best = " << bestresid << " old = " << residual << " min_new = " << min_new << ", probablility = " << std::exp((bestresid - min_new)/temperature)  << std::endl;
+            std::cout << "Temperature " << temperature << ", Unity probability " << std::exp(-1/temperature) << std::endl;
         }
-        std::cout << "best = " << bestresid << " old = " << residual << " min_new = " << min_new << ", probablility = " << std::exp((bestresid - min_new)/temperature)  << std::endl;
-        std::cout << "Temperature " << temperature << ", Unity probability" << std::exp(-1/temperature) << std::endl;
         if (no_change < max_it) {
             no_change = 0;
             temperature *= cooling;
-            std::cout << "Jump to " << new_residual << std::endl;
-            std::cerr << "Transition probability = " << std::exp((bestresid - new_residual)/temperature) << std::endl;
+            if (verbosity > 8) {
+                std::cout << "Jump to " << new_residual << std::endl;
+                std::cout << "Transition probability = " << std::exp((bestresid - new_residual)/temperature) << std::endl;
+            }
         }
         // Collect the new position and residual
         residual = new_residual;

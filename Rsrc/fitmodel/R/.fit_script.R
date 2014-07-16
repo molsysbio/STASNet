@@ -93,12 +93,14 @@ model = createModel(network, data, basal_nodes, variation, inits=inits, cores=co
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
-    print("it works")
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
 accuracyPlot(model, conditions);
 dev.off()
 printParameters(model)
-    print("it works")
+
+if (method == "annealing") {
+    stop("debugging annealing")
+}
 
 # Perform the profile likelihood
 profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));

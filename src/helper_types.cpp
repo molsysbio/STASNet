@@ -6,7 +6,7 @@
 
 // Performs a Latin Hypercube Sampling on ]0, 1[
 // Each element of the return vector is a sample
-std::vector< std::vector<double> > LHSampling (const int sample_size, const int nb_samples, const int decimals) {
+std::vector< std::vector<double> > LHSampling (const int nb_samples, const int sample_size, const int decimals) {
     // Remember which "band" is filled for each dimension
     std::vector< std::vector<bool> > dimension_filled;
     dimension_filled.resize(sample_size);
@@ -45,8 +45,8 @@ std::vector< std::vector<double> > LHSampling (const int sample_size, const int 
 }
 
 // Perform LHS on a normal distribution
-std::vector< std::vector<double> > normalLHS (const int sample_size, const int nb_samples, const int sd, const double decimals) {
-    std::vector< std::vector<double> > sampling = LHSampling(sample_size, nb_samples, decimals);
+std::vector< std::vector<double> > normalLHS (const int nb_samples, const int sample_size, const int sd, const double decimals) {
+    std::vector< std::vector<double> > sampling = LHSampling(nb_samples, sample_size, decimals);
     for (size_t i=0 ; i < sample_size ; i++) {
         for (size_t j=0 ; j < sample_size ; j++) {
             sampling[i][j] = boost::math::quantile(boost::math::normal(0, sd), sampling[i][j]);
