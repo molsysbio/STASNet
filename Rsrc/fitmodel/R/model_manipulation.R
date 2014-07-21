@@ -34,8 +34,11 @@ printParameters <- function(model_description) {
     }
 }
 
-# Plots heatmaps of the model prediction against the data weighted by the error
-accuracyPlot <- function(model_description, data_name = "default") {
+#' Plots heatmaps of the model prediction against the data, weighted by the error
+#' @param model_description A list describing the model, as the one produced by createModel or importModel
+#' @return Nothing
+#' @seealso plotModelPrediction, createModel
+accuracyPlot <- function(model_description) {
     # Calculate the mismatch
     model = model_description$model
     data = model_description$data
@@ -53,7 +56,7 @@ accuracyPlot <- function(model_description, data_name = "default") {
         stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1]
         inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]
         if (length(inhib_names) > 0) {
-            paste(inhib_names, "i", sep="")
+            inhib_names = paste(inhib_names, "i", sep="")
         }
         treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
     }
@@ -65,7 +68,9 @@ accuracyPlot <- function(model_description, data_name = "default") {
     pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T)
 }
 
-# Selection of a minimal model
+#' Selection of a minimal model by the removal of non significant links with a \chi^2 test
+#' @param model_description A list describing the model, as the one produced by createModel or importModel
+#' @param accuracy Probability of the confidence interval. The link can be removed if 0 is included.
 selectMinimalModel <- function(model_description, accuracy=0.95) {
     # Extra fitting informations from the model description
     model = model_description$model

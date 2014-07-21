@@ -132,8 +132,13 @@ addPLinfos <- function(model_description, profiles) {
     return(model_description)
 }
 
-# Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
-niplotPL <- function(profiles, init_residual=0, data_name="default") {
+#' Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
+#' and redirect it in a pdf file.
+#' @param profiles A profile likelihood list, as outputed by the profileLikeLihood function.
+#' @param data_name Name for the output pdf file
+#' @export
+#' @author Mathurin Dorel \email{dorel@horus.ens.fr}
+niplotPL <- function(profiles, data_name="default") {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
     for (profile in profiles) {
         residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[2]
@@ -190,7 +195,8 @@ niplotPL <- function(profiles, init_residual=0, data_name="default") {
                     # Could be accelerated with two points instead of hundreds
                     lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[1], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" )
                     lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[2], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" )
-                    if (init_residual != 0) { lines( rep(ni_profiles[[ni]]$value, length(-5:100)), (1 + -5:100/100) * init_residual, col="red"); }
+                    pl_range = range(ni_profiles[[ni]]$resniuals[ni_profiles[[ni]]$pathni,])
+                    lines( rep(ni_profiles[[ni]]$value, 2), c( pl_range[1]-0.1*(pl_range[1]-ni_profiles[[ni]]$threshold[1]), pl_range[1]+0.1*(pl_range[1]-ni_profiles[[ni]]$threshold[1]) ), col="red")
                 }
             }
             print(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"))
@@ -203,13 +209,12 @@ niplotPL <- function(profiles, init_residual=0, data_name="default") {
     par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) )
     if (nbid > 0) {
         for (id in 1:nbid) {
-            # Plot the profile likelihood with the thresholds and a mark for the optimum
+            # Plot the profile likelihood with the thresholds and a tick for the optimum
             plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"))
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
             lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
             pl_range = range(i_profiles[[id]]$residuals[i_profiles[[id]]$pathid,])
             lines( rep(i_profiles[[id]]$value, 2), c( pl_range[1]-0.1*(pl_range[1]-i_profiles[[id]]$threshold[1]), pl_range[1]+0.1*(pl_range[1]-i_profiles[[id]]$threshold[1]) ), col="red")
-            if (init_residual != 0) { lines( rep(i_profiles[[id]]$value, length(-5:100)), (1 + -5:100/100) * init_residual, col="red"); }
 
             plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid,], na.rm=T) )
             # Plot the functionnal relation

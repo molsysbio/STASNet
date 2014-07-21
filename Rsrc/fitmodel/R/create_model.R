@@ -1,9 +1,9 @@
 ################################ create_model.R #########################################
 ## Functions that simplify data parsing and model creation and fitting using the package
 
-#library("igraph")
-#library("pheatmap")
-#library("parallel")
+#' @import igraph
+#' @import pheatmap
+#' @import parallel
 
 #source("R/randomLHS.r"); # Latin Hypercube Sampling
 
@@ -11,7 +11,29 @@
 verbose = FALSE
 debug = TRUE
 
-# Creates a parameterised model from experiment files and the network structure
+#' Creates a parameterised model from experiment files and the network structure
+#' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
+#' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
+#' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
+## CHECK THE IMPLEMENTATION FOR THE NO BASAL
+#' @param data.variation Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.
+#' @param cores Number of cores that should be used for the computation
+#' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
+#' @param init_distribution Whether the distribution of the residuals and the parameters deduced by correlation should be plotted or not
+#' @param method Method to be used for the initialisation, available methods are :
+#'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
+#'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters.
+#'      explore : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled
+#'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value.
+#' @return A list describing the model and its best fit
+#' @export
+#' @seealso importModel, exportModel, rebuildModel
+#' @author Mathurin Dorel \mail{dorel@horus.ens.fr}
+#' @examples
+#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
+#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
+#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", cores = detectCores()) # Uses all cores available (with the package parallel)
+#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
 createModel <- function(model_links, data.stimulation, basal_file, data.variation="", cores=1, inits=1000, init_distribution=F, method="default") {
 
     # Creation of the model structure object
@@ -50,7 +72,10 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     if (cores == 0) { cores = detectCores()-1 }
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
     # Different sampling methods
-    if (method == "default" || method == "correlation") {
+    if (method == "default") {
+        method = "correlation"
+    }
+    if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, plot=init_distribution, sd=2)$samples
         results = parallel_initialisation(model, expdes, data, samples, cores)
     } else if (method == "random" || method == "sample") {
@@ -303,7 +328,7 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
     
     # The first iteration does not use any shift
     kept = matrix(0, ncol=model$nr_of_parameters())
-    correlation = correlate_parameters(model, core$design, core$data, core$structure, plot)
+    correlation = correlate_parameters(model, core, plot)
     for (i in 1:depth) {
         print(paste("Depth :", i))
         # Create the new samples, with a random initialisation shifted by the previous steps local minimum
