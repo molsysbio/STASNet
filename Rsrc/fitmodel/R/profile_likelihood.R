@@ -47,36 +47,39 @@ simplify_path_name <- function (path_name) {
         return(path_name)
     }
 
-    # Prepare a matrix 2*nb_nodes
+    # Prepare a matrix 2*nb_nodes indexed by node names
     elements = c()
     nodes = unique(unlist(strsplit(path_name, "\\*|_|r|\\^")))
     for (node in nodes) {
         if (node != "" && !grepl("\\(-1\\)", node)) {
             elements = rbind(elements, c("", ""))
-            rownames(elements)[dim(elements)[1]] = node
+            rownames(elements)[nrow(elements)] = node
         }
     }
-    # Indicate for each node it previous and following node in the path
+    # Indicate for each node its previous and following node in the path
     for (link in unlist(strsplit(path_name, "\\*")) ) {
         if (grepl("\\(-1\\)", link)) { # If the power is -1, we reverse the link
             nodes = unlist(strsplit(link, "_|\\^"))[3:2]
+            elements[nodes[1], 1] = nodes[2]
+            elements[nodes[2], 2] = paste0("<-", nodes[1])
         } else {
             nodes = unlist(strsplit(link, "_"))[2:3]
+            elements[nodes[1], 1] = nodes[2]
+            elements[nodes[2], 2] = paste0("->", nodes[1])
         }
-        elements[nodes[1], 1] = nodes[2]
-        elements[nodes[2], 2] = nodes[1]
     }
-    # Look for the node without predecessor
+    # Look for the node without predecessor (i.e the first node of the path)
     selected = 1
     while (elements[selected, 1] != "") {
         selected = selected + 1
     }
     # Build the simple path
-    node = elements[selected, 2]
-    simple_path = paste0(elements[node, 1], "->", elements[selected, 2])
+    node = gsub("<-|->", "", elements[selected, 2])
+    simple_path = paste0(elements[node, 1], elements[selected, 2])
     while(elements[node, 2] != "") {
         node = elements[node, 2]
-        simple_path = paste0(simple_path, "->", node)
+        simple_path = paste0(simple_path, node)
+        node = gsub("<-|->", "", node)
     }
 
     return(simple_path)
