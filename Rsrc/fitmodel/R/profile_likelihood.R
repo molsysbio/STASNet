@@ -1,9 +1,14 @@
 ###################### profile_likelihood.R ###############################
 # Functions associated with the profile likelihood
 
-# Computes the profile likelihood and the parameters relationships of each parameters in the model
-# Returns a list with the profiles for each parameters
-profileLikelihood <- function(model_description, nb_points=10000, cores=1, in_file=FALSE) {
+#' Computes the profile likelihood and the parameters relationships of each parameters in the model
+#' @param model_description An MRAmodel object
+#' @param nb_points Number of points to plot the profile
+#' @param cores Maximum number of cores used for the calculation
+#' @return Returns a list of the profile for each parameters
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+profileLikelihood <- function(model_description, nb_points=10000, cores=1) {
     # Get the information from the model description
     model = model_description$model
     model_structure = model_description$structure
@@ -104,8 +109,14 @@ print_error_intervals <- function(profiles) {
     }
 }
 
-# Add the information provided by the profile likelihood in the model_description object
-# ie the limits of the confidence interval and the corresponding sets of parameters
+#' Add the information provided by the profile likelihood in the model_description object
+#' ie the limits of the confidence interval and the corresponding sets of parameters
+#' @param model_description An MRAmodel object
+#' @param profiles A list of the likelihood profiles of the parameters of the model
+#' @return An MRAmodel object with the profile likelihood information integrated to it
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+#' @seealso \code{\link{profileLikelihood}}
 addPLinfos <- function(model_description, profiles) {
     model_description$lower_values = c()
     model_description$upper_values = c()
@@ -137,10 +148,12 @@ addPLinfos <- function(model_description, profiles) {
 
 #' Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
 #' and redirect it in a pdf file.
-#' @param profiles A profile likelihood list, as outputed by the profileLikeLihood function.
+#' @param profiles A list of the likelihood profiles of the parameters of the model
 #' @param data_name Name for the output pdf file
+#' @return Nothing
 #' @export
-#' @author Mathurin Dorel \email{dorel@horus.ens.fr}
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+#' @seealso \code{\link{profileLikelihood}}
 niplotPL <- function(profiles, data_name="default") {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
     for (profile in profiles) {

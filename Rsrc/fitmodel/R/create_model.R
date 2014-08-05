@@ -5,13 +5,15 @@
 #' @import pheatmap
 #' @import parallel
 
+#' @useDynLib fitmodel
+
 #source("R/randomLHS.r"); # Latin Hypercube Sampling
 
 # Global variable to have more outputs
 verbose = FALSE
 debug = TRUE
 
-#' Creates a parameterised model from experiment files and the network structure
+#' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
 #' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
 #' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
@@ -25,10 +27,10 @@ debug = TRUE
 #'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
-#' @return A list describing the model and its best fit
+#' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
-#' @author Mathurin Dorel \mail{dorel@horus.ens.fr}
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @examples
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
@@ -202,7 +204,8 @@ simulated_annealing_wrapper <- function(correlated_parameters, model, data, max_
 }
 
 # TODO put it in deep_initialisation
-# Produces shifted random samples with some parameters inferred from correlations in the measurements
+#' Produces shifted random samples with some parameters inferred from correlations in the measurements
+#' @param model An MRAmodel object
 #' @param shift A vector giving the shift to be applied to the normal distribution. Must have the same size as the number of parameters
 sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="", sd=2, plot=F) {
     if (!is.list(correlated)) {
@@ -765,7 +768,17 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     return(core)
 }
 
-# Build a model from a file, and import data for this model
+#' Build a fitted model from a .mra file, and import data for this model
+#' Does NOT perform any initialisation
+#' @param model_file A .mra file containing the information on the model
+#' @param data_file A .csv file with the data for the model
+#' @param var_file A .var file with the variation of the data
+#' @return An MRAmodel object describing the model and its best fit, containing the data
+#' @export
+#' @seealso importModel, exportModel, createModel
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+#' @examples
+#' rebuildModel("model.mra", "data.csv", "data.var")
 rebuildModel <- function(model_file, data_file, var_file="") {
     if (!grep(".mra$", model_file)) {
         stop("The model file does not have the mra extension")

@@ -4,6 +4,8 @@
 # Get the target simulations in a MIDAS design-like or list format
 # Returns a matrix in a MIDAS measure-like format
 # TODO change the control to put the not enough nodes error after the usability control
+# @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 simulateModel <- function(model_description, targets, readouts = "all") {
     design = model_description$design
     nodes = model_description$structure$names
@@ -230,10 +232,19 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
     return(final)
 }
 
-# Plot the predictions by the model
-# One plot per measured node
-# Can plot with error bars if available, and give absolute value or log-fold change
+#' Plot the predictions by the model
+#' One plot per measured node
+#' Plot with error bars if available, and give absolute value
+#or log-fold change
 # TODO add the possibility to give log-fold change
+#' @param model An MRAmodel object
+#' @param targets A matrix describing the conditions to be simulated
+#' @param readouts Vector with the name of the nodes that should be used as readouts
+#' @param plotsPerFrame
+#' @param log_axis Boolean, whether the ordinate axis should be in log scale
+#' @return Nothing
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 4, log_axis=F) {
     if (log_axis) {
         ylog = "y"

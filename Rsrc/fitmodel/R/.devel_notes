@@ -1,0 +1,5 @@
+
+All the files displayed here are part of the package and the functions into them are loaded with library(fitmodel)
+.fit_script is hidden to be with the R functions but is not part of the package (not installed by R CMD INSTALL)
+
+

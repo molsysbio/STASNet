@@ -1,7 +1,11 @@
 ########################### model_manipulation.R ###########################
 # Functions to change and visualise the model
 
-# Print the value of each path from the model, and add the profile likelihood infos if they are provided
+#' Print the value of each path from the model, and add the profile likelihood infos if they are provided
+#' @param model_description An MRAmodel object
+#' @return Nothing
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 printParameters <- function(model_description) {
     model = model_description$model
     parameters = model_description$parameters
@@ -37,7 +41,9 @@ printParameters <- function(model_description) {
 #' Plots heatmaps of the model prediction against the data, weighted by the error, as well as the log fold change data and the prediction
 #' @param model_description A list describing the model, as the one produced by createModel or importModel
 #' @return Nothing
+#' @export
 #' @seealso plotModelPrediction, createModel
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 accuracyPlot <- function(model_description) {
     # Calculate the mismatch
     model = model_description$model
@@ -80,9 +86,12 @@ accuracyPlot <- function(model_description) {
     pheatmap(simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="simulation")
 }
 
-#' Selection of a minimal model by the removal of non significant links with a \chi^2 test
+#' Selection of a minimal model by the removal of non significant links with a Chi^2 test
 #' @param model_description A list describing the model, as the one produced by createModel or importModel
-#' @param accuracy Probability of the confidence interval. The link can be removed if 0 is included.
+#' @param accuracy Probability of the confidence interval for the Chi^2 test. The link can be removed if 0 is included in this interval.
+#' @return An MRAmodel object of the reduced model with the data
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 selectMinimalModel <- function(model_description, accuracy=0.95) {
     # Extra fitting informations from the model description
     model = model_description$model
