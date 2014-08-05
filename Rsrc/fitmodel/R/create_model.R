@@ -22,9 +22,9 @@ debug = TRUE
 #' @param init_distribution Whether the distribution of the residuals and the parameters deduced by correlation should be plotted or not
 #' @param method Method to be used for the initialisation, available methods are :
 #'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
-#'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters.
-#'      explore : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled
-#'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value.
+#'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
+#'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
+#'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
 #' @return A list describing the model and its best fit
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -69,19 +69,19 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 
     # INITIAL FIT
     # Parallelized version uses all cores but one to keep control
-    if (cores == 0) { cores = detectCores()-1 }
-    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
-    # Different sampling methods
     if (method == "default") {
         method = "correlation"
     }
+    if (cores == 0) { cores = detectCores()-1 }
+    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores, method : ", method, sep=""))
+    # Different sampling methods
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, plot=init_distribution, sd=2)$samples
         results = parallel_initialisation(model, expdes, data, samples, cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
         results = parallel_initialisation(model, expdes, data, samples, cores)
-    } else if (method == "explore" || method == "deep") {
+    } else if (method == "genetic" || method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
         results = parallelAnnealing(model, core, inits, cores, init_distribution)
@@ -89,25 +89,39 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
         stop("The selected initialisation method does not exist (valid methods are correlation, random, explore, and annealing)")
     }
     print("Initial fits completed")
+
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
     #write("All residuals : ", stderr())
     #write(residuals, stderr())
     print(paste( sum(is.na(residuals)), "NA and ", sum(is.infinite(residuals)), "infinite residuals" ))
+    # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
+    order_id = order(residuals)[1:20]
+    for ( i in 1:min(20, length(residuals)) ) {
+        p_res = residuals[order_id[i]]
+        if (!is.na(p_res) && !is.infinite(p_res)) {
+            repeat {
+                result = model$fitmodel(core$data, params[order_id[i],])
+                if (p_res == result$residuals) {
+                    break
+                }
+                p_res = result$residuals
+            }
+            params[order_id[i],] = result$parameter
+            residuals[order_id[i]] = result$residuals
+        }
+    }
     if (init_distribution) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
     if (debug) {
         # Print the 20 smallest residuals to check if the optimum has been found several times
         print("Best residuals :")
         print(sort(residuals)[1:20])
     }
+
     best = order(residuals)[1]
     init_params = params[best,]
     init_residual = residuals[best]
-
-    print(init_params)
-    print(init_residual)
-
     if (verbose) {
         print("Model simulation with optimal parameters :")
         print(model$simulate(data, init_params)$prediction)
@@ -126,13 +140,39 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_description$bestfit = init_residual
     # Name and infos of the model
     model_description$name = data.stimulation
-    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ))
+    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method))
     # Values that can't be defined without the profile likelihood
     model_description$param_range = list()
     model_description$lower_values = c()
     model_description$upper_values = c()
 
     return(model_description)
+}
+
+#' Perform an initialisation of the model 
+initModel <- function(model, core, nb_inits, nb_cores=1) {
+    # Parallelized version uses all cores but one to keep control
+    if (cores == 0) { cores = detectCores()-1 }
+    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
+    # Different sampling methods
+    if (method == "default") {
+        method = "correlation"
+    }
+    if (method == "correlation") {
+        samples = sampleWithCorrelation(model, core, inits, plot=init_distribution, sd=2)$samples
+        results = parallel_initialisation(model, expdes, data, samples, cores)
+    } else if (method == "random" || method == "sample") {
+        samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
+        results = parallel_initialisation(model, expdes, data, samples, cores)
+    } else if (method == "genetic" || method == "explore" || method == "deep") {
+        results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
+    } else if (method == "annealing" || method == "SA") {
+        results = parallelAnnealing(model, core, inits, cores, init_distribution)
+    } else {
+        stop("The selected initialisation method does not exist (valid methods are correlation, random, explore, and annealing)")
+    }
+
+    return(results)
 }
 
 # Perform several simulated annealing, one per core
@@ -318,24 +358,37 @@ correlate_parameters <- function(model, core, plot=F) {
     return(correlated)
 }
 
+# Generates a random number between 0 and 1
+rand <- function(decimals=4) {
+    return(sample(1:10^decimals, size=1) / 10^decimals)
+}
+
 # TODO integrate it into the creation function
-# Explore the parameter space with series of random initialisations and selection after each step of the best fits
+# Explore the parameter space with series of random initialisations and selection after each step of the best fits (mutation only genetic algorithm)
 MIN_SAMPLE_SIZE = 100 # TODO Find a heuristic value depending on the number of parameters to estimate
 deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=100, plot=F) { # TODO Chose to give the total number or the per sampling
+
     if (depth < 1) { depth = 1 } # We do at least one initialisation
     #if (nSamples < MIN_SAMPLE_SIZE) { nSamples = MIN_SAMPLE_SIZE }
-    nSamples = ceiling(sqrt(totalSamples) / depth)
+    nSamples = ceiling(sqrt(totalSamples / depth))
+    print(paste("Mutations per point =", nSamples))
     
     # The first iteration does not use any shift
     kept = matrix(0, ncol=model$nr_of_parameters())
     correlation = correlate_parameters(model, core, plot)
     for (i in 1:depth) {
         print(paste("Depth :", i))
-        # Create the new samples, with a random initialisation shifted by the previous steps local minimum
+        # Create the new samples, with a random initialisation shifted by the previous steps local minimum and recombinations of those previous best steps
         # We reduce the exploration range at each step
         samples = c()
         for (j in 1:nrow(kept)) {
-            new_sample = sampleWithCorrelation(model, core, nSamples, kept[j,], correlation, sd=3/i)
+            # Generate half of the new samples by simple mutation
+            new_sample = sampleWithCorrelation(model, core, ceiling(nSamples * 0.5), kept[j,], correlation, sd=3/i)
+            samples = rbind( samples, new_sample$samples) 
+            # Recombination of the individual j with some of the others
+            for (k in 1:ceiling(nSamples * 0.5)) {
+                new_sample$samples[k,] = (kept[j,] + kept[sample(1:nrow(kept), size=1),]) / 2
+            }
             samples = rbind( samples, new_sample$samples) 
         }
         results = parallel_initialisation(model, core$design, core$data, samples, NB_CORES)
@@ -343,9 +396,10 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
         # Keep the number of samples, and select the best parameters sets for the next iteration
         kept = results$params[order(results$residuals)[1:nSamples],]
     }
+
     # Finish by checking that sampling around the optimum with a high variation still finds several times the optimum
-    new_sample = sampleWithCorrelation(model, core, nSamples, kept[1,], correlation, sd=3)
-    if (plot) { hist(log(parallel_initialisation(model, core$design, core$data, samples, NB_CORES)$residuals, base=10), breaks="fd") }
+    new_sample = sampleWithCorrelation(model, core, nSamples, kept[1,], correlation, sd=3)$samples
+    if (plot) { hist(log(parallel_initialisation(model, core$design, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
 
     return(results) # Return the last set of fit
 }
