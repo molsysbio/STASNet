@@ -1,5 +1,6 @@
 # .gitignore
 # tells git which files shouldn't be tracked nor shown as being untracked
+.gitignore
 *.[oa]
 *.lo
 *.la
