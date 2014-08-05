@@ -34,7 +34,7 @@ printParameters <- function(model_description) {
     }
 }
 
-#' Plots heatmaps of the model prediction against the data, weighted by the error
+#' Plots heatmaps of the model prediction against the data, weighted by the error, as well as the log fold change data and the prediction
 #' @param model_description A list describing the model, as the one produced by createModel or importModel
 #' @return Nothing
 #' @seealso plotModelPrediction, createModel
@@ -46,7 +46,10 @@ accuracyPlot <- function(model_description) {
     stim_data = data$stim_data
     init_params = model_description$parameter
 
-    mismatch = (stim_data - model$simulate(data, init_params)$prediction) / error
+    simulation = model$simulate(data, init_params)$prediction
+    mismatch = (stim_data - simulation) / error
+    simulation = log(simulation / data$unstim_data, base=2)
+    stim_data = log(stim_data / data$unstim_data, base=2)
 
     # Rebuild the conditions from the design
     nodes = model_description$structure$names
@@ -60,12 +63,21 @@ accuracyPlot <- function(model_description) {
         }
         treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
     }
+    print("Treatments : ")
     print(treatments)
-    colnames(mismatch) = nodes[design$measured_nodes + 1]
-    rownames(mismatch) = treatments
+    colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
+    rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
 
+    # Comparison of the data and the stimulation in term of error fold change and log fold change
     bk = unique( c(seq(min(mismatch, na.rm=T), 0, length=50), seq(0, max(mismatch, na.rm=T), length=50)) )
-    pheatmap(mismatch, color=colorRampPalette(c("blue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T)
+    pheatmap(mismatch, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="(data - simulation) / error")
+    bk = unique( c(seq(min(stim_data-simulation, na.rm=T), 0, length=50), seq(0, max(stim_data-simulation, na.rm=T), length=50)) )
+    pheatmap(stim_data-simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="log2(data/simulation)")
+    # Log fold changes for the data and the stimulation
+    bk = unique( c(seq(min(stim_data, na.rm=T), 0, length=50), seq(0, max(stim_data, na.rm=T), length=50)) )
+    pheatmap(stim_data, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="data")
+    bk = unique( c(seq(min(simulation, na.rm=T), 0, length=50), seq(0, max(simulation, na.rm=T), length=50)) )
+    pheatmap(simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="simulation")
 }
 
 #' Selection of a minimal model by the removal of non significant links with a \chi^2 test

@@ -5,13 +5,12 @@
 *.la
 *.libs
 *.pdf
-4cell_lines/
 .RData*
-small_network/
 feed_forward_simple/
 src/levmar-2.5/.deps
-src/levmar-2.5/Makefile
 # Vim swap files
 *.swn
 *.swp
 *.swo
+Makefile*
+config*

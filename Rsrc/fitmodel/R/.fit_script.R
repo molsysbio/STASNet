@@ -94,7 +94,7 @@ dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
-accuracyPlot(model, conditions);
+accuracyPlot(model);
 dev.off()
 printParameters(model)
 
