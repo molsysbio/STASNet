@@ -5,6 +5,7 @@
 #' @import pheatmap
 #' @import parallel
 
+#' @import Rcpp
 #' @useDynLib fitmodel
 
 #source("R/randomLHS.r"); # Latin Hypercube Sampling
@@ -66,7 +67,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_structure = core$structure
 
     # MODEL SETUP
-    model = new(fitmodel::Model)
+    model = new(fitmodel:::Model)
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
@@ -705,7 +706,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 
 ### SET UP DATA OBJECT
 
-    data=new(fitmodel::Data)
+    data=new(fitmodel:::Data)
     data$set_unstim_data (matrix(rep(unstim.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]))
     data$set_scale( data$unstim_data )
     data$set_stim_data( as.matrix(data.stim) )

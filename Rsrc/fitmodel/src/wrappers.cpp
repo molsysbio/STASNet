@@ -2,6 +2,7 @@
 #include <Rcpp.h>
 #include <fitmodel/helper_types.hpp>
 
+//[[Rcpp:export]]
 RCPP_MODULE(ExperimentalDesignEx) {
   using namespace Rcpp ;
   class_<ExperimentalDesign>("ExperimentalDesign")
@@ -19,6 +20,7 @@ RCPP_MODULE(ExperimentalDesignEx) {
 
 };
 
+//[[Rcpp:export]]
 RCPP_MODULE(DataEx) {
   using namespace Rcpp ;
   class_<Data>("Data")

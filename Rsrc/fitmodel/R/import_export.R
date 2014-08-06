@@ -254,7 +254,7 @@ importModel <- function(file_name) {
     # Set up the experimental design and the model
     expDes = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
     model_description$design = expDes
-    model_description$model = new(fitmodel::Model)
+    model_description$model = new(fitmodel:::Model)
     model_description$model$setModel( expDes, model_description$structure )
 
     # Get the unstimulated data

@@ -1,12 +1,15 @@
 Package: fitmodel
 Type: Package
-Title: What the package does (short line)
+Title: Fit and simulate model from perturbation data
 Version: 1.0
-Date: 2013-08-21
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What Licence is it under ?
+Date: 2014-08-06
+Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
+    email="bertram.klinger@charite.de"), person("Mathurin", "Dorel",
+    role=c("aut"), email="dorel@horus.ens.fr"), person("Nils", "Blüthgen",
+    role=c("aut", "cre"), email="nils.bluethgen@charite.de"))
+Description: Fits and simulates network model derived from perturbation data
+    using Modular Response Analysis and Profile Likelihood
+License: GPLv3
 Depends:
     methods,
     Rcpp (>= 0.10.4)

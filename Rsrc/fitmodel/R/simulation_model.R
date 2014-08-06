@@ -97,7 +97,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
     new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimulations, inhibitions, model_description$basal)
 
     # Set up the model and the data for the simulation
-    model = new(fitmodel::Model)
+    model = new(fitmodel:::Model)
     model$setModel( new_design, model_description$structure )
     new_data = new(fitmodel::Data)
     new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))

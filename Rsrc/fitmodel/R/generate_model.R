@@ -1,5 +1,5 @@
 getModelStructure <- function(links) {
-  ModelStructure <- fitmodel::ModelStructure;
+  ModelStructure <- fitmodel:::ModelStructure
   modelStructure =new(ModelStructure, as.character(links[,1]),as.character(links[,2]))
   return(modelStructure);
 }
@@ -33,7 +33,7 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
   }
 
 
-  ExperimentalDesign <- fitmodel::ExperimentalDesign;
+  ExperimentalDesign <- fitmodel:::ExperimentalDesign;
   expdes=new(ExperimentalDesign);
 
   expdes$stim_nodes=match(as.character(stim.nodes),model.structure$names)-1;
