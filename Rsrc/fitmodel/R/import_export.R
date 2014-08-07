@@ -9,7 +9,15 @@ pastetab <- function(...) {
     return(paste(..., sep="\t"))
 }
 
-# Exports the model in a file 
+#' Exports the model in a file 
+#'
+#' Export an MRAmodel object in a .mra file
+#' @param model_description An MRAmodel object
+#' @param file_name Name of the output file
+#' @return Nothing
+#' @export
+#' @seealso importModel, rebuildModel
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 exportModel <- function(model_description, file_name="model") {
     # Add an extension
     if (!grepl(".mra$", file_name)) {
@@ -94,7 +102,14 @@ exportModel <- function(model_description, file_name="model") {
     close(handle)
 }
 
-# Import model from a file
+#' Import model from a file
+#'
+#' Import an MRAmodel object from a .mra file
+#' @param file_name Name of the .mra file
+#' @return An MRAmodel object
+#' @export
+#' @seealso exportModel, rebuildModel
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 importModel <- function(file_name) {
     model_description = list()
 # Fields not covered :
@@ -258,7 +273,7 @@ importModel <- function(file_name) {
     model_description$model$setModel( expDes, model_description$structure )
 
     # Get the unstimulated data
-    model_description$data = new(fitmodel::Data)
+    model_description$data = new(fitmodel:::Data)
     model_description$data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
 
     return(model_description)

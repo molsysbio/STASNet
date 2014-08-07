@@ -3,9 +3,7 @@
 
 # Get the target simulations in a MIDAS design-like or list format
 # Returns a matrix in a MIDAS measure-like format
-# TODO change the control to put the not enough nodes error after the usability control
-# @export
-#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+# TODO Add some check that there is enough inhib/stim left once those not usable have been remove, change the control to put the not enough nodes error after the usability control
 simulateModel <- function(model_description, targets, readouts = "all") {
     design = model_description$design
     nodes = model_description$structure$names
@@ -99,7 +97,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
     # Set up the model and the data for the simulation
     model = new(fitmodel:::Model)
     model$setModel( new_design, model_description$structure )
-    new_data = new(fitmodel::Data)
+    new_data = new(fitmodel:::Data)
     new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
 
     # Compute the predictions
@@ -162,7 +160,17 @@ getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_
     return(new_model$getParameterFromLocalResponse(response$local_response, inhib_values))
 }
 
-# Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions
+#' Create a perturbation matrix
+#'
+#' Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions.
+#' @param perturbations A vector with the name of the perturbation, either NODE for a stimulation a node, or NODEi for its inhibition
+#' @param inhib_combo Number of inhibitions to use simultaneously in each perturbation
+#' @param stim_combo Number of stimulations to use simultaneously in each perturbation
+#' @param byStim Whether the perturbations should be ordered according to the stimulations or the inhibtions
+#' @return A perturbation matrix with the names of the nodes as columnnames
+#' @export
+#' @seealso plotModelPrediction
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1, byStim=T) {
     stimulators = perturbations[!grepl("i$", perturbations)]
     if (stim_combo > length(stimulators) ) {
@@ -236,16 +244,17 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
 #' One plot per measured node
 #' Plot with error bars if available, and give absolute value
 #or log-fold change
-# TODO add the possibility to give log-fold change
 #' @param model An MRAmodel object
-#' @param targets A matrix describing the conditions to be simulated
+#' @param targets A perturbation matrix describing the conditions to be simulated
 #' @param readouts Vector with the name of the nodes that should be used as readouts
-#' @param plotsPerFrame
 #' @param log_axis Boolean, whether the ordinate axis should be in log scale
 #' @return Nothing
 #' @export
+#' @seealso getCombinationMatrix
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelPrediction <- function(model, targets, readouts="all", plotsPerFrame = 4, log_axis=F) {
+# TODO , plotsPerFrame = 4
+##' @param maxPlotsPerFrame Maximum number of perturbation per frame
+plotModelPrediction <- function(model, targets, readouts="all", log_axis=F) {
     if (log_axis) {
         ylog = "y"
     } else {
