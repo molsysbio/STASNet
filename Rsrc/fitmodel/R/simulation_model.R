@@ -56,6 +56,9 @@ simulateModel <- function(model_description, targets, readouts = "all") {
             inhibitions = cbind(inhibitions, target_matrix[, which(colnames(target_matrix) == node)])
         }
     }
+    if (length(inhib_nodes) == 0) {
+        stop("None of the inhibitions provided can be applied in this network. Aborting...")
+    }
     ## Set the stimuli matrices
     stim_nodes = c()
     stimulations = c()
@@ -66,6 +69,9 @@ simulateModel <- function(model_description, targets, readouts = "all") {
             stim_nodes = cbind(stim_nodes, nodes[which(nodes == node)])
             stimulations = cbind(stimulations, target_matrix[, which(colnames(target_matrix) == node)])
         }
+    }
+    if (length(stim_nodes) == 0) {
+        stop("None of the stimulations provided can be applied in this network. Aborting...")
     }
     ## Set the nodes to be measured
     measured_nodes = c()
@@ -91,6 +97,9 @@ simulateModel <- function(model_description, targets, readouts = "all") {
                 }
             }
         }
+    }
+    if (length(measured_nodes) == 0) {
+        stop("None of the simulations recquired correspond to nodes measured in the network. Aborting...")
     }
     new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimulations, inhibitions, model_description$basal)
 
@@ -246,9 +255,10 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
 #or log-fold change
 #' @param model An MRAmodel object
 #' @param targets A perturbation matrix describing the conditions to be simulated
+# Or "all" to reproduce the perturbations used to build the model
 #' @param readouts Vector with the name of the nodes that should be used as readouts
 #' @param log_axis Boolean, whether the ordinate axis should be in log scale
-#' @return Nothing
+#' @return Invisibly, the matrix of the results of the simulation
 #' @export
 #' @seealso getCombinationMatrix
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
