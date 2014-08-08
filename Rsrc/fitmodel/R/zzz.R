@@ -17,3 +17,4 @@ loadModule("ModelEx", TRUE)
 
 #ExperimentalDesign <- fitmodel::ExperimentalDesign
 #ModelStructure=fitmodel::ModelStructure
+

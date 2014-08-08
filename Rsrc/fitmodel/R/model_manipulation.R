@@ -12,28 +12,29 @@ printParameters <- function(model_description) {
 
     print("Parameters :")
     paths = model$getParametersLinks()
+    decimals = 2
     if (length(model_description$lower_values) > 0) {
         for (i in 1:length(paths)) {
-            text = paste(simplify_path_name(paths[i]), "=", parameters[i])
+            text = paste(simplify_path_name(paths[i]), "=", signif(parameters[i],decimals))
             if (is.na(model_description$lower_values[i])) {
                 if (is.na(model_description$upper_values[i])) {
                     text = paste(text, "(non identifiable)")
                 } else {
-                    text = paste(text, "( ni - ", model_description$upper_values[i], ")")
+                    text = paste(text, "( ni - ", signif(model_description$upper_values[i], decimals), ")")
                 }
             } else {
-                text = paste(text, "(", model_description$lower_values[i])
+                text = paste(text, "(", signif(model_description$lower_values[i], decimals))
                 if (is.na(model_description$upper_values[i])) {
                     text = paste(text, "- ni )")
                 } else {
-                    text = paste(text, "-", model_description$upper_values[i], ")")
+                    text = paste(text, "-", signif(model_description$upper_values[i], decimals), ")")
                 }
             }
             print(text)
         }
     } else {
         for (i in 1:length(paths)) {
-            print (paste(simplify_path_name(paths[i]), ":", parameters[i]))
+            print (paste( simplify_path_name(paths[i]), ":", signif(parameters[i], decimals) ))
         }
     }
 }
@@ -76,14 +77,14 @@ accuracyPlot <- function(model_description) {
 
     # Comparison of the data and the stimulation in term of error fold change and log fold change
     bk = unique( c(seq(min(mismatch, na.rm=T), 0, length=50), seq(0, max(mismatch, na.rm=T), length=50)) )
-    pheatmap(mismatch, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="(data - simulation) / error")
+    pheatmap(mismatch, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk)-1), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="(data - simulation) / error")
     bk = unique( c(seq(min(stim_data-simulation, na.rm=T), 0, length=50), seq(0, max(stim_data-simulation, na.rm=T), length=50)) )
-    pheatmap(stim_data-simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="log2(data/simulation)")
+    pheatmap(stim_data-simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk)-1), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="log2(data/simulation)")
     # Log fold changes for the data and the stimulation
     bk = unique( c(seq(min(stim_data, na.rm=T), 0, length=50), seq(0, max(stim_data, na.rm=T), length=50)) )
-    pheatmap(stim_data, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="data")
+    pheatmap(stim_data, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk)-1), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="data")
     bk = unique( c(seq(min(simulation, na.rm=T), 0, length=50), seq(0, max(simulation, na.rm=T), length=50)) )
-    pheatmap(simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk-1)), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="simulation")
+    pheatmap(simulation, color=colorRampPalette(c("deepskyblue", "black", "red"))(length(bk)-1), breaks = bk, cluster_rows=F, cluster_col=F, display_numbers = T, main="simulation")
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test

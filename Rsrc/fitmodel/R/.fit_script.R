@@ -1,5 +1,5 @@
 #!/usr/bin/Rscript
-# -*- coding=utf-8 -*-
+# -*- coding:utf-8 -*-
 
 # Hidden from the R installer but with the other scripts from the package
 
