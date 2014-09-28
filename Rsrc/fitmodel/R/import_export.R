@@ -98,6 +98,10 @@ exportModel <- function(model_description, file_name="model") {
     for (i in 1:length(design$measured_nodes)) {
         writeLines(paste0("MN ", model_description$structure$names[1 + design$measured_nodes[i]], " ", model_description$data$unstim_data[1, i]), handle)
     }
+    # CV matrix
+    for (r in 1:nrow(model_description$cv)) {
+        writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
+    }
 
     close(handle)
 }
@@ -275,6 +279,16 @@ importModel <- function(file_name) {
     # Get the unstimulated data
     model_description$data = new(fitmodel:::Data)
     model_description$data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
+
+    # Get the cv values if they are present
+    cv_values = c()
+    while(grepl("^CV", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;"))
+        lnb = lnb + 1
+
+        cv_values = rbind(cv_values, line[2:length(line)])
+    }
+    model_description$cv = cv_values
 
     return(model_description)
 }

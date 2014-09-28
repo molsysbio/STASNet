@@ -138,6 +138,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_description$structure = model_structure
     model_description$basal = basal_activity
     model_description$data = data
+    model_description$cv = core$cv
     # Remember the optimal parameters
     model_description$parameters = init_params
     model_description$bestfit = init_residual
@@ -711,6 +712,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     data$set_scale( data$unstim_data )
     data$set_stim_data( as.matrix(data.stim) )
     data$set_error( as.matrix(error ))
+# TODO data$data_cv
 
 ### EXTRACT EXPERIMENTAL DESIGN
 
@@ -765,6 +767,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     core$data = data
     core$structure = model_structure
     core$basal = basal_activity
+    core$cv = cv.stim
 
     return(core)
 }
@@ -790,6 +793,7 @@ rebuildModel <- function(model_file, data_file, var_file="") {
 
     model$data = core$data
     model$bestfit = model$model$fitmodel(model$data, model$parameters)$residuals
+    model$cv = core$cv
 
     return(model)
 }
