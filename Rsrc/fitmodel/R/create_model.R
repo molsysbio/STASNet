@@ -144,7 +144,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model_description$bestfit = init_residual
     # Name and infos of the model
     model_description$name = data.stimulation
-    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), pasteO("Network : ", model_links))
+    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
     # Values that can't be defined without the profile likelihood
     model_description$param_range = list()
     model_description$lower_values = c()
