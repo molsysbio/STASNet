@@ -56,7 +56,7 @@ accuracyPlot <- function(model_description) {
 
     simulation = model$simulate(data, init_params)$prediction
     if (!is.null(nrow(cv)) && nrow(cv) == nrow(stim_data)) {
-        mismatch = (stim_data - simulation) / cv
+        mismatch = (stim_data - simulation) / (cv * stim_data)
     } else {
         mismatch = (stim_data - simulation) / error
     }
