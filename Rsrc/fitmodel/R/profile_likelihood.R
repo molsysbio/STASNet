@@ -54,7 +54,7 @@ simplify_path_name <- function (path_name) {
 
     # Prepare a matrix 2*nb_nodes indexed by node names
     elements = c()
-    nodes = unique(unlist(strsplit(path_name, "\\*|_|r|\\^")))
+    nodes = unique(unlist(strsplit(path_name, "\\*|_|^r|\\^")))
     for (node in nodes) {
         if (node != "" && !grepl("\\(-1\\)", node)) {
             elements = rbind(elements, c("", ""))
