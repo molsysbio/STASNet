@@ -50,7 +50,7 @@ accuracyPlot <- function(model_description) {
     model = model_description$model
     data = model_description$data
     error = data$error
-    cv = data$cv
+    cv = model_description$cv
     stim_data = data$stim_data
     init_params = model_description$parameter
 

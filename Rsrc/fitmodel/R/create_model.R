@@ -628,8 +628,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     blank.values[is.nan(blank.values)] = 0; # For conditions without blank values
 
     # Calculates the mean and standard deviation for each condition 
-    mean.values = aggregate(as.list(data.values),by=data_file[,1:(begin_measure-1)],mean)
-    sd.values = aggregate(as.list(data.values),by=data_file[,1:(begin_measure-1)],sd)
+    mean.values = aggregate(as.list(data.values),by=data_file[,1:(begin_measure-1)],mean, na.rm=T)
+    sd.values = aggregate(as.list(data.values),by=data_file[,1:(begin_measure-1)],sd, na.rm=T)
     if (verbose) {
         print("Data used :")
         print(mean.values)
@@ -659,10 +659,10 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
                 }
             }
             if (matchError) { stop("Names of the variation and measurement files do not match") }
-            cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model_structure$names] ), by=data_file[,1:(begin_measure-1)], mean)
+            cv.values = aggregate(as.list( pre_cv[colnames(pre_cv) %in% model_structure$names] ), by=data_file[,1:(begin_measure-1)], mean, na.rm=T)
         } else {
             variation.file = read.delim(var_file)
-            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model_structure$names]),by=data_file[,1:(begin_measure-1)], mean)
+            cv.values = aggregate(as.list(variation.file[, colnames(data.values) %in% model_structure$names]),by=data_file[,1:(begin_measure-1)], mean, na.rm=T)
         }
         cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
         error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1]) + cv.stim * data.stim
