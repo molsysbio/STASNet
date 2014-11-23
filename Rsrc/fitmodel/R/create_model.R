@@ -675,6 +675,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         cv.values = sd.values[begin_measure:dim(sd.values)[2]] / mean.values[begin_measure:dim(sd.values)[2]]
         # Values to close to the blank are removed because the error is not due to antibody specific binding
         cv.values[!mean.values[,begin_measure:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA
+        cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
             
         # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
         cv = colMeans(cv.values,na.rm=TRUE)

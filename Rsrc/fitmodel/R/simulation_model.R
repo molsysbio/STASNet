@@ -283,8 +283,8 @@ plotModelPrediction <- function(model, targets, readouts="all", log_axis=F) {
         # Collects the positions of the bars
         par(mar = c(1, 6, 4, 4))
         bars = barplot(prediction$bestfit[,node], plot=F)
-        limits = c(0, max(prediction$bestfit[,node]))
         if (length(prediction$variants) > 0) {
+            limits = c(0, 2 * max(prediction$bestfit[,node]))
             low_var = c()
             high_var = c()
             # Collect the extreme values for each condition, and the global extremes to be sure everything gets included in the plot
@@ -294,19 +294,21 @@ plotModelPrediction <- function(model, targets, readouts="all", log_axis=F) {
                     variants = c(variants, prediction$variants[[set]][perturbation, node])
                 }
                 low_var = c(low_var, sort(variants)[1])
-                # If the incaccuracy yields negative activity, we correct if log scale is used
+                limits[1] = min(limits[1], low_var)
+                # If the inaccuracy yields negative activity, we correct if log scale is used
                 if (low_var <= 0 && log_axis) { low_var = 1 }
                 high_var = c(high_var, sort(variants, decreasing=T)[1])
-                limits = c( min(limits[1], low_var), max(limits[2], high_var) )
             }
             # Plot the bars with the errors
-            barplot(prediction$bestfit[,node], ylim=limits, ylab="Activity", log=ylog, col="#008000", main=colnames(prediction$bestfit)[node])
-            segments(bars, low_var, bars, high_var)
+            barplot(prediction$bestfit[,node], ylim=limits, ylab="Fluorescence intensity (AU)", log=ylog, col="#008000", main=colnames(prediction$bestfit)[node])
+            text_pos = limits[2] - 0.1 * limits[2]
+            segments( bars, low_var, bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
+            text( bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2], X, "") }), pos=4 )
             space = abs(bars[2] - bars[1])/3
             segments(bars - space, low_var, bars + space, low_var)
             segments(bars - space, high_var, bars + space, high_var)
         } else {
-            barplot(prediction$bestfit[,node], ylab="Activity", log=ylog)
+            barplot(prediction$bestfit[,node], ylab="Fluorescence intensity (AU)", log=ylog)
             low_var=0;
         }
 

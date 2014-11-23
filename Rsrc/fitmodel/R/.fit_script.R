@@ -114,7 +114,7 @@ niplotPL(profiles, data_name=conditions)
 #plotModelPrediction(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
 #dev.off()
 # Plot the simulated conditions
-pdf(paste0("all_", conditions, ".pdf"))
+pdf(paste0("model_prediction_", conditions, ".pdf"))
 plotModelPrediction(model, "all")
 dev.off()
 
