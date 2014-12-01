@@ -47,46 +47,55 @@ parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
 
 # Simplify the path name from the r_t_f* form to a f->t-> form
 simplify_path_name <- function (path_name) {
-    # Inhibitors do not need modification
-    if (grepl("i$", path_name) || grepl("^i", path_name)) {
-        return(path_name)
-    }
-
+  simplify_sub_path <- function (sub_path) {
+    
     # Prepare a matrix 2*nb_nodes indexed by node names
-    elements = c()
-    nodes = unique(unlist(strsplit(path_name, "\\*|_|^r|\\^")))
-    for (node in nodes) {
-        if (node != "" && !grepl("\\(-1\\)", node)) {
-            elements = rbind(elements, c("", ""))
-            rownames(elements)[nrow(elements)] = node
-        }
-    }
+    entries=unique(unlist(strsplit(sub_path, "\\*|_|^r|\\^|\\(-1\\)")))
+    elements=matrix("",nrow=sum(entries!=""),ncol=2)
+    rownames(elements)<-entries[entries!=""]
+    
     # Indicate for each node its previous and following node in the path
-    for (link in unlist(strsplit(path_name, "\\*")) ) {
-        if (grepl("\\(-1\\)", link)) { # If the power is -1, we reverse the link
-            nodes = unlist(strsplit(link, "_|\\^"))[3:2]
-            elements[nodes[1], 1] = nodes[2]
-            elements[nodes[2], 2] = paste0("<-", nodes[1])
-        } else {
-            nodes = unlist(strsplit(link, "_"))[2:3]
-            elements[nodes[1], 1] = nodes[2]
-            elements[nodes[2], 2] = paste0("->", nodes[1])
-        }
-    }
-    # Look for the node without predecessor (i.e the first node of the path)
-    selected = 1
-    while (elements[selected, 1] != "") {
-        selected = selected + 1
-    }
-    # Build the simple path
-    node = gsub("<-|->", "", elements[selected, 2])
-    simple_path = paste0(elements[node, 1], elements[selected, 2])
-    while(elements[node, 2] != "") {
-        node = elements[node, 2]
-        simple_path = paste0(simple_path, node)
-        node = gsub("<-|->", "", node)
+    for (link in unlist(strsplit(sub_path, "\\*"))){
+      nodes = unlist(strsplit(link, "_|\\^"))[2:3]
+      elements[nodes[1], 1] = nodes[2]
+      elements[nodes[2], 2] = paste0("->", nodes[1])
     }
 
+    # Look for the node(s) without predecessor (i.e the first node of the path(s))
+    selected=which(elements[,1]=="")
+    if (is.na(selected[1])){
+      stop(writeLines(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
+    }
+
+    # Build the most simple sub path(s)
+    final_paths=matrix("",ncol=length(selected),nrow=1)
+    for (i in 1:length(selected)){	
+      node = gsub("->", "", elements[selected[i], 2])
+      simple_sub_path = paste0(elements[node, 1], elements[selected[i],2])
+      while (elements[node, 2] != "") {
+        node = elements[node, 2]
+        simple_sub_path = paste0(simple_sub_path, node)
+        node = gsub("->", "", node)
+      }
+      final_paths[i]=simple_sub_path
+    }
+    return(paste(final_paths[order(final_paths)],collapse="*"))
+  }
+
+  # Inhibitors do not need modification
+  if (grepl("i$", path_name) || grepl("^i", path_name)) {
+     return(path_name)
+  }
+
+  # First derive the sub path of the enumerator 
+  links=unlist(strsplit(path_name, "\\*"))
+  denom_pos=grepl("(-1)",links)
+  simple_path=simplify_sub_path(links[!denom_pos])
+
+  # If present add the sub path of the denominator 
+  if (any(denom_pos)){
+    simple_path=paste0(simple_path,"/",simplify_sub_path(links[denom_pos]))
+  }
     return(simple_path)
 }
 
