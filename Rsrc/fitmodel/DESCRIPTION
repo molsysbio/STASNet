@@ -5,13 +5,15 @@ Version: 1.0
 Date: 2014-08-06
 Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
     email="bertram.klinger@charite.de"), person("Mathurin", "Dorel",
-    role=c("aut"), email="dorel@horus.ens.fr"), person("Nils", "Blüthgen",
+    role=c("aut"), email="dorel@horus.ens.fr"), person("Nils", "Bluethgen",
     role=c("aut", "cre"), email="nils.bluethgen@charite.de"))
 Description: Fits and simulates network model derived from perturbation data
     using Modular Response Analysis and Profile Likelihood
 License: GPLv3
 Depends:
     methods,
-    Rcpp (>= 0.10.4)
+    Rcpp (>= 0.10.4),
+    Rgraphviz,
+    pheatmap
 LinkingTo: Rcpp
 RcppModules: ModelStructure, ExperimentalDesign

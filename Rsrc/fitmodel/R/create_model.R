@@ -1,7 +1,9 @@
 ################################ create_model.R #########################################
 ## Functions that simplify data parsing and model creation and fitting using the package
 
-#' @import igraph
+#' @import Rgraphviz
+#  @import igraph
+
 #' @import pheatmap
 #' @import parallel
 
@@ -42,12 +44,21 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     # Creation of the model structure object
     links = read.delim(model_links, header=FALSE)
     model_structure=getModelStructure(links)
-    # Plot the network in a file # TODO find a better visualisation tool
-    model_graph = graph.edgelist(as.matrix(links))
+    # Plot the network in a file
+    names=levels(unlist(links))
+    adm=matrix(0,length(names),length(names),dimnames=list(names,names))
+    for (i in 1:nrow(links))
+       adm[match(links[i,2],rownames(adm)),links[i,1]]=1
+    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
+    nodeRenderInfo(g1) <- list(shape="ellipse")
+    g1<-layoutGraph(g1) 
+  # model_graph = graph.edgelist(as.matrix(links))
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
     pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
-    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
+    edgeRenderInfo(g1)<-list(fontsize=10)
+    renderGraph(g1)
+    #plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
 # TODO extraction of the basal activity with different format
@@ -569,11 +580,20 @@ extractStructure = function(model_links, names="") {
     }
 
     # Plot the graph of the network
-    model_graph = graph.edgelist(as.matrix(links_list))
+    names=levels(unlist(links_list))
+    adm=matrix(0,length(names),length(names),dimnames = list(names,names))
+    for (i in 1:nrow(links))
+        adm[match(links_list[i,2],rownames(adm)),links_list[i,1]]=1
+    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
+    nodeRenderInfo(g1) <- list(shape="ellipse")
+    g1<-layoutGraph(g1)
+    #model_graph = graph.edgelist(as.matrix(links_list))
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
     pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
-    plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
+    edgeRenderInfo(g1)<-list(fontsize=10)
+    renderGraph(g1)
+    #plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
     
     model_structure=getModelStructure(links_list)
