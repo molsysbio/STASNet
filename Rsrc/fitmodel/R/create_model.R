@@ -2,8 +2,6 @@
 ## Functions that simplify data parsing and model creation and fitting using the package
 
 #' @import Rgraphviz
-#  @import igraph
-
 #' @import pheatmap
 #' @import parallel
 
@@ -52,13 +50,11 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     g1 <- graphAM(adjMat=t(adm),edgemode="directed")
     nodeRenderInfo(g1) <- list(shape="ellipse")
     g1<-layoutGraph(g1) 
-  # model_graph = graph.edgelist(as.matrix(links))
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
     pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
     edgeRenderInfo(g1)<-list(fontsize=10)
     renderGraph(g1)
-    #plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
 
 # TODO extraction of the basal activity with different format
@@ -587,13 +583,11 @@ extractStructure = function(model_links, names="") {
     g1 <- graphAM(adjMat=t(adm),edgemode="directed")
     nodeRenderInfo(g1) <- list(shape="ellipse")
     g1<-layoutGraph(g1)
-    #model_graph = graph.edgelist(as.matrix(links_list))
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
     pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
     edgeRenderInfo(g1)<-list(fontsize=10)
     renderGraph(g1)
-    #plot.igraph(model_graph, edge.arrow.size=0.5, layout=layout.fruchterman.reingold.grid)
     dev.off()
     
     model_structure=getModelStructure(links_list)
