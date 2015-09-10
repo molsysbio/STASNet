@@ -1,8 +1,8 @@
 #include "modelwrapper.hpp"
 
-#include <fitmodel/model.hpp>
-#include <fitmodel/generate_response.hpp>
-#include <fitmodel/fitmodel_in_CPP.hpp>
+#include "model.hpp"
+#include "generate_response.hpp"
+#include "fitmodel_in_CPP.hpp"
 #include <Rcpp.h>
 //#include <boost/thread.hpp>
 

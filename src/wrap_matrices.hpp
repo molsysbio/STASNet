@@ -1,6 +1,6 @@
 #ifndef WRAP_MATRICES_HPP
 #define WRAP_MATRICES_HPP
-#include <fitmodel/helper_types.hpp>
+#include "helper_types.hpp"
 
 #include <RcppCommon.h>
 

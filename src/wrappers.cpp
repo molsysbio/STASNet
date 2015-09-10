@@ -1,6 +1,6 @@
 #include "wrap_matrices.hpp"
 #include <Rcpp.h>
-#include <fitmodel/helper_types.hpp>
+#include "helper_types.hpp"
 
 //[[Rcpp:export]]
 RCPP_MODULE(ExperimentalDesignEx) {

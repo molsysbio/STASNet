@@ -1,5 +1,4 @@
-﻿
-Copyright (c) Nils Blüthgen and Bertram Klinger, 2013-
+﻿Copyright (c) Nils Blüthgen and Bertram Klinger, 2013-
 
 Gnu General Public Licence
 
@@ -13,30 +12,23 @@ The library contains the levmar-package (version 2.5) for optimization (c) by Ma
 This library can be used to model signalling perturbation data using models that are derived from
 Modular Response Analysis, in a way described in Klinger et al, 2013 using R. 
 
-Requires the following libraries to be installed: 
+Requires the following C++ libraries to be installed: 
 									boost
 									blas
 									ginac
 									cls
 									gmp
-
-To install it, first compile the library, install it, then install the R-package. 
+And the following R packages: 
+									Rcpp
+                                    igraph
+                                    pheatmap
+You can install those packages in R with:
+install.packages(“Rccp”,”igraph”,”pheatmap”,lib=<local library path>)
 
 Linux installation guide:
+For a local installation, first create a folder for local R library in (e.g “home/<Username>/R”)
 Open shell go to the folder of the package (“MRA_Signaling”)
-and execute: 
-			autoreconfigure -fi
-			./configure –prefix=$HOME
-			export LIBRARY_PATH=$HOME/lib
-			export LD_LIBRARY_PATH=$HOME/lib
-			export CPATH=$HOME/include
-			make
-			make install
-first create a folder for local R library in (e.g “home/<Username>/R”)
-if necessary open R and install dependent packages:
-install.packages(“Rccp”,”igraph”,”pheatmap”,lib=<local library path>) 
-close R open shell go to “MRA_Signaling/Rsrc” folder 
-execute: R CMD INSTALL fitmodel (when recompiling use R CMD INSTALL –preclean fitmodel)				
+execute: R CMD INSTALL ./ (when recompiling use R CMD INSTALL –preclean ./)
 
 
 Have fun with it! 
@@ -45,7 +37,7 @@ Have fun with it!
 
 If you use this program in publications, please cite our paper:
 
-Klinger, B., Sieber, A., Fritsche-Guenther, R., Witzel, F., Berry, L., Schumacher, D., Yan, Y., Durek, P., Merchant, M., Schäfer, R., Sers, C. and Blüthgen, N. 
+Klinger B., Sieber A., Fritsche-Guenther R., Witzel F., Berry L., Schumacher D., Yan Y., Durek P., Merchant M., Schäfer R., Sers C. and Blüthgen N. 
 Network quantification of EGFR signaling unveils potential for targeted combination therapy. 
 Molecular Systems Biology, 9: 673, 2013
  

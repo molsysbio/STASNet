@@ -1,9 +1,9 @@
 #ifndef MODELWRAPPER_HPP
 #define MODELWRAPPER_HPP
 #include "wrap_matrices.hpp"
-#include <fitmodel/helper_types.hpp>
-#include <fitmodel/model.hpp>
-#include <fitmodel/rref.hpp>
+#include "helper_types.hpp"
+#include "model.hpp"
+#include "rref.hpp"
 #include <vector>
 #include <string>
 #include "modelstructure.hpp"
