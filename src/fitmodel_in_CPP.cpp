@@ -11,7 +11,7 @@
 #include <boost/bind.hpp>   
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/math/distributions/normal.hpp>
-#include <levmar-2.5/levmar.h>               // to include Marquardt-Levenberg fitting (lsqnonlin in matlab)(written for C)
+#include "levmar-2.5/levmar.h"               // to include Marquardt-Levenberg fitting (lsqnonlin in matlab)(written for C)
 #include <float.h>                       // needed to declare the lower and upper bounds to plus and mimnus infinity DBL_MAX and -DBL_MAX
 //#include<cstring>    // include these two if you want to view some ginac expressions in matlab (mex)
 //#include<string>
