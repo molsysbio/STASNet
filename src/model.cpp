@@ -11,45 +11,42 @@ extern int verbosity;
 Model::Model() : rank_(0) {
 };
 
-// COPY CONSTRUCTOR IS BUGGY!
-Model::Model(const Model &model) : symbols_(model.symbols_), response_(model.response_), rank_(0), linear_approximation_(false) {
-    std::cerr << "Scheisse 2!" << std::endl;
-    exit(1);
-    
-    do_init();
-}
-
-
 Model::Model(const GiNaC::matrix &response, 
              const std::vector<GiNaC::symbol> &symbols, 
              const ExperimentalDesign &expdesign,
              bool linear_approximation) : 
-
     exp_design_(expdesign), symbols_(symbols), response_(response), rank_(0), linear_approximation_(linear_approximation)
-
 {
     do_init();
 } 
 
+// Copy an existing model
+Model::Model(const Model &model) {
+    copy_Model(model);
+}
 
+Model & Model::operator=(const Model &model) {
+    copy_Model(model);
+    return *this;
+}
 
-Model & Model::operator =(const Model &model) {
-    exp_design_ = model.exp_design_;
-    symbols_=model.symbols_;
-
-    response_ = model.response_;
+void Model::copy_Model(const Model &model) {
     copy_matrix(model.model_eqns_,model_eqns_);
     parameters_=model.parameters_;
     independent_parameters_=model.independent_parameters_;
     paths_=model.paths_;
+    response_ = model.response_;
 
+    exp_design_ = model.exp_design_;
+    symbols_=model.symbols_;
     copy_matrix(model.parameter_dependency_matrix_,parameter_dependency_matrix_);
     copy_matrix(model.parameter_dependency_matrix_unreduced_,parameter_dependency_matrix_unreduced_);
-
     rank_=model.rank_;
-    return *this;
-}
+    linear_approximation_ = model.linear_approximation_;
 
+    param_constraints_ = model.param_constraints_;
+    constraints_ = model.constraints_;
+}
 
 void Model::do_init () {
  
@@ -144,7 +141,7 @@ void Model::do_init () {
         showGUnreduced();
     }
     
-    // Replacement of the dependent paths into combination of independent ones
+    // Replacement of non identifiable links into combination of links (paths) that are identifiable in the mathtree object
     for (unsigned int i=0; i<model_eqns_.shape()[0];i++) { 
         for (unsigned int j=0; j<model_eqns_.shape()[1];j++) {
             if (verbosity > 10) {

@@ -26,6 +26,7 @@ public:
   Model(const Model &);
 
   Model &operator=(const Model &m);
+  void copy_Model(const Model &model);
 
 public:
 
