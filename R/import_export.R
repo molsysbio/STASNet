@@ -115,13 +115,13 @@ exportModel <- function(model_description, file_name="model") {
 #' @seealso exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 importModel <- function(file_name) {
-    model_description = list()
+    model_description = MRAmodel()
 # Fields not covered :
     model_description$bestfit = NA # Used to indicate that it is an imported model without data
 # --------------------
 
     if (!grepl(".mra", file_name)) {
-        print("This file does not have the correct .mra extension. Trying to extract a model anyway...")
+        warn("This file does not have the expected .mra extension. Trying to extract a model anyway...")
     }
 
     file = readLines(file_name)

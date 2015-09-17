@@ -138,24 +138,8 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     }
 
 # Information required to run the model (including the model itself)
-    model_description = list()
-    # Objects to build the model
-    model_description$model = model
-    model_description$design = expdes
-    model_description$structure = model_structure
-    model_description$basal = basal_activity
-    model_description$data = data
-    model_description$cv = core$cv
-    # Remember the optimal parameters
-    model_description$parameters = init_params
-    model_description$bestfit = init_residual
-    # Name and infos of the model
-    model_description$name = data.stimulation
-    model_description$infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-    # Values that can't be defined without the profile likelihood
-    model_description$param_range = list()
-    model_description$lower_values = c()
-    model_description$upper_values = c()
+    infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
+    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, data.stimulation, infos)
 
     return(model_description)
 }
@@ -630,9 +614,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         not_included = colnames(data.values)[!(colnames(data.values) %in% model_structure$names)]
         data.values = data.values[, colnames(data.values) %in% model_structure$names]
     }
-    # Warn for the measured not that have not been found in the network
+    # Warn for the measured nodes that have not been found in the network
     if (length(not_included) > 0) {
-        print(paste(not_included , "measurement is not in the network structure (could be a mispelling)" ))
+        print(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)" ))
     }
 
     # Means of basal activity of the network and of the blank fixation of the antibodies
@@ -687,7 +671,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 
         # Calculate error percentage
         cv.values = sd.values[begin_measure:dim(sd.values)[2]] / mean.values[begin_measure:dim(sd.values)[2]]
-        # Values to close to the blank are removed because the error is not due to antibody specific binding
+        # Values too close to the blank are removed because the error is not due to antibody specific binding
         cv.values[!mean.values[,begin_measure:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA
         cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
             
@@ -709,7 +693,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
                 print("Defaulted")
             }
         }
-        }
+        } ##
 
         if (verbose) {
             print("Error model :")
