@@ -86,7 +86,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores, method : ", method, sep=""))
     # Different sampling methods
     if (method == "correlation") {
-        samples = sampleWithCorrelation(model, core, inits, plot=init_distribution, sd=2)$samples
+        samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
         results = parallel_initialisation(model, expdes, data, samples, cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
@@ -156,7 +156,7 @@ initModel <- function(model, core, nb_inits, nb_cores=1) {
         method = "correlation"
     }
     if (method == "correlation") {
-        samples = sampleWithCorrelation(model, core, inits, plot=init_distribution, sd=2)$samples
+        samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
         results = parallel_initialisation(model, expdes, data, samples, cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
@@ -173,8 +173,8 @@ initModel <- function(model, core, nb_inits, nb_cores=1) {
 }
 
 # Perform several simulated annealing, one per core
-parallelAnnealing <- function(model, core, max_it, nb_cores, do_plot=F) {
-    correlation = parametersFromCorrelation(model, core, plot=do_plot)
+parallelAnnealing <- function(model, core, max_it, nb_cores, perform_plot=F) {
+    correlation = parametersFromCorrelation(model, core, perform_plot=perform_plot)
     correlation_list = list()
     for (i in 1:nb_cores) {
         correlation_list[[i]] = correlation
@@ -202,9 +202,9 @@ simulated_annealing_wrapper <- function(correlated_parameters, model, data, max_
 #' Produces shifted random samples with some parameters inferred from correlations in the measurements
 #' @param model An MRAmodel object
 #' @param shift A vector giving the shift to be applied to the normal distribution. Must have the same size as the number of parameters
-sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="", sd=2, plot=F) {
+sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="", sd=2, perform_plot=F) {
     if (!is.list(correlated)) {
-        correlated = correlate_parameters(model, core, plot)
+        correlated = correlate_parameters(model, core, perform_plot)
     }
     random_samples = qnorm(randomLHS(nb_samples, model$nr_of_parameters()-length(correlated$list)), sd=sd)
     samples = c()
@@ -230,8 +230,8 @@ sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="
 }
 
 # Gives a parameter vector with a value for correlated parameters and 0 otherwise
-parametersFromCorrelation <- function(model, core, plot=F) {
-    correlated = correlate_parameters(model, core, plot)
+parametersFromCorrelation <- function(model, core, perform_plot=F) {
+    correlated = correlate_parameters(model, core, perform_plot)
     param_vector = c()
     j = 1
     for (i in 1:model$nr_of_parameters()) {
@@ -246,7 +246,7 @@ parametersFromCorrelation <- function(model, core, plot=F) {
 }
 
 # Indentify the links that can be deduced by a simple correlation, calculate them, and return their index and the corresponding parameter vector with the other values set to 0
-correlate_parameters <- function(model, core, plot=F) {
+correlate_parameters <- function(model, core, perform_plot=F) {
     print("Looking for identifiable correlations...")
     expdes = core$design
     model_structure = core$structure
@@ -293,9 +293,10 @@ correlate_parameters <- function(model, core, plot=F) {
         # Collect the measured data for the regression
         node_mes = which( measured_nodes == node)
         measurements = log(data$stim_data[use, node_mes] / data$unstim_data[1, node_mes] )
-        regression = paste0("lm(measurements[,", 1, '] ~ ')
+        regression = paste0('lm(measurements[,1] ~ ')
         first = TRUE
-        condition = paste(model_structure$names[node], "and")
+        node_name = model_structure$names[node]
+        condition = paste(node_name, "and")
         for (sender in upstreams[[node]] ) {
             mes_index = which(measured_nodes==sender)
             measurements = cbind(measurements, log(data$stim_data[use, mes_index] / data$unstim_data[1,mes_index]) )
@@ -306,7 +307,8 @@ correlate_parameters <- function(model, core, plot=F) {
                 condition = paste(condition, "+")
             }
             regression = paste0(regression, "measurements[,", 1+which(upstreams[[node]] == sender), "]")
-            condition = paste(condition, model_structure$names[sender])
+            sender_name = model_structure$names[sender]
+            condition = paste(condition, sender_name)
         }
         # Perform the regression and put the values in the adjacency matrix
         regression = paste0(regression, ")")
@@ -316,13 +318,13 @@ correlate_parameters <- function(model, core, plot=F) {
             params_matrix[ node, upstreams[[node]][sender] ] = result$coefficients[sender+1]
             # TODO add the information on the quality of the fit
         }
-        if (plot) {
-            # Plot the data and the fit
+        if (perform_plot) {
+            # Plot the data and the fit, directly plot the correlation curve if there is only one upstream node, or plot the distance between each measurements and the hyperplane
             if (length(upstreams[[node]]) == 1) {
-                plot(measurements[,2], measurements[,1], main=condition)
+                plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name)
                 lines(measurements[,2], result$coefficients[1] + result$coefficients[2] * measurements[,2])
             } else {
-                plot(1:nrow(measurements), measurements[,1], pch=4, main=condition)
+                plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name)
                 for (measure in 1:nrow(measurements)) {
                     fitted = result$coefficients[1]
                     for (sender in 2:ncol(measurements)) {
@@ -364,7 +366,7 @@ rand <- function(decimals=4) {
 # TODO integrate it into the creation function
 # Explore the parameter space with series of random initialisations and selection after each step of the best fits (mutation only genetic algorithm)
 MIN_SAMPLE_SIZE = 100 # TODO Find a heuristic value depending on the number of parameters to estimate
-deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=100, plot=F) { # TODO Chose to give the total number or the per sampling
+deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=100, perform_plot=F) { # TODO Chose to give the total number or the per sampling
 
     if (depth < 1) { depth = 1 } # We do at least one initialisation
     #if (nSamples < MIN_SAMPLE_SIZE) { nSamples = MIN_SAMPLE_SIZE }
@@ -373,7 +375,7 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
     
     # The first iteration does not use any shift
     kept = matrix(0, ncol=model$nr_of_parameters())
-    correlation = correlate_parameters(model, core, plot)
+    correlation = correlate_parameters(model, core, perform_plot)
     for (i in 1:depth) {
         print(paste("Depth :", i))
         # Create the new samples, with a random initialisation shifted by the previous steps local minimum and recombinations of those previous best steps
@@ -390,14 +392,14 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
             samples = rbind( samples, new_sample$samples) 
         }
         results = parallel_initialisation(model, core$design, core$data, samples, NB_CORES)
-        if (plot) { hist(log(results$residuals, base=10), breaks="fd") }
+        if (perform_plot) { hist(log(results$residuals, base=10), breaks="fd") }
         # Keep the number of samples, and select the best parameters sets for the next iteration
         kept = results$params[order(results$residuals)[1:nSamples],]
     }
 
     # Finish by checking that sampling around the optimum with a high variation still finds several times the optimum
     new_sample = sampleWithCorrelation(model, core, nSamples, kept[1,], correlation, sd=3)$samples
-    if (plot) { hist(log(parallel_initialisation(model, core$design, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
+    if (perform_plot) { hist(log(parallel_initialisation(model, core$design, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
 
     return(results) # Return the last set of fit
 }
