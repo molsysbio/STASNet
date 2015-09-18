@@ -603,6 +603,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     } else if (grepl(".csv$", data_filename)) {
         use_midas = TRUE
         data_file = read.delim(data_filename, sep=",")
+        if (ncol(data_file) <= 1) {
+            data_file = read.delim(data_filename, sep="\t") # Accept tab-delimited MIDAS files
+        }
         begin_measure = which(grepl("^DA.", colnames(data_file)))
         data_file = data_file[-begin_measure] # Delete the DA field which is not used
         begin_measure = begin_measure[1] # If there were several DA fields
