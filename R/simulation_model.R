@@ -113,11 +113,11 @@ simulateModel <- function(model_description, targets, readouts = "all") {
     prediction = list()
     colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = paste0(inhibitors, "i")
     
-prediction$conditions = target_matrix
+    prediction$conditions = target_matrix
     ## Use the optimal fit
     old_inhib_nodes = model_description$structure$names[1+design$inhib_nodes]
     
-prediction$bestfit = model$simulate(new_data, getParametersForNewDesign(model, model_description$model, model_description$parameters, old_inhib_nodes, inhib_nodes))$prediction
+    prediction$bestfit = model$simulate(new_data, getParametersForNewDesign(model, model_description$model, model_description$parameters, old_inhib_nodes, inhib_nodes))$prediction
     colnames(prediction$bestfit) = measured_nodes
     ## Parameters sets provided by the profile likelihood
     params_sets = list()
@@ -285,8 +285,8 @@ plotModelPrediction <- function(model, targets, readouts="all", log_axis=F) {
         # Collects the positions of the bars
         par(mar = c(1, 6, 4, 4))
         bars = barplot(prediction$bestfit[,node], plot=F)
+        limits = c(0, 2 * max(prediction$bestfit[,node]))
         if (length(prediction$variants) > 0) {
-            limits = c(0, 2 * max(prediction$bestfit[,node]))
             low_var = c()
             high_var = c()
             # Collect the extreme values for each condition, and the global extremes to be sure everything gets included in the plot

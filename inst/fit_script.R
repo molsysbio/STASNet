@@ -22,7 +22,8 @@ get_running_time <- function(init_time, text="") {
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
 
-reduction = F
+reduction = FALSE
+perform_pl = TRUE
 
 data = ""
 network = ""
@@ -67,6 +68,8 @@ for (argument in commandArgs()) {
         reduction = FALSE
     } else if (grepl("^-m", argument)) {
         method = gsub("^-m", "", argument)
+    } else if (argument == "--nopl") {
+        perform_pl = FALSE
     }
 }
 if (cores == 0) {
@@ -103,11 +106,13 @@ if (method == "annealing") {
 }
 
 # Perform the profile likelihood
-profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));
-model = addPLinfos(model, profiles);
-get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
-exportModel(model, paste0(conditions, ".mra"));
-niplotPL(profiles, data_name=conditions)
+if (perform_pl) {
+    profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));
+    model = addPLinfos(model, profiles);
+    get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
+    exportModel(model, paste0(conditions, ".mra"));
+    niplotPL(profiles, data_name=conditions)
+}
 
 # Plot the simulation for all combinations of inhibitors 
 #pdf(paste0("combos_", conditions, ".pdf"))
