@@ -139,7 +139,9 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 
 # Information required to run the model (including the model itself)
     infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, data.stimulation, infos)
+    basefit = sum((data$stim_data-data$unstim_data)^2)
+    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, basefit, data.stimulation, infos)
+    print(paste("Residual score =", model_description$bestfitscore))
 
     return(model_description)
 }

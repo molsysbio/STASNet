@@ -18,7 +18,7 @@
 #' @param lower_value Lower bound on the values of the parameters
 #' @param upper_values Upper bound on the values of the parameters
 #' @seealso \code{\link{createModel}}
-MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
+MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, basefit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
     structure(
               list(
                    # Objects to build the model
@@ -31,6 +31,8 @@ MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), da
                    # Optimal parameters of the model
                    parameters=parameters,
                    bestfit=bestfit,
+                   basefit = basefit, # Chi-2 score without any link
+                   bestfitscore = bestfit / basefit,
                    # Name of the model and extra informations
                    name=name,
                    infos=infos,

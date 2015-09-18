@@ -22,6 +22,7 @@ profileLikelihood <- function(model_description, nb_points=10000, cores=1) {
 
     # Print results
     print(paste("Residual =", init_residual))
+    print(paste("Residual score =", model_description$bestfitscore))
     print_error_intervals(profiles)
 
     return(profiles)
