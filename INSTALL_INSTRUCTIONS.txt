@@ -12,11 +12,11 @@ The library contains the levmar-package (version 2.5) for optimization (c) by Ma
 This library can be used to model signalling perturbation data using models that are derived from
 Modular Response Analysis, in a way described in Klinger et al, 2013 using R. 
 
-Requires the following C++ libraries to be installed: 
+Requires the following C++ libraries to be installed (installation method depends on the OS): 
 									boost
 									blas
 									ginac
-									cls
+									cln
 									gmp
 And the following R packages: 
 									Rcpp
@@ -25,11 +25,10 @@ And the following R packages:
 You can install those packages in R with:
 install.packages(“Rccp”,”igraph”,”pheatmap”,lib=<local library path>)
 
-Linux installation guide:
+Unix (MacOS, BSD, GNU/Linux) installation guide:
 For a local installation, first create a folder for local R library in (e.g “home/<Username>/R”)
 Open shell go to the folder of the package (“MRA_Signaling”)
 execute: R CMD INSTALL ./ (when recompiling use R CMD INSTALL –preclean ./)
-
 
 Have fun with it! 
 

@@ -4,11 +4,8 @@
 #' @import Rgraphviz
 #' @import pheatmap
 #' @import parallel
-
 #' @import Rcpp
 #' @useDynLib fitmodel
-
-#source("R/randomLHS.r"); # Latin Hypercube Sampling
 
 # Global variable to have more outputs
 verbose = FALSE
