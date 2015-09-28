@@ -27,6 +27,8 @@ MRAmodel(model = NULL, design = NULL, structure = NULL,
 
 \item{bestfit}{The residual chi-2 value associated with the best fit}
 
+\item{basefit}{The chi-2 value associated with the raw data (no fit)}
+
 \item{name}{Name of the model}
 
 \item{infos}{Extra information on the model}
@@ -36,6 +38,9 @@ MRAmodel(model = NULL, design = NULL, structure = NULL,
 \item{upper_values}{Upper bound on the values of the parameters}
 
 \item{lower_value}{Lower bound on the values of the parameters}
+}
+\value{
+An MRAmodel object
 }
 \description{
 Construct an MRAmodel objects, which contains all the informations recquired to simulate the model, and the data used to build it.

@@ -3,9 +3,7 @@
 
 # Hidden from the R installer but with the other scripts from the package
 
-library("methods")
 library("fitmodel")
-library("parallel")
 
 # Print the time it took in a readable format
 get_running_time <- function(init_time, text="") {
@@ -15,9 +13,6 @@ get_running_time <- function(init_time, text="") {
     run_seconds = run_time - 3600 * run_hours - 60 * run_minutes;
     print(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
 }
-
-#source("generate_model.R");
-#source("create_model.R");
 
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
@@ -35,8 +30,15 @@ method = "default"
 # Autodetection of the cores
 cores = 0
 
+if (!exists("cargs")) {
+    cargs = commandArgs()
+} else if (is.character(cargs)) {
+    cargs = strsplit(cargs, " ")[[1]]
+
+}
+
 # Collect the filenames based on their extension
-for (argument in commandArgs()) {
+for (argument in cargs) {
     if (grepl(".tab$", argument)) {
         network = paste0(getwd(), "/", argument)
     } else if (grepl(".data$", argument) || grepl(".csv$", argument)) {
