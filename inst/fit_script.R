@@ -92,7 +92,7 @@ conditions = gsub(" ", "_", conditions)
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0("distribution_", conditions, ".pdf"))
-model = createModel(network, data, basal_nodes, variation, inits=inits, cores=cores, init_distribution=T, method=method);
+model = createModel(network, data, basal_nodes, variation, inits=inits, nb_cores=cores, init_distribution=T, method=method);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
@@ -107,7 +107,7 @@ if (method == "annealing") {
 
 # Perform the profile likelihood
 if (perform_pl) {
-    profiles = profileLikelihood(model, nb_steps, cores=min(cores, length(model$parameters)));
+    profiles = profileLikelihood(model, nb_steps, nb_cores=min(cores, length(model$parameters)));
     model = addPLinfos(model, profiles);
     get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
     exportModel(model, paste0(conditions, ".mra"));
@@ -128,7 +128,7 @@ if (reduction) {
     print("Reduction of the model...")
     reduced_model = selectMinimalModel(model)
 # Profile likelihood on the reduced model
-    reduced_profiles = profileLikelihood(reduced_model, nb_steps, cores=min(cores, length(reduced_model$parameters)));
+    reduced_profiles = profileLikelihood(reduced_model, nb_steps, nb_cores=min(cores, length(reduced_model$parameters)));
     reduced_model = addPLinfos(reduced_model, reduced_profiles)
     exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
     niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))

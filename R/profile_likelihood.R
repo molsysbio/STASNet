@@ -4,11 +4,11 @@
 #' Computes the profile likelihood and the parameters relationships of each parameters in the model
 #' @param model_description An MRAmodel object
 #' @param nb_points Number of points to plot the profile
-#' @param cores Maximum number of cores used for the calculation
+#' @param nb_cores Maximum number of cores used for the calculation
 #' @return Returns a list of the profile for each parameters
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-profileLikelihood <- function(model_description, nb_points=10000, cores=1) {
+profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
     # Get the information from the model description
     model = model_description$model
     model_structure = model_description$structure
@@ -18,7 +18,7 @@ profileLikelihood <- function(model_description, nb_points=10000, cores=1) {
     init_residual = model_description$bestfit
     print(paste(length(init_params), " paths to evaluate"))
 
-    profiles = parallelPL(model, data, init_params, nb_points, cores)
+    profiles = parallelPL(model, data, init_params, nb_points, nb_cores)
 
     # Print results
     print(paste("Residual =", init_residual))

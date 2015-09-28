@@ -5,7 +5,7 @@
 \title{Produces shifted random samples with some parameters inferred from correlations in the measurements}
 \usage{
 sampleWithCorrelation(model, core, nb_samples, shift = 0, correlated = "",
-  sd = 2, plot = F)
+  sd = 2, perform_plot = F)
 }
 \arguments{
 \item{model}{An MRAmodel object}

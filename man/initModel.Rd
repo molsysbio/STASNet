@@ -2,11 +2,14 @@
 % Please edit documentation in R/create_model.R
 \name{initModel}
 \alias{initModel}
-\title{Perform an initialisation of the model}
+\title{Perform an initialisation of the model
+Possibility to use different sampling methods}
 \usage{
-initModel(model, core, nb_inits, nb_cores = 1)
+initModel(model, core, nb_inits, method = "default", nb_cores = 1,
+  init_distribution = F)
 }
 \description{
 Perform an initialisation of the model
+Possibility to use different sampling methods
 }
 
