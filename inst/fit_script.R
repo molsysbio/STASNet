@@ -112,9 +112,9 @@ if (perform_pl) {
     profiles = profileLikelihood(model, nb_steps, nb_cores=min(cores, length(model$parameters)));
     model = addPLinfos(model, profiles);
     get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
-    exportModel(model, paste0(conditions, ".mra"));
     niplotPL(profiles, data_name=conditions)
 }
+exportModel(model, paste0(conditions, ".mra"))
 
 # Plot the simulation for all combinations of inhibitors 
 #pdf(paste0("combos_", conditions, ".pdf"))
