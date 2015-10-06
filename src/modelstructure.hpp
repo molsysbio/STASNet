@@ -1,7 +1,7 @@
 #ifndef MODELSTRUCTURE_HPP
 #define MODELSTRUCTURE_HPP
 
-#include <fitmodel/helper_types.hpp>
+#include "helper_types.hpp"
 #include <vector>
 #include <string>
 
