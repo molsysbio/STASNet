@@ -9,7 +9,7 @@
 int verbosity=0;
 bool debug=false;
 
-ModelWrapper::ModelWrapper() : model(NULL), linear_approximation(FALSE) { }
+ModelWrapper::ModelWrapper() : linear_approximation(FALSE), model(NULL)  { }
 
 ModelWrapper::~ModelWrapper() {
   if (model!=NULL) delete model;

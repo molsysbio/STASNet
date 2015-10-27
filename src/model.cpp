@@ -15,7 +15,7 @@ Model::Model(const GiNaC::matrix &response,
              const std::vector<GiNaC::symbol> &symbols, 
              const ExperimentalDesign &expdesign,
              bool linear_approximation) : 
-    exp_design_(expdesign), symbols_(symbols), response_(response), rank_(0), linear_approximation_(linear_approximation)
+    exp_design_(expdesign), response_(response), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
 {
     do_init();
 } 
@@ -242,7 +242,7 @@ void Model::simplify_independent_parameters_using_k(std::vector< std::pair<MathT
             p_from_k_unreduced[i][independent_parameters_.size() + j] = 0;
         }
         // Identity, will contain expression of paths in terms of k after reduction
-        p_from_k_unreduced[i][independent_parameters_.size() + i] =- 1;
+        p_from_k_unreduced[i][independent_parameters_.size() + i] = -1;
     }
 
     rational_matrix rational_for_rref;
@@ -318,7 +318,6 @@ void Model::simplify_independent_parameters_using_subtraction(std::vector< std::
     // Build the reduced parameters
     std::pair< std::vector<size_t>, std::vector<size_t> > first_one;
     int index[independent_parameters_.size()];
-    size_t previous_size = parameters_.size();
     for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
         ipi = independent_parameters_[i];
         index[i] = i;

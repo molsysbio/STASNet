@@ -100,7 +100,6 @@ void generate_response( GiNaC::matrix &response,
       	        if (exp_design.inhibitor[j][k] == 1) {
 	                int i_temp = exp_design.inhib_nodes[k];
 	                GiNaC::ex Rtmp2=0;
-                    bool first = false;
 	                for (int l=0; l<size;l++){                                        
                         // Propagate the effect from the nodes downstream to the inhibited node to the measured node
 	                    if (exp_design.basal_activity[i_temp]==1) { 
