@@ -92,7 +92,13 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
 
     double residual;
     double_matrix  predictions;
+    try {
     ::fitmodel(parameters, &residual, predictions, model, &data);
+    } catch(std::exception &ex) {	
+	forward_exception_to_r(ex);
+    } catch(...) { 
+	::Rf_error("c++ exception (unknown reason)"); 
+    }
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
@@ -114,7 +120,13 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
 
     // Ajust the gradient descent
     double_matrix predictions;
-    ::fitmodel(parameters, &residual, predictions, model, &data);
+    try {
+      ::fitmodel(parameters, &residual, predictions, model, &data);
+    } catch(std::exception &ex) {	
+	forward_exception_to_r(ex);
+    } catch(...) { 
+	::Rf_error("c++ exception (unknown reason)"); 
+    }
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
@@ -133,8 +145,14 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     std::vector<double> explored;
     pl_analysis thresholds;
     thresholds.decision = 0.95;
-
-    ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, thresholds, total_steps);
+    
+    try {
+      ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, thresholds, total_steps);
+    } catch(std::exception &ex) {	
+	forward_exception_to_r(ex);
+    } catch(...) { 
+	::Rf_error("c++ exception (unknown reason)"); 
+    }
     
     Rcpp::List ret;
     Rcpp::NumericMatrix track(parameters.size(), explored.size());

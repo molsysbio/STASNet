@@ -7,6 +7,7 @@
 
 #include <vector>                       
 #include <fstream> 
+#include <exception>
 #include <boost/numeric/ublas/io.hpp>   
 #include <boost/bind.hpp>   
 #include <boost/math/distributions/chi_squared.hpp>
@@ -40,7 +41,9 @@ class levmar_pass_info {
 public: 
   levmar_pass_info(const Model * model, std::vector<size_t> fixed_params, std::vector<double> params, const Data * data) : 
     model_(model), data_(data), fixed_params_(fixed_params), params_(params) {
-    data_->data_consistent(model_->exp_design());
+    if (!data_->data_consistent(model_->exp_design()))
+      throw std::logic_error("Error: Data and Model do not match");
+
     if (fixed_params_.size()==0) {
       direct_pass=true; 
     } else {
@@ -184,7 +187,8 @@ void fitmodel( std::vector <double> &bestfit,
   
   size_t number_of_parameters=model->nr_of_parameters();
   
-  data->data_consistent(model->exp_design());
+  if (!data->data_consistent(model->exp_design())) 
+    throw std::logic_error("Error: Data and Model do not match");
   double p[number_of_parameters];
   
   // starting parameter value
