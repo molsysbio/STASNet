@@ -15,7 +15,7 @@ Model::Model(const GiNaC::matrix &response,
              const std::vector<GiNaC::symbol> &symbols, 
              const ExperimentalDesign &expdesign,
              bool linear_approximation) : 
-    exp_design_(expdesign), response_(response), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
+    response_(response), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
 {
     do_init();
 } 
