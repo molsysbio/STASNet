@@ -39,7 +39,7 @@ std::ostream & operator<<(std::ostream &os, std::vector<GiNaC::symbol> &v) {
 class levmar_pass_info {
 public: 
   levmar_pass_info(const Model * model, std::vector<size_t> fixed_params, std::vector<double> params, const Data * data) : 
-    model_(model), fixed_params_(fixed_params), params_(params), data_(data) {
+    model_(model), data_(data), fixed_params_(fixed_params), params_(params) {
     data_->data_consistent(model_->exp_design());
     if (fixed_params_.size()==0) {
       direct_pass=true; 
@@ -367,7 +367,7 @@ void profile_likelihood(const Data &data,
     // Initial fit
     std::vector<double> parameters = bestfit;
     fitmodel(parameters, &residual, prediction, model, &data);
-    double previous_residual = residual;
+    //    double previous_residual = residual;
 
     // Add the values of the thresholds
     thresholds.decision = 0.95;
