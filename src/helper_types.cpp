@@ -57,9 +57,10 @@ std::vector< std::vector<double> > normalLHS (const int nb_samples, const int sa
 
 // Provides a random number in ]0, 1[
 double uniform_sampling(double precision) {
-    if (precision > 1) {
-        return ((double)(rand() % ((int)precision-1)) + 1.0) / precision;
+    if (precision <= 1) {
+      precision = 2;
     }
+    return ((double)(rand() % ((int)precision-1)) + 1.0) / precision;
 }
 
 template<typename T> 
