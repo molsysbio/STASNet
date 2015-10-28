@@ -26,9 +26,9 @@ You can install those packages in R with:
 install.packages(“Rccp”,”igraph”,”pheatmap”,lib=<local library path>)
 
 Unix (MacOS, BSD, GNU/Linux) installation guide:
-For a local installation, first create a folder for local R library in (e.g “home/<Username>/R”)
+For a local installation, first create a folder for local R library in (e.g "home/<Username>/R")
 Open shell go to the folder of the package (“MRA_Signaling”)
-execute: R CMD INSTALL ./ (when recompiling use R CMD INSTALL –preclean ./)
+execute: R CMD INSTALL ./ (when recompiling use R CMD INSTALL --preclean ./)
 
 Have fun with it! 
 
