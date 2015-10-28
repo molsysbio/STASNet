@@ -1,6 +1,16 @@
 ## Use the R_HOME indirection to support installations of multiple R versionl
-PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(BLAS_LIBS) $(LAPACK_LIBS)  -lginac -lcln
-OBJECTS = fitmodel_in_CPP.o helper_types.o mathtree.o modelstructure.o wrappers.o generate_response.o identifiability.o model.o modelwrapper.o levmar-2.5/lm.o levmar-2.5/Axb.o levmar-2.5/misc.o levmar-2.5/lmlec.o levmar-2.5/lmbc.o levmar-2.5/lmblec.o levmar-2.5/lmbleic.o
+PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(BLAS_LIBS) $(LAPACK_LIBS)  -lginac -lcln 
+
+PKG_CFLAGS = -DHAVE_LAPACK
+
+SOURCES = fitmodel_in_CPP.cpp	identifiability.cpp	modelstructure.cpp \
+generate_response.cpp	mathtree.cpp		modelwrapper.cpp \
+helper_types.cpp	model.cpp		wrappers.cpp \
+levmar-2.5/Axb.c levmar-2.5/lmlec.c \
+levmar-2.5/lmblec.c levmar-2.5/misc.c levmar-2.5/lm.c levmar-2.5/lmbleic.c \
+levmar-2.5/lmbc.c levmar-2.5/lmdemo.c
+
+OBJECTS = $(addsuffix .o,$(basename $(SOURCES)))
 
 ## As an alternative, one can also add this code in a file 'configure'
 ##

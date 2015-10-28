@@ -4,7 +4,7 @@
 \alias{printParameters}
 \title{Print the value of each path from the model, and add the profile likelihood infos if they are provided}
 \usage{
-printParameters(model_description)
+printParameters(model_description, precision = 2)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}

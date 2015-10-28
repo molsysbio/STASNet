@@ -18,7 +18,7 @@ pastetab <- function(...) {
 #' @export
 #' @seealso importModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-exportModel <- function(model_description, file_name="model") {
+exportModel <- function(model_description, file_name="mra_model", export_data=FALSE) {
     # Add an extension
     if (!grepl(".mra$", file_name)) {
         file_name = paste0(file_name, ".mra")
@@ -32,6 +32,9 @@ exportModel <- function(model_description, file_name="model") {
     for (info in model_description$infos) {
         writeLines(paste0("H ", info), handle)
     }
+    # Bestfit and bestfitscore
+    writeLines(paste0("BF ", model_description$bestfit), handle)
+    writeLines(paste0("BFS ", model_description$bestfitscore), handle)
 
     # Names of the nodes, with info on basal activity
     for (name in model_description$structure$names) {
@@ -98,9 +101,15 @@ exportModel <- function(model_description, file_name="model") {
     for (i in 1:length(design$measured_nodes)) {
         writeLines(paste0("MN ", model_description$structure$names[1 + design$measured_nodes[i]], " ", model_description$data$unstim_data[1, i]), handle)
     }
-    # CV matrix
-    for (r in 1:nrow(model_description$cv)) {
-        writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
+
+    # Write the raw data used for the model in the file
+    if (export_data) {
+        # CV matrix
+        if (length(model_description$cv) > 1) {
+            for (r in 1:nrow(model_description$cv)) {
+                writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
+            }
+        }
     }
 
     close(handle)
@@ -116,9 +125,6 @@ exportModel <- function(model_description, file_name="model") {
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 importModel <- function(file_name) {
     model_description = MRAmodel()
-# Fields not covered :
-    model_description$bestfit = NA # Used to indicate that it is an imported model without data
-# --------------------
 
     if (!grepl(".mra", file_name)) {
         warn("This file does not have the expected .mra extension. Trying to extract a model anyway...")
@@ -129,6 +135,7 @@ importModel <- function(file_name) {
     if (!grepl("^[NH]", file[lnb])) {
         stop("This is not a valid mra model file.")
     }
+
     # Model name (cell line, network, ...)
     if (grepl("^H", file[lnb])) {
         model_description$name = gsub("^H[A-Z]?( |\t)", "", file[lnb])
@@ -139,6 +146,15 @@ importModel <- function(file_name) {
     }
     while (grepl("^H", file[lnb])) {
         model_description$infos = c(model_description$infos, gsub("^H[A-Z]?( |\t)", "", file[lnb]))
+        lnb = lnb + 1
+    }
+    # Model fitting residual and score
+    if (grepl("^BF", file[lnb])) {
+        model_description$bestfit = as.numeric(gsub("^BF( |\t)", "", file[lnb]))
+        lnb = lnb + 1
+    }
+    if (grepl("^BFS", file[lnb])) {
+        model_description$bestfitscore = as.numeric(gsub("^BFS( |\t)", "", file[lnb]))
         lnb = lnb + 1
     }
 
@@ -289,6 +305,7 @@ importModel <- function(file_name) {
         cv_values = rbind(cv_values, line[2:length(line)])
     }
     model_description$cv = cv_values
+# TODO import the data, and calculate the base fit
 
     return(model_description)
 }

@@ -6,35 +6,34 @@
 #' @return Nothing
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-printParameters <- function(model_description) {
+printParameters <- function(model_description, precision=2) {
     model = model_description$model
     parameters = model_description$parameters
 
     print("Parameters :")
     paths = model$getParametersLinks()
-    decimals = 2
     if (length(model_description$lower_values) > 0) {
         for (i in 1:length(paths)) {
-            text = paste(simplify_path_name(paths[i]), "=", signif(parameters[i],decimals))
+            text = paste(simplify_path_name(paths[i]), "=", signif(parameters[i],precision))
             if (is.na(model_description$lower_values[i])) {
                 if (is.na(model_description$upper_values[i])) {
                     text = paste(text, "(non identifiable)")
                 } else {
-                    text = paste(text, "( ni - ", signif(model_description$upper_values[i], decimals), ")")
+                    text = paste(text, "( ni - ", signif(model_description$upper_values[i], precision), ")")
                 }
             } else {
-                text = paste(text, "(", signif(model_description$lower_values[i], decimals))
+                text = paste(text, "(", signif(model_description$lower_values[i], precision))
                 if (is.na(model_description$upper_values[i])) {
                     text = paste(text, "- ni )")
                 } else {
-                    text = paste(text, "-", signif(model_description$upper_values[i], decimals), ")")
+                    text = paste(text, "-", signif(model_description$upper_values[i], precision), ")")
                 }
             }
             print(text)
         }
     } else {
         for (i in 1:length(paths)) {
-            print (paste( simplify_path_name(paths[i]), ":", signif(parameters[i], decimals) ))
+            print (paste( simplify_path_name(paths[i]), ":", signif(parameters[i], precision) ))
         }
     }
 }

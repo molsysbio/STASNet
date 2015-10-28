@@ -32,9 +32,11 @@
 
 #ifdef _MSC_VER
 #define LM_FINITE _finite // MSVC
+#elif defined(__clang__)
+#define LM_FINITE isfinite // clang
 #elif defined(__ICC) || defined(__INTEL_COMPILER) || defined(__GNUC__)
 #define LM_FINITE finite // ICC, GCC
-#else
+#else 
 #define LM_FINITE finite // other than MSVC, ICC, GCC, let's hope this will work
 #endif 
 
