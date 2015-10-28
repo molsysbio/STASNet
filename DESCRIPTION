@@ -11,9 +11,9 @@ Description: Fits and simulates network model derived from perturbation data
     using Modular Response Analysis and Profile Likelihood
 License: GPLv3
 Depends:
-    methods,
     Rcpp (>= 0.10.4),
     Rgraphviz,
-    pheatmap
+    pheatmap,
+    parallel
 LinkingTo: Rcpp
 RcppModules: ModelStructure, ExperimentalDesign

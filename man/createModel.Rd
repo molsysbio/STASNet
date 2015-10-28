@@ -5,7 +5,7 @@
 \title{Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data}
 \usage{
 createModel(model_links, data.stimulation, basal_file, data.variation = "",
-  cores = 1, inits = 1000, init_distribution = F, method = "default")
+  nb_cores = 1, inits = 1000, init_distribution = F, method = "default")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
@@ -16,7 +16,7 @@ createModel(model_links, data.stimulation, basal_file, data.variation = "",
 
 \item{data.variation}{Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.}
 
-\item{cores}{Number of cores that should be used for the computation}
+\item{nb_cores}{Number of cores that should be used for the computation}
 
 \item{inits}{Number of initialisation steps which should be performed (see method for the exact meaning of this value)}
 
@@ -37,7 +37,7 @@ Creates a parameterised model from experiment files and the network structure, a
 \examples{
 model = createModel("links.tab", "data_MIDAS.csv", "basal.dat") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
 model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
-model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", cores = detectCores()) # Uses all cores available (with the package parallel)
+model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
 }
 \author{

@@ -4,11 +4,8 @@
 #' @import Rgraphviz
 #' @import pheatmap
 #' @import parallel
-
 #' @import Rcpp
 #' @useDynLib fitmodel
-
-#source("R/randomLHS.r"); # Latin Hypercube Sampling
 
 # Global variable to have more outputs
 verbose = FALSE
@@ -20,7 +17,7 @@ debug = TRUE
 #' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
 ## CHECK THE IMPLEMENTATION FOR THE NO BASAL
 #' @param data.variation Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.
-#' @param cores Number of cores that should be used for the computation
+#' @param nb_cores Number of cores that should be used for the computation
 #' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
 #' @param init_distribution Whether the distribution of the residuals and the parameters deduced by correlation should be plotted or not
 #' @param method Method to be used for the initialisation, available methods are :
@@ -35,9 +32,9 @@ debug = TRUE
 #' @examples
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", cores = detectCores()) # Uses all cores available (with the package parallel)
+#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, data.stimulation, basal_file, data.variation="", cores=1, inits=1000, init_distribution=F, method="default") {
+createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, method="default") {
 
     # Creation of the model structure object
     links = read.delim(model_links, header=FALSE)
@@ -78,25 +75,27 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
+    #results = initModel(model, core, inits, method, nb_cores, init_distribution)
     # Parallelized version uses all cores but one to keep control
+    if (nb_cores == 0) { nb_cores = detectCores()-1 }
+    if (method == "default") { method = "correlation" }
+    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
+    # Different sampling methods
     if (method == "default") {
         method = "correlation"
     }
-    if (cores == 0) { cores = detectCores()-1 }
-    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores, method : ", method, sep=""))
-    # Different sampling methods
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, cores)
+        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, cores)
+        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
     } else if (method == "genetic" || method == "explore" || method == "deep") {
-        results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
+        results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
-        results = parallelAnnealing(model, core, inits, cores, init_distribution)
+        results = parallelAnnealing(model, core, inits, nb_cores, init_distribution)
     } else {
-        stop("The selected initialisation method does not exist (valid methods are correlation, random, explore, and annealing)")
+        stop("The selected initialisation method does not exist (valid methods are 'correlation', 'random', 'explore', and 'annealing')")
     }
     print("Initial fits completed")
 
@@ -147,27 +146,27 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 }
 
 #' Perform an initialisation of the model 
-initModel <- function(model, core, nb_inits, nb_cores=1) {
+#' Possibility to use different sampling methods
+initModel <- function(model, core, nb_inits, method="default", nb_cores=1, init_distribution=F) {
     # Parallelized version uses all cores but one to keep control
-    if (cores == 0) { cores = detectCores()-1 }
-    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", cores, " cores", sep=""))
+    if (nb_cores == 0) { nb_cores = detectCores()-1 }
+    if (method == "default") { method = "correlation" }
+    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
     # Different sampling methods
-    if (method == "default") {
-        method = "correlation"
-    }
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, cores)
+        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, cores)
+        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
     } else if (method == "genetic" || method == "explore" || method == "deep") {
-        results = deep_initialisation(model, core, cores, 3, inits, init_distribution)
+        results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
-        results = parallelAnnealing(model, core, inits, cores, init_distribution)
+        results = parallelAnnealing(model, core, inits, nb_cores, init_distribution)
     } else {
-        stop("The selected initialisation method does not exist (valid methods are correlation, random, explore, and annealing)")
+        stop("The selected initialisation method does not exist (valid methods are 'correlation', 'random', 'explore', and 'annealing')")
     }
+    print("Initial fits completed")
 
     return(results)
 }
@@ -409,7 +408,7 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
     # Put the samples under list format, as mclapply only take "one dimension" objects
     parallel_sampling = list()
     nb_samples = dim(samples)[1]
-    length(parallel_sampling) = nb_samples # Avoid to resize the list multiple times
+    length(parallel_sampling) = nb_samples # Prevents the resizing of the list
     for (i in 1:nb_samples) {
         parallel_sampling[[i]] = samples[i,]
     }
@@ -424,6 +423,22 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         return(result)
     }
 
+    get_parallel_results <- function(model, data, samplings, NB_CORES) {
+        parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+
+        # Reorder the results to get the same output as the non parallel function
+        results = list()
+        results$residuals = c()
+        results$params = c()
+        if (!is.list(parallel_results[[1]])) {
+            stop(parallel_results[[1]])
+        }
+        for (entry in parallel_results) {
+            results$residuals = c(results$residuals, entry$residuals)
+            results$params = rbind(results$params, entry$parameter)
+        }
+        return(results)
+    }
     # Since the aggregation in the end of the parallel calculations takes a lot of time for a big list, we calculate by block and take the best result of each block
     if (nb_samples > 10000) {
         print("Using the block version for the parallel initialisation")
@@ -431,16 +446,8 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         best_results$residuals = c()
         best_results$params = c()
         for (i in 1:(nb_samples %/% 10000)) {
-            parallel_results = mclapply(parallel_sampling[ (10000*(i-1)+1):(10000*i) ], fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+            results = get_parallel_results(model, data, parallel_sampling[ (10000*(i-1)+1):(10000*i) ], NB_CORES)
 
-            # Reorder the results to get the same output as the linear function
-            results = list()
-            results$residuals = c()
-            results$params = c()
-            for (entry in parallel_results) {
-                results$residuals = c(results$residuals, entry$residuals)
-                results$params = rbind(results$params, entry$parameter)
-            }
             # Only keep the best fits
             best = order(results$residuals)[1:20]
             write(paste(sum(is.na(results$residuals)), "NAs"), stderr())
@@ -455,31 +462,14 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         }
         # The last block is smaller
         if (nb_samples %% 10000 != 0) {
-            parallel_results = mclapply(parallel_sampling[(nb_samples %/% 10000):nb_samples], fitmodel_wrapper, data, model, mc.cores=NB_CORES)
-
-            results = list()
-            results$residuals = c()
-            results$params = c()
-            for (entry in parallel_results) {
-                results$residuals = c(results$residuals, entry$residuals)
-                results$params = rbind(results$params, entry$parameter)
-            }
+            results = get_parallel_results(model, data, parallel_sampling[(nb_samples %/% 10000):nb_samples], NB_CORES)
 
             best = order(results$residuals)[1:20]
             best_results$residuals = c(best_results$residuals, results$residuals[best])
             best_results$params = rbind(best_results$params, results$params[best,])
         }
     } else {
-        parallel_results = mclapply(parallel_sampling, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
-
-        # Reorder the best_results to get the same output as the linear function
-        best_results = list()
-        best_results$residuals = c()
-        best_results$params = c()
-        for (entry in parallel_results) {
-            best_results$residuals = c(best_results$residuals, entry$residuals)
-            best_results$params = rbind(best_results$params, entry$parameter)
-        }
+        best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES)
     }
 
 
