@@ -7,7 +7,6 @@ extern int verbosity;
 // Constructor
 // Stores all data neccessary for evaluation 
 // and performs identifiability analysis
-bla hj ;
 
 Model::Model() : rank_(0) {
 };
