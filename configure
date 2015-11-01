@@ -1,0 +1,26 @@
+#!/bin/sh
+GINACLIB=$1
+GINACINCLUDE=$2
+
+if [ "$GINACLIB""_" == "_"  ]; then
+    GINACLIB=$(pkg-config --libs ginac)
+    if [ "$?" != "0"  ]; then
+	echo
+	echo THIS PACKAGE REQUIRES GINAC. 
+	echo ============================
+	echo plase install Ginac \(http:\/\/www.ginac.de\/\)
+	echo and make sure that pkg-config --libs ginac 
+	echo returns the linker options
+	echo 
+	echo Alternatively: specify the linker options using the variable GINAC 
+	echo using something like: 
+	echo R CMD INSTALL --preclean --configure-args='"-Lpath -lginac -lcln" "-Ipath"'  fitmodel.tar.gz
+	exit 1
+    fi
+    GINACINCLUDE=$(pkg-config --cflags ginac)
+fi
+
+echo DEBUG: Using the following compiler options for GINAC:
+echo Libraries: $GINACLIB Header: $GINACINCLUDE
+cat src/Makevars.in | sed "s|@GINACLIB@|$GINACLIB|g" | \
+   sed "s|@GINACINCLUDE@|$GINACINCLUDE|g" > src/Makevars
