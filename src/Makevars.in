@@ -1,7 +1,7 @@
 ## Use the R_HOME indirection to support installations of multiple R versionl
 PKG_LIBS = `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"` $(BLAS_LIBS) $(LAPACK_LIBS) @GINACLIB@ 
 
-PKG_CFLAGS = -DHAVE_LAPACK @GINACINCLUDE@
+PKG_CPPFLAGS = -DHAVE_LAPACK @GINACINCLUDE@
 
 SOURCES = fitmodel_in_CPP.cpp	identifiability.cpp	modelstructure.cpp \
 generate_response.cpp	mathtree.cpp		modelwrapper.cpp \
