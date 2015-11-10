@@ -120,7 +120,7 @@ void generate_response( GiNaC::matrix &response,
 	                response(c,0) += Rtmp2;
 	            }
           }
-          
+	  /*
           // Suppress the effect on all the nodes without basal activity that are not directly stimulated
           for (size_t m=0; m<size;m++) {
 	        bool remove_activity=false;
@@ -143,8 +143,9 @@ void generate_response( GiNaC::matrix &response,
 
 	        }
           }
-
+	  */
           c++; // Next condition
     }
   }
+  //  std::cout << response << std::endl;
 }
