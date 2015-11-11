@@ -270,7 +270,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
                 }
             }
         }
-        if (valid) {
+        if (valid && length(senders) > 0) {
             upstreams[[node]] = senders
             valid_nodes = c(valid_nodes, node)
         }
