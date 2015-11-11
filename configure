@@ -2,7 +2,7 @@
 GINACLIB=$1
 GINACINCLUDE=$2
 
-if [ "$GINACLIB""_" == "_"  ]; then
+if [ "$GINACLIB""_" = "_"  ]; then
     GINACLIB=$(pkg-config --libs ginac)
     if [ "$?" != "0"  ]; then
 	echo
