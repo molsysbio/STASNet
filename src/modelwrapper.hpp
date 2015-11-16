@@ -26,7 +26,11 @@ public:
 
   void setModel(ExperimentalDesign exp, ModelStructure mod);
 
+  SEXP fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant=std::vector<size_t>());
+
+  SEXP fitmodelWithConstants(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant);
   SEXP fitmodel(Data data, std::vector<double> parameters);
+
   SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth);
 
   SEXP simulate(Data data, std::vector<double> parameters);

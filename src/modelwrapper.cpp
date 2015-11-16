@@ -85,25 +85,32 @@ SEXP ModelWrapper::simulate(Data data, std::vector<double> parameters) {
   return ret;
 }
 
-SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  { 
+SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
 
-  if ( parameters.size() != model->nr_of_parameters() ) 
-    throw std::invalid_argument("length of parameter vector invalid");
+    if ( parameters.size() != model->nr_of_parameters() ) 
+        throw std::invalid_argument("length of parameter vector invalid");
 
     double residual;
-    double_matrix  predictions;
+    double_matrix predictions;
     try {
-    ::fitmodel(parameters, &residual, predictions, model, &data);
+        ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
     } catch(std::exception &ex) {	
-	forward_exception_to_r(ex);
+	    forward_exception_to_r(ex);
     } catch(...) { 
-	::Rf_error("c++ exception (unknown reason)"); 
+	    ::Rf_error("c++ exception (unknown reason)"); 
     }
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
     ret["residuals"]=residual;
     return ret;
+}
+
+SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters) {
+    fitmodel_wrapper(data, parameters, std::vector<size_t>());
+}
+SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+    fitmodel_wrapper(data, parameters, keep_constant);
 }
 
 SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth) {
@@ -359,6 +366,7 @@ RCPP_MODULE(ModelEx) {
     .method( "modelRank", &ModelWrapper::modelRank )
     .method( "nr_of_parameters", &ModelWrapper::nr_of_parameters )
     .method( "fitmodel", &ModelWrapper::fitmodel )
+    //.method( "fitmodelWithConstants", &ModelWrapper::fitmodelWithConstants )
     .method( "annealingFit", &ModelWrapper::annealingFit )
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
