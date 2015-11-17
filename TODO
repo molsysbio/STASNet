@@ -1,0 +1,15 @@
+Input: Multiple Datasets with the same experimental layout
+
+Goal: Model with joint and distinct parameters
+
+- write a superclass Uebermodel that derive from model and overwrites eval()
+
+new eval() function has to interprete parameters differnently:
+    - we have N*nr_parameters(), where the first nr_parameters() parameters are the once for the first cell lines, and the rest (N-1) * nr_parameters() are the difference to the fitst cell line
+    - calls original eval function for each cell line and adds up scores
+    - eval needs to be able to take several Data sets
+    
+
+write a wrapper that
+
+
