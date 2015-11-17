@@ -764,7 +764,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     core$data = data
     core$structure = model_structure
     core$basal = basal_activity
-    core$cv = cv.stim
+    core$cv = as.matrix(cv.stim)
 
     return(core)
 }
