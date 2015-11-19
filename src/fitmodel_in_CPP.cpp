@@ -180,8 +180,36 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
 void fitmodel( std::vector <double> &bestfit,
          double * bestresid,
          double_matrix &prediction,
+         const ModelSet *model,
+         const Data **data, 
+         std::vector<size_t> keep_constant
+         ) {
+         // Convert a set of Data matrices to a unique Data matrix to call the Model fitmodel function
+
+         for (size_t mod = 1 ; mod < model->getNbModels() ; mod++) {
+            assert(data[mod]->stim_data.shape()[0] == data[0]->stim_data.shape()[0]);
+            assert(data[mod]->stim_data.shape()[1] == data[1]->stim_data.shape()[1]);
+         }
+
+        double_matrix stim_data(boost::extents[model->getNbModels()*data[0]->stim_data.shape()[0]][data[0]->stim_data.shape()[1]]);
+        double_matrix unstim_data;
+        double_matrix error;
+        double_matrix scale;
+        boost::multi_array_types::index_gen indices; // To generate the views
+        for (size_t mod=0 ; mod < model->getNbModels() ; mod++) {
+            stim_data[ indices[boost::multi_array_types::index_range(mod * data[mod]->stim_data.shape()[0], (mod+1) * data[mod]->stim_data.shape()[0])][boost::multi_array_types::index_range(0, stim_data.shape()[1])] ] = data[mod]->stim_data;
+        }
+        Data* fitdata = new Data();
+        fitdata->setStimData(stim_data);
+
+        fitmodel(bestfit, bestresid, prediction, model, fitdata, keep_constant);
+}
+
+void fitmodel( std::vector <double> &bestfit,
+         double * bestresid,
+         double_matrix &prediction,
          const Model *model,
-         const Data  *data, 
+         const Data *data, 
          std::vector<size_t> keep_constant
          ) {
   
