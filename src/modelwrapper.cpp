@@ -1,6 +1,7 @@
 #include "modelwrapper.hpp"
 
 #include "model.hpp"
+#include "modelset.hpp"
 #include "generate_response.hpp"
 #include "fitmodel_in_CPP.hpp"
 #include <Rcpp.h>
@@ -347,6 +348,51 @@ void ModelWrapper::printEquation(const size_t r, const size_t c) {
     model->printEquation(r-1, c-1);
 }
 
+ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
+
+ModelSetWrapper::~ModelSetWrapper() {
+}
+
+SEXP ModelSetWrapper::fitmodel(Data *data, std::vector<double> parameters) {
+//TODO
+    if ( parameters.size() != model->nr_of_parameters() ) 
+        throw std::invalid_argument("length of parameter vector invalid");
+
+    double residual;
+    double_matrix predictions;
+    try {
+        ::fitmodel(parameters, &residual, predictions, model, &data[0]);
+    } catch(std::exception &ex) {	
+	    forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+    Rcpp::List ret;
+    Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
+    ret["parameter"]=pars;
+    ret["residuals"]=residual;
+    return ret;
+}
+
+void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod, int nb_models) {
+    model_design_consistent(exp,mod);
+
+    if(debug) {std::cout << mod;} // DEBUGGING  
+    generate_response(response_full_model,  
+		        symbols_full_model,
+		        mod.getAdjacencyMatrix(),
+		        exp,
+		        mod.getNames());
+    adjacency_matrix.resize(boost::extents[mod.getAdjacencyMatrix().shape()[0]]
+			    [mod.getAdjacencyMatrix().shape()[1]]);
+    adjacency_matrix=mod.getAdjacencyMatrix();
+    
+    if (model != NULL) delete model;
+    model = new ModelSet(response_full_model, 
+		      symbols_full_model,
+		      exp, nb_models);
+}
+
 
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
@@ -372,5 +418,12 @@ RCPP_MODULE(ModelEx) {
     .method( "getEquation", &ModelWrapper::printEquation )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
+    
+    class_<ModelSetWrapper> ( "ModelSet" )
+        .derives<ModelWrapper>("ModelWrapper")
+        .default_constructor()
+        .method( "fitmodel" , &ModelSetWrapper::fitmodel)
+        .method( "setModel", &ModelSetWrapper::setModel )
+        ;
 }
 
