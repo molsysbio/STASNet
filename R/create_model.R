@@ -40,22 +40,21 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     links = read.delim(model_links, header=FALSE)
     model_structure=getModelStructure(links)
     # Plot the network in a file
-    names=levels(unlist(links))
-    adm=matrix(0,length(names),length(names),dimnames=list(names,names))
-    for (i in 1:nrow(links))
-       adm[match(links[i,2],rownames(adm)),links[i,1]]=1
+    adm=model_structure$adjacencyMatrix
+    dimnames(adm) <- list(model_structure$names,model_structure$names)
     g1 <- graphAM(adjMat=t(adm),edgemode="directed")
     nodeRenderInfo(g1) <- list(shape="ellipse")
     g1<-layoutGraph(g1) 
-    name = unlist(strsplit(model_links, "/"))
-    name = name[length(name)]
-    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
+    graphName = unlist(strsplit(model_links, "/"))
+    graphName = graphName[length(graphName)]
+    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf",graphName)) ))
     edgeRenderInfo(g1)<-list(fontsize=10)
     renderGraph(g1)
     dev.off()
 
 # TODO extraction of the basal activity with different format
-    basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    #basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    basal_activity =unlist(read.delim(basal_file,header = F,colClasses = "character"))
     # Create a valid basal activity list from a list of the nodes that do not have basal activity
 # TODO Find a day to switch
 # IDEA Consider it is basal if more than 2/3 of the nodes and not basal if less than 1/3, ask otherwise
@@ -68,7 +67,6 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     core = extractModelCore(model_structure, basal_activity , data.stimulation, data.variation)
     expdes = core$design
     data = core$data
-    model_structure = core$structure
 
     # MODEL SETUP
     model = new(fitmodel:::Model)
@@ -671,7 +669,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         cv.values = sd.values[begin_measure:dim(sd.values)[2]] / mean.values[begin_measure:dim(sd.values)[2]]
         # Values too close to the blank are removed because the error is not due to antibody specific binding
         cv.values[!mean.values[,begin_measure:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA
-        cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
+        cv.stim = sd.values[sd.values$type=="t", begin_measure:dim(sd.values)[2]] # NA if no replicates are in stimulated data
             
         # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
         cv = colMeans(cv.values,na.rm=TRUE)
