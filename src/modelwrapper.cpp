@@ -420,7 +420,7 @@ RCPP_MODULE(ModelEx) {
     ;
     
     class_<ModelSetWrapper> ( "ModelSet" )
-        .derives<ModelWrapper>("ModelWrapper")
+        .derives<ModelWrapper>("Model")
         .default_constructor()
         .method( "fitmodel" , &ModelSetWrapper::fitmodel)
         .method( "setModel", &ModelSetWrapper::setModel )
