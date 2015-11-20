@@ -196,11 +196,18 @@ void fitmodel( std::vector <double> &bestfit,
         double_matrix error;
         double_matrix scale;
         boost::multi_array_types::index_gen indices; // To generate the views
+        typedef boost::multi_array_types::index_range index_range;
         for (size_t mod=0 ; mod < model->getNbModels() ; mod++) {
-            stim_data[ indices[boost::multi_array_types::index_range(mod * data[mod]->stim_data.shape()[0], (mod+1) * data[mod]->stim_data.shape()[0])][boost::multi_array_types::index_range(0, stim_data.shape()[1])] ] = data[mod]->stim_data;
+            stim_data[ indices[index_range(mod * data[mod]->stim_data.shape()[0], (mod+1) * data[mod]->stim_data.shape()[0])][index_range(0, stim_data.shape()[1])] ] = data[mod]->stim_data;
+            unstim_data[ indices[index_range(mod * data[mod]->unstim_data.shape()[0], (mod+1) * data[mod]->unstim_data.shape()[0])][index_range(0, unstim_data.shape()[1])] ] = data[mod]->unstim_data;
+            scale[ indices[index_range(mod * data[mod]->scale.shape()[0], (mod+1) * data[mod]->scale.shape()[0])][index_range(0, scale.shape()[1])] ] = data[mod]->scale;
+            error[ indices[index_range(mod * data[mod]->error.shape()[0], (mod+1) * data[mod]->error.shape()[0])][index_range(0, error.shape()[1])] ] = data[mod]->error;
         }
         Data* fitdata = new Data();
         fitdata->setStimData(stim_data);
+        fitdata->setScale(scale);
+        fitdata->setUnstimData(unstim_data);
+        fitdata->setError(error);
 
         fitmodel(bestfit, bestresid, prediction, model, fitdata, keep_constant);
 }
