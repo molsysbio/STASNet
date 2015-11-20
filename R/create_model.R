@@ -270,7 +270,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
                 }
             }
         }
-        if (valid) {
+        if (valid && length(senders) > 0) {
             upstreams[[node]] = senders
             valid_nodes = c(valid_nodes, node)
         }
@@ -764,7 +764,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     core$data = data
     core$structure = model_structure
     core$basal = basal_activity
-    core$cv = cv.stim
+    core$cv = as.matrix(cv.stim)
 
     return(core)
 }

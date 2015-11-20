@@ -54,11 +54,7 @@ accuracyPlot <- function(model_description) {
     init_params = model_description$parameter
 
     simulation = model$simulate(data, init_params)$prediction
-    if (!is.null(nrow(cv)) && nrow(cv) == nrow(stim_data)) {
-        mismatch = (stim_data - simulation) / (cv * stim_data)
-    } else {
-        mismatch = (stim_data - simulation) / error
-    }
+    mismatch = (stim_data - simulation) / error
     simulation = log(simulation / data$unstim_data, base=2)
     stim_data = log(stim_data / data$unstim_data, base=2)
 
@@ -100,8 +96,8 @@ accuracyPlot <- function(model_description) {
     comparisonHeatmap(mismatch, "(data - simulation) / error")
     comparisonHeatmap(stim_data-simulation, "log2(data/simulation)")
     # Log fold changes for the data and the stimulation
-    comparisonHeatmap(stim_data, "Experimental data")
-    comparisonHeatmap(simulation, "Simulated data")
+    comparisonHeatmap(stim_data, "Log-fold change Experimental data")
+    comparisonHeatmap(simulation, "Log-fold change Simulated data")
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test
