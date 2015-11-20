@@ -41,7 +41,7 @@ public:
   }
 
   // returns the number of identifiable parameter combinations
-  size_t nr_of_parameters() const;
+  virtual size_t nr_of_parameters() const;
 
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);

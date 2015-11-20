@@ -16,6 +16,7 @@ public:
 protected:
     unsigned int nb_submodels_;
     std::vector<size_t> subparameters_ids_; // IDs of the parameters that should be fitted independently
+    virtual size_t nr_of_parameters() const;
     /*
     std::vector< std::vector<MathTree::parameter::Ptr> > subparameters_;
     std::vector<equation_matrix> submodels_eqns_;

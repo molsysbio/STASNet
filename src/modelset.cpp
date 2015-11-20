@@ -26,17 +26,20 @@ ModelSet::ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbo
 }
 
 void ModelSet::eval(const double *p, double *datax, const Data **data) const {
+    // Returns the simulation matrix for the ModelSet, simulating each submodel with either the same set or different parameters
 
-    double *dataxm;
+    size_t rows=data[0]->unstim_data.shape()[0], cols=data[0]->unstim_data.shape()[1];
+
+    double dataxm[rows * cols];
     double *ptmp;
     std::copy(p, p+parameters_.size(), ptmp);
     for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
-        std::copy(p, p + nr_of_parameters(), ptmp);
+        std::copy(p, p * independent_parameters_.size(), ptmp);
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
-            ptmp[*id] = p[mod * nr_of_parameters() +(*id)];
+            ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
         }
         Model::eval(ptmp, dataxm, data[mod]);
-        //evalSubmodel(ptmp, dataxm, data[mod], mod);
+        std::copy(dataxm, dataxm + rows * cols, datax + mod * rows * cols);
     }
 }
 
@@ -44,42 +47,7 @@ unsigned int ModelSet::getNbModels() const {
     return(nb_submodels_);
 }
 
-/*
-ModelSet::evalSubmodel(const double *p, double *datax, const Data *data, size_t submodel_id) {
-    size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
-    
-    for (size_t i=0; i< nr_of_parameters(); i++ ) {
-        parameters_[independent_parameters_[i]]->set_parameter(p[i]);
-    }
-        
-    double penelty=getPeneltyForConstraints(p);
-    for (unsigned int i=0; i<cols;i++) { 
-        for (unsigned int j=0; j<rows;j++) {
-            if (penelty>1) {
-                // Positive feedback loops create forking, so we eliminate the parameters sets which involve such feedback
-                datax[i*rows+j] = 100000*penelty*data->stim_data[j][i]/data->error[j][i];
-            } else if (linear_approximation_) {
-                datax[i*rows+j]=( data->unstim_data[j][i] + submodels_eqns_[submodel_id][i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
-            } else {
-                datax[i*rows+j]=( data->unstim_data[j][i] *exp( submodels_eqns_[submodel_id][i*rows+j][0]->eval()))/data->error[j][i];
-            }
-//}
-
-            if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
-                datax[i*rows+j]=0;
-            } else if ((std::isnan(datax[i*rows+j])) || 
-             (std::isinf(datax[i*rows+j])) ) {
-                if (verbosity > 10) {
-                    std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << submodels_eqns_[submodel_id][i*rows+j][0]->eval() << std::endl;
-                }
-                datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
-            } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
-    // to exclude extreme values, where the algorithm can't find a way out somehow 
-                datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/data->error[j][i];
-            } 
-        }
-    }
-
+size_t ModelSet::nr_of_parameters() const {
+    return( independent_parameters_.size() + subparameters_ids_.size() * nb_submodels );
 }
-*/
 
