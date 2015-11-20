@@ -37,22 +37,7 @@ debug = TRUE
 createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, method="default") {
 
     # Creation of the model structure object
-    links = read.delim(model_links, header=FALSE)
-    model_structure=getModelStructure(links)
-    # Plot the network in a file
-    names=levels(unlist(links))
-    adm=matrix(0,length(names),length(names),dimnames=list(names,names))
-    for (i in 1:nrow(links))
-       adm[match(links[i,2],rownames(adm)),links[i,1]]=1
-    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
-    nodeRenderInfo(g1) <- list(shape="ellipse")
-    g1<-layoutGraph(g1) 
-    name = unlist(strsplit(model_links, "/"))
-    name = name[length(name)]
-    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
-    edgeRenderInfo(g1)<-list(fontsize=10)
-    renderGraph(g1)
-    dev.off()
+    model_structure = extractStructure(model_links)
 
 # TODO extraction of the basal activity with different format
     basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
@@ -504,18 +489,16 @@ extractStructure = function(model_links, names="") {
     splitlist = strsplit(structure_file, ",|->|;|\\ |\t")
     if (length(splitlist) < 3) {
         stop("This is a trivial network, you don't need a simulation !")
+    } else if ( length(splitlist[[1]]) == 1 ) {
+        splitlist = splitlist[-1] # If the number of links is indicated at the beginning, remove it
     }
     struct_matrix = c()
-    for (i in 1:length(splitlist)) {
-        struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[i]])) )
+    for (ii in 1:length(splitlist)) {
+        struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[ii]])) )
     }
 
-    # Detect if it is an list of links or an adjacency matrix
+    # Detect if it is a list of links or an adjacency matrix
     if (ncol(struct_matrix) == 2) {
-        # If it is a list of links and the number of links is indicated at the beginning, remove it 
-        if (suppressWarnings( is.na(as.numeric(struct_matrix[1, 1])) )) {
-            struct_matrix = struct_matrix[,-1]
-        }
         links_list = struct_matrix
     } else {
         # Remove the number of nodes
@@ -554,17 +537,17 @@ extractStructure = function(model_links, names="") {
 
     }
 
-    # Plot the graph of the network
-    names=levels(unlist(links_list))
+    # Plot the graph of the network in a pdf
+    names = unique(as.vector(links_list))
     adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-    for (i in 1:nrow(links))
-        adm[match(links_list[i,2],rownames(adm)),links_list[i,1]]=1
+    for (ii in 1:nrow(links_list))
+        adm[match(links_list[ii,2],rownames(adm)),links_list[ii,1]]=1
     g1 <- graphAM(adjMat=t(adm),edgemode="directed")
     nodeRenderInfo(g1) <- list(shape="ellipse")
     g1<-layoutGraph(g1)
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
-    pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
+    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
     edgeRenderInfo(g1)<-list(fontsize=10)
     renderGraph(g1)
     dev.off()
