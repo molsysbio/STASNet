@@ -117,15 +117,21 @@ public:
   double_matrix stim_data;
   double_matrix error;
   double_matrix scale;
+//  std::vector<double> dataVector;
+  size_t nb_measurements;
+  double *dataVector;
 
   void setUnstimData(double_matrix new_unstim) { copy_matrix(new_unstim,unstim_data); }
-  void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); }
-  void setError(double_matrix new_error) { copy_matrix(new_error,error); }
+  void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); dataVectorComputed = false; computeDataVector(); }
+  void setError(double_matrix new_error) { copy_matrix(new_error,error); dataVectorComputed = false; computeDataVector(); }
   void setScale(double_matrix new_scale) { copy_matrix(new_scale,scale); }
-
 
   bool read_from_stream(std::istream &is);
   bool data_consistent(const ExperimentalDesign &) const;
+
+private:
+  bool dataVectorComputed;
+  void computeDataVector();
 };
 
 

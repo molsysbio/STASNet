@@ -200,7 +200,6 @@ bool ExperimentalDesign::read_from_stream(std::istream &is) {
   
 }
 
-
 bool Data::read_from_stream(std::istream &is) {
   std::string label;
   is >> label;
@@ -225,7 +224,6 @@ bool Data::read_from_stream(std::istream &is) {
   
 }
 
-
 bool Data::data_consistent(const ExperimentalDesign &expdesign) const {
   return ( (unstim_data.shape()[0]==stim_data.shape()[0]) &&
 	   (unstim_data.shape()[1]==stim_data.shape()[1]) &&
@@ -241,7 +239,6 @@ bool Data::data_consistent(const ExperimentalDesign &expdesign) const {
 /*(basal_activity.size()==names.size())*/);
 
 }
-
 
 ExperimentalDesign &ExperimentalDesign::operator=(const ExperimentalDesign &exper) {
   stim_nodes=exper.stim_nodes;
@@ -273,4 +270,28 @@ long unsigned int getSeed()
   rand.close();
   int* number = reinterpret_cast<int*>(tmp);
   return (*number);
+}
+
+void Data::computeDataVector() {
+    // define the measurement value to compare with simulated values divided by the error
+    if (!dataVectorComputed && stim_data.shape()[0] == error.shape()[0] && stim_data.shape()[1] == error.shape()[1]) {
+        size_t rows=stim_data.shape()[0], cols=stim_data.shape()[1];
+        nb_measurements = rows * cols;
+
+        if (dataVector != NULL) {
+            delete dataVector;
+        }
+        dataVector = new double[rows * cols];
+//        dataVector.resize(rows * cols);
+        for (unsigned int i=0; i<cols;i++) { 
+            for (unsigned int j=0; j<rows;j++) {
+                if (std::isnan(error[j][i]) || std::isnan(stim_data[j][i])) {
+                    dataVector[i*stim_data.shape()[0]+j]=0;
+                } else {
+                    dataVector[i*stim_data.shape()[0]+j]=stim_data[j][i]/error[j][i];
+                }
+            }
+        }
+        dataVectorComputed = true;
+    }
 }
