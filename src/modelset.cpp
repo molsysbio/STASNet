@@ -34,7 +34,7 @@ void ModelSet::eval(const double *p, double *datax, const Data **data) const {
     double *ptmp;
     std::copy(p, p+parameters_.size(), ptmp);
     for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
-        std::copy(p, p * independent_parameters_.size(), ptmp);
+        std::copy(p, p + independent_parameters_.size(), ptmp);
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
             ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
         }
@@ -48,6 +48,6 @@ unsigned int ModelSet::getNbModels() const {
 }
 
 size_t ModelSet::nr_of_parameters() const {
-    return( independent_parameters_.size() + subparameters_ids_.size() * nb_submodels );
+    return( independent_parameters_.size() + subparameters_ids_.size() * nb_submodels_ );
 }
 
