@@ -32,9 +32,9 @@ void ModelSet::eval(const double *p, double *datax, const Data **data) const {
 
     double dataxm[rows * cols];
     double *ptmp;
-    std::copy(p, p+parameters_.size(), ptmp);
+    std::copy(p, p+independent_parameters_.size(), ptmp);
     for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
-        std::copy(p, p + independent_parameters_.size(), ptmp);
+        // Change the parameters that vary accross models
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
             ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
         }

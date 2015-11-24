@@ -20,6 +20,7 @@
 #' @param upper_values Upper bound on the values of the parameters
 #' @return An MRAmodel object
 #' @seealso \code{\link{createModel}}
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, basefit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
     structure(
               list(
