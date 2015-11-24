@@ -131,6 +131,67 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     return(model_description)
 }
 
+#' Build an MRAmodelSet
+#'
+#' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, init_distribution=F, method="default") {
+    if (length(csv_files) != length(var_files)) {
+        if (length(var_files) == 0) {
+            var_files = rep("", length(csv_files))
+        } else {
+            stop("'var_files' must have the same length as 'csv_files' or be of length 0")
+        }
+    }
+    model_structure = extractStructure(model_links)
+    basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+
+    core0 = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
+    stim_data = core0$stim_data
+    unstim_data = core$data$unstim_data
+    error = core0$error
+    cv = core0$cv
+
+    # Build an extended dataset that contains the data of each model
+    for (ii in 2:length(csv_files)) {
+        core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
+        if (all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
+            unstim_data = rbind(unstim_data, core$data$unstim_data)
+        } else {
+            stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
+        }
+        if (all( dim(core0$data$error)==dim(core$data$error) )) {
+            error = rbind(error, core$data$error)
+        } else {
+            stop(paste0("dimension of 'error' from model ", ii, " do not match those of model 1"))
+        }
+        if (all( dim(core0$data$stim_data)==dim(core$data$stim_data) )) {
+            stim_data = rbind(stim_data, core$data$stim_data)
+        } else {
+            stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
+        }
+        if (all( dim(core0$data$cv)==dim(core$data$cv) )) {
+            cv = rbind(cv, core$data$cv)
+        } else {
+            stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
+        }
+    }
+# TODO add the first fit
+    data_ = new(fitmodel:::Data)
+    data_$set_stim_data( stim_data )
+    data_$set_unstim_data( data$unstim_data )
+    data_$set_scale( unstim_data )
+    data_$set_error( error )
+
+    model = new(fitmodel:::ModelSet)
+    model$setModel(core$expdes, model_structure)
+
+    self = MRAmodel(length(csv_files), model, core$expdes, model_structure, basal_activity, data_, cv)
+#, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
+
+}
+
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
 initModel <- function(model, core, nb_inits, method="default", nb_cores=1, init_distribution=F) {
