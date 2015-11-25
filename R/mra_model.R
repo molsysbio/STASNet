@@ -1,3 +1,5 @@
+############################ mra_model.R ################################
+# Definition of the MRAmodel object, an R wrapper around the C++ Model object which also contains the data necessary to fit the model
 
 #' Constructor for MRAmodel objects
 #'

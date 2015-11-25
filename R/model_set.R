@@ -1,4 +1,5 @@
-# Create and manage multiple dataset meant to be applied on the same network
+############################ model_set.R ################################
+# The MRAmodelSet object, to fit multiple dataset on the same network
 
 #' Import multiple files 
 #' @param data_list Name of the file containing the list of the files for the data without the extension
