@@ -599,6 +599,21 @@ extractStructure = function(model_links, names="") {
     }
 
     # Plot the graph of the network in a pdf
+    name = unlist(strsplit(model_links, "/"))
+    name = name[length(name)]
+    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", fname)) ))
+    plotGraph(name)
+    dev.off()
+    
+    model_structure=getModelStructure(links_list)
+
+    return(model_structure)
+}
+
+#' Plot a graph from an adjacency list
+#'
+#' @param links_list A 2-columns matrix. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes.
+plotGraph <- function(links_list) {
     names = unique(as.vector(links_list))
     adm=matrix(0,length(names),length(names),dimnames = list(names,names))
     for (ii in 1:nrow(links_list))
@@ -606,16 +621,8 @@ extractStructure = function(model_links, names="") {
     g1 <- graphAM(adjMat=t(adm),edgemode="directed")
     nodeRenderInfo(g1) <- list(shape="ellipse")
     g1<-layoutGraph(g1)
-    name = unlist(strsplit(model_links, "/"))
-    name = name[length(name)]
-    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
     edgeRenderInfo(g1)<-list(fontsize=10)
     renderGraph(g1)
-    dev.off()
-    
-    model_structure=getModelStructure(links_list)
-
-    return(model_structure)
 }
 
 # Extracts the data, the experimental design and the structure from the input files
