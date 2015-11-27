@@ -145,11 +145,11 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
         }
     }
     model_structure = extractStructure(model_links)
-    basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    basal_activity = as.character(read.delim(basal_nodes,header=FALSE)[,1])
 
-    core0 = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
+    core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1])
     stim_data = core0$stim_data
-    unstim_data = core$data$unstim_data
+    unstim_data = core0$data$unstim_data
     error = core0$error
     cv = core0$cv
 
@@ -171,8 +171,8 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
         } else {
             stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
         }
-        if (all( dim(core0$data$cv)==dim(core$data$cv) )) {
-            cv = rbind(cv, core$data$cv)
+        if (all( dim(core0$cv)==dim(core$cv) )) {
+            cv = rbind(cv, core$cv)
         } else {
             stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
         }
@@ -180,16 +180,16 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 # TODO add the first fit
     data_ = new(fitmodel:::Data)
     data_$set_stim_data( stim_data )
-    data_$set_unstim_data( data$unstim_data )
+    data_$set_unstim_data( unstim_data )
     data_$set_scale( unstim_data )
     data_$set_error( error )
 
     model = new(fitmodel:::ModelSet)
-    model$setModel(core$expdes, model_structure)
+    model$setModel(core0$design, model_structure)
 
-    self = MRAmodel(length(csv_files), model, core$expdes, model_structure, basal_activity, data_, cv)
+    self = MRAmodelSet(length(csv_files), model, core0$expdes, model_structure, basal_activity, data_, cv)
 #, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
-
+    return(self)
 }
 
 #' Perform an initialisation of the model 
@@ -601,8 +601,8 @@ extractStructure = function(model_links, names="") {
     # Plot the graph of the network in a pdf
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
-    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", fname)) ))
-    plotGraph(name)
+    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
+    plotGraph(links_list)
     dev.off()
     
     model_structure=getModelStructure(links_list)
@@ -633,7 +633,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------
 # stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
     ### READ DATA
-    print("Reading data")
+    print(paste0("Reading data from ", data_filename))
     # Read the experiment design and extract the values
     use_midas = FALSE
     if (grepl(".data$", data_filename)) {
@@ -690,7 +690,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     if (grepl("\\.cv$", var_file) || grepl("\\.var$", var_file)) {
         # We use the CV file if there is one
         # The format and the order of the conditions are assumed to be the same as the data file
-        print("Using var file")
+        print(paste0("Using var file ", var_file))
         if (use_midas) {
             variation.file = read.delim(var_file, sep=",")
             pre_cv = variation.file[, grepl("^DV", colnames(variation.file))]

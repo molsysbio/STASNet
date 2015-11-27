@@ -64,7 +64,7 @@ compareModels <- function(files) {
 MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, basefit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
 
     # An MRAmodelSet is an MRAmodel
-    self = MRAmodel(model, design, structure, basal, data_, cv, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
+    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
     # With some extra attributes
     class(self) = c(class(self), "MRAmodelSet")
     self$nb_models = nb_models
