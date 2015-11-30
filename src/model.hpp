@@ -42,6 +42,7 @@ public:
 
   // returns the number of identifiable parameter combinations
   virtual size_t nr_of_parameters() const;
+  virtual void getSubmodelsParameters(std::vector<double> &parameters) {} // Used for ModelSet
 
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);

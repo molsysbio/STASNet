@@ -51,3 +51,17 @@ size_t ModelSet::nr_of_parameters() const {
     return( independent_parameters_.size() + subparameters_ids_.size() * nb_submodels_ );
 }
 
+size_t ModelSet::nr_of_parameters_per_submodel() const {
+    return( independent_parameters_.size() );
+}
+
+// Replaces the parameters vector to reflect the parameters that were effectively fitted
+void ModelSet::getSubmodelsParameters(std::vector<double> &parameters) {
+    for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
+        // Change the parameters that vary accross models
+        for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
+            parameters[*id] = parameters[mod * independent_parameters_.size() + (*id)];
+        }
+    }
+}
+

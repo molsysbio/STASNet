@@ -353,20 +353,20 @@ ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 ModelSetWrapper::~ModelSetWrapper() {
 }
 
-SEXP ModelSetWrapper::fitmodel(Data *data, std::vector<double> parameters) {
-//TODO
+SEXP ModelSetWrapper::fitmodel(Data data, std::vector<double> parameters) {
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data[0]);
+        ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {	
 	    forward_exception_to_r(ex);
     } catch(...) { 
 	    ::Rf_error("c++ exception (unknown reason)"); 
     }
+    model->getSubmodelsParameters(parameters);
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
