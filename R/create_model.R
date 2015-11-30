@@ -71,10 +71,10 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     }
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "genetic" || method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
@@ -187,6 +187,9 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     model = new(fitmodel:::ModelSet)
     model$setModel(core0$design, model_structure)
 
+    samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
+    results = parallel_initialisation(model, data, samples, nb_cores)
+
     self = MRAmodelSet(length(csv_files), model, core0$expdes, model_structure, basal_activity, data_, cv)
 #, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
     return(self)
@@ -202,10 +205,10 @@ initModel <- function(model, core, nb_inits, method="default", nb_cores=1, init_
     # Different sampling methods
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "genetic" || method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
@@ -437,7 +440,7 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
             }
             samples = rbind( samples, new_sample$samples) 
         }
-        results = parallel_initialisation(model, core$design, core$data, samples, NB_CORES)
+        results = parallel_initialisation(model, core$data, samples, NB_CORES)
         if (perform_plot) { hist(log(results$residuals, base=10), breaks="fd") }
         # Keep the number of samples, and select the best parameters sets for the next iteration
         kept = results$params[order(results$residuals)[1:nSamples],]
@@ -445,13 +448,13 @@ deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=10
 
     # Finish by checking that sampling around the optimum with a high variation still finds several times the optimum
     new_sample = sampleWithCorrelation(model, core, nSamples, kept[1,], correlation, sd=3)$samples
-    if (perform_plot) { hist(log(parallel_initialisation(model, core$design, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
+    if (perform_plot) { hist(log(parallel_initialisation(model, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
 
     return(results) # Return the last set of fit
 }
 
 # Parallel initialisation of the parameters
-parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
+parallel_initialisation <- function(model, data, samples, NB_CORES) {
     # Put the samples under list format, as mclapply only take "one dimension" objects
     parallel_sampling = list()
     nb_samples = dim(samples)[1]
@@ -509,7 +512,7 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         }
         # The last block is smaller
         if (nb_samples %% 10000 != 0) {
-            results = get_parallel_results(model, data, parallel_sampling[(nb_samples %/% 10000):nb_samples], NB_CORES)
+            results = get_parallel_results(model, data, parallel_sampling[(10000 * nb_samples %/% 10000):nb_samples], NB_CORES)
 
             best = order(results$residuals)[1:20]
             best_results$residuals = c(best_results$residuals, results$residuals[best])
