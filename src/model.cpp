@@ -566,18 +566,16 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
             } else {
                 datax[i*rows+j]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
             }
-//}
 
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*rows+j]=0;
-            } else if ((std::isnan(datax[i*rows+j])) || 
-             (std::isinf(datax[i*rows+j])) ) {
+            } else if ((std::isnan(datax[i*rows+j])) || (std::isinf(datax[i*rows+j])) ) {
                 if (verbosity > 10) {
                     std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << model_eqns_[i*rows+j][0]->eval() << std::endl;
                 }
                 datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
             } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
-    // to exclude extreme values, where the algorithm can't find a way out somehow 
+                // to exclude extreme values, where the algorithm can't find a way out somehow 
                 datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/data->error[j][i];
             } 
         }

@@ -5,7 +5,7 @@ extern int verbosity;
 
 
 ModelSet::ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbol> &symbols, const ExperimentalDesign &expdes, const int nb_submodels, const std::vector<size_t> inter_variable_parameters, bool linear_approximation ) : Model(response, symbols, expdes, linear_approximation), nb_submodels_(nb_submodels) {
-    do_init();
+    //do_init();
 
     /*
     // Copy the equation for each model, the parameters are copied as pointers and thus the same in every models
@@ -25,10 +25,12 @@ ModelSet::ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbo
     */
 }
 
-void ModelSet::eval(const double *p, double *datax, const Data **data) const {
+void ModelSet::eval(const double *p, double *datax, const DataSet &dataset) const {
     // Returns the simulation matrix for the ModelSet, simulating each submodel with either the same set or different parameters
 
-    size_t rows=data[0]->unstim_data.shape()[0], cols=data[0]->unstim_data.shape()[1];
+    assert(DataSet.datas_.size() == nb_submodels_);
+    size_t rows = dataset.datas_[0].unstim_data.shape()[0], cols = dataset.datas_[0].unstim_data.shape()[1];
+    // TODO Change to account for the DataSet object
 
     double dataxm[rows * cols];
     double *ptmp;
@@ -38,13 +40,17 @@ void ModelSet::eval(const double *p, double *datax, const Data **data) const {
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
             ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
         }
-        Model::eval(ptmp, dataxm, data[mod]);
+        Model::eval(ptmp, dataxm, &dataset.datas_[mod]);
         std::copy(dataxm, dataxm + rows * cols, datax + mod * rows * cols);
     }
 }
 
 unsigned int ModelSet::getNbModels() const {
     return(nb_submodels_);
+}
+
+void ModelSet::setNbModels(const int nb_submodels) {
+    nb_submodels_ = nb_submodels;
 }
 
 size_t ModelSet::nr_of_parameters() const {

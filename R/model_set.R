@@ -61,13 +61,17 @@ compareModels <- function(files) {
 #' @return An MRAmodelSet object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, basefit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
+MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, names=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
+    if (length(names) != nb_models) {
+        names = rep(names[1], nb_models)
+    }
 
     # An MRAmodelSet is an MRAmodel
-    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
+    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(names, collapse=" ")),  infos, param_range, lower_values, upper_values)
     # With some extra attributes
     class(self) = c(class(self), "MRAmodelSet")
     self$nb_models = nb_models
+    self$names = names
 
     return(self)
 }
@@ -89,7 +93,7 @@ extractSubmodels <- function(modelset) {
         row_selection = ((ii-1)*data_size+1):(ii*data_size)
         cv = modelset$data[row_selection,]
         data = modelset$data[row_selection,]
-        model_list[[ii]] = MRAmodel(modelset$model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, modelset$bestfit, modelset$basefit, modelset$name, modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
+        model_list[[ii]] = MRAmodel(modelset$model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, modelset$bestfit, modelset$basefit, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
     }
     return(model_list)
 }

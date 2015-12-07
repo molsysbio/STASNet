@@ -123,9 +123,8 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 
 # Information required to run the model (including the model itself)
     infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-    basefit = sum((data$stim_data-data$unstim_data)^2)
     model_name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(data.stimulation)))
-    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, basefit, name=model_name, infos=infos)
+    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos)
     print(paste("Residual score =", model_description$bestfitscore))
 
     return(model_description)
@@ -152,46 +151,46 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     unstim_data = core0$data$unstim_data
     error = core0$error
     cv = core0$cv
-
     # Build an extended dataset that contains the data of each model
+    data_ = new(fitmodel:::DataSet)
+    data_$addData(core0$data, FALSE)
     for (ii in 2:length(csv_files)) {
         core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
-        if (all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
-            unstim_data = rbind(unstim_data, core$data$unstim_data)
-        } else {
+        if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
             stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
-        }
-        if (all( dim(core0$data$error)==dim(core$data$error) )) {
-            error = rbind(error, core$data$error)
-        } else {
+        } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
             stop(paste0("dimension of 'error' from model ", ii, " do not match those of model 1"))
-        }
-        if (all( dim(core0$data$stim_data)==dim(core$data$stim_data) )) {
-            stim_data = rbind(stim_data, core$data$stim_data)
-        } else {
+        } else if (!all( dim(core0$data$stim_data)==dim(core$data$stim_data) )) {
             stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
-        }
-        if (all( dim(core0$cv)==dim(core$cv) )) {
-            cv = rbind(cv, core$cv)
-        } else {
+        } else if (!all( dim(core0$cv)==dim(core$cv) )) {
             stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
         }
+        unstim_data = rbind(unstim_data, core$data$unstim_data)
+        stim_data = rbind(stim_data, core$data$stim_data)
+        error = rbind(error, core$data$error)
+        data_$addData(core$data, FALSE)
     }
+    data_$set_stim_data(stim_data)
+    data_$set_unstim_data(unstim_data)
+    data_$set_error(error)
+    data_$set_scale(error)
 # TODO add the first fit
-    data_ = new(fitmodel:::Data)
-    data_$set_stim_data( stim_data )
-    data_$set_unstim_data( unstim_data )
-    data_$set_scale( unstim_data )
-    data_$set_error( error )
 
     model = new(fitmodel:::ModelSet)
     model$setModel(core0$design, model_structure)
 
+    print("setting completed")
+    if (nb_cores == 0) { nb_cores = detectCores()-1 }
     samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-    results = parallel_initialisation(model, data, samples, nb_cores)
+    results = parallel_initialisation(model, data_, samples, nb_cores)
+    bestid = order(results$residuals)[1]
+    parameters = results$parameters[bestid,]
+    bestfit = results$parameters[bestid]
 
-    self = MRAmodelSet(length(csv_files), model, core0$expdes, model_structure, basal_activity, data_, cv)
-#, parameters, bestfit, basefit, name, infos, param_range, lower_values, upper_values)
+    infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
+    names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
+    self = MRAmodelSet(length(csv_files), model, core0$expdes, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos)
+# param_range, lower_values, upper_values)
     return(self)
 }
 

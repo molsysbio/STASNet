@@ -84,6 +84,30 @@ void copy_matrix(const T &from, T &to ) {
   to=from;
 }
 
+template<typename T, typename S>
+void rbind_matrix(const T &from, S &dest) {
+    std::cout << "Another round" << std::endl;
+    std::cout << "from dim: " << from.shape()[0] << ", " << from.shape()[1] << std::endl; //Debug
+    std::cout << "dest dim: " << dest.shape()[0] << ", " << dest.shape()[1] << std::endl; //Debug
+    std::vector<std::size_t> extendlist(2);
+    extendlist[0] = dest.shape()[0] + from.shape()[0];
+    extendlist[1] = dest.shape()[1];
+    std::cout << "Ready for extension" << std::endl; // Debug
+    if (dest.shape()[1] == 0) { extendlist[1] = from.shape()[1]; }
+    assert(extendlist[1] == from.shape()[1]); // <---- generates a "malloc(): memory corruption"
+    std::cout << "new size: " << extendlist[0] << ", " << extendlist[1] << std::endl; // Debug
+    const size_t *old_shape = dest.shape();
+    std::cout << "Performing resize" << std::endl; // Debug
+    dest.resize(extendlist);
+    std::cout << "yolo" << std::endl;
+    for (int ii=0; ii < from.shape()[0]; ii++) {
+        for (int jj=0; jj < from.shape()[1]; jj++) {
+            //std::cout << "Ok for " << ii << ", " << jj << std::endl;
+            dest[old_shape[0]+ii][jj] = from[ii][jj];
+        }
+    }
+}
+
 // ---------------------------------
 // Class that stores all data
  
@@ -106,12 +130,11 @@ public:
   bool read_from_stream(std::istream &is);
 };
 
-
-
 class Data {
 
 public:
   Data &operator=(const Data &data);
+  Data();
 public:
   double_matrix unstim_data;
   double_matrix stim_data;
@@ -120,18 +143,30 @@ public:
 //  std::vector<double> dataVector;
   size_t nb_measurements;
   double *dataVector;
+  bool dataVectorComputed;
 
   void setUnstimData(double_matrix new_unstim) { copy_matrix(new_unstim,unstim_data); }
-  void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); dataVectorComputed = false; computeDataVector(); }
-  void setError(double_matrix new_error) { copy_matrix(new_error,error); dataVectorComputed = false; computeDataVector(); }
+  void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); dataVectorComputed=false; }
+  void setError(double_matrix new_error) { copy_matrix(new_error,error); dataVectorComputed=false; }
   void setScale(double_matrix new_scale) { copy_matrix(new_scale,scale); }
 
   bool read_from_stream(std::istream &is);
-  bool data_consistent(const ExperimentalDesign &) const;
+  virtual bool data_consistent(const ExperimentalDesign &expdesign) const;
 
-private:
-  bool dataVectorComputed;
   void computeDataVector();
+};
+
+// Stores several dataset, used with ModelSet
+class DataSet: public Data {
+public:
+    DataSet();
+    ~DataSet();
+public:
+    std::vector<Data> datas_;
+public:
+    void addData(Data &data, bool doDataVectorComputation=false);
+    void addDataFromMatrices(double_matrix unstim_data, double_matrix stim_data, double_matrix error, double_matrix scale, bool doDataVectorComputation=false);
+    virtual bool data_consistent(const ExperimentalDesign &expdesign) const;
 };
 
 
@@ -154,7 +189,6 @@ size_t rank(const T &array, double eps=0.00000001) {
 }
 
 // Helper function to read in multiarray
-
 template<typename T>
 bool read_array(std::istream &is, boost::multi_array<T,2> &matrix) {
   size_t sizex, sizey;

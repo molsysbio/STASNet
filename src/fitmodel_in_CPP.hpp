@@ -8,14 +8,6 @@
 #include "modelset.hpp"
 
 
-void fitmodel( std::vector <double> &bestfit,
-         double * bestresid,
-         double_matrix &prediction,
-         const ModelSet *model,
-         const Data **data, 
-         std::vector<size_t> keep_constant
-         );
-
 void fitmodel( std::vector<double> &bestfit,
            double  * bestresid,
            double_matrix &prediction,

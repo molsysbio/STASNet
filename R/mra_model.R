@@ -23,8 +23,14 @@
 #' @return An MRAmodel object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, basefit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
-    structure(
+MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
+
+    # Compute the basal fit if data are present
+    if (class(data) == "Rcpp_Data" ) {
+        basefit = sum( ((data$stim_data-data$unstim_data)/data$error)^2 )
+    }
+
+    return(structure(
               list(
                    # Objects to build the model
                    model=model,
@@ -46,6 +52,6 @@ MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), da
                    lower_values=lower_values,
                    upper_values=upper_values
                    ),
-              class="MRAmodel")
+              class="MRAmodel"))
 }
 

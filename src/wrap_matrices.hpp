@@ -9,11 +9,9 @@ namespace Rcpp {
   template <> int_matrix as( SEXP xx );
   template <> SEXP wrap( const double_matrix &a );
   template <> double_matrix as( SEXP xx );
-
 };
 
-
-
+RCPP_EXPOSED_AS(DataSet);
 RCPP_EXPOSED_AS(Data);
 RCPP_EXPOSED_AS(ExperimentalDesign);
 

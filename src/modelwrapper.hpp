@@ -55,10 +55,9 @@ class ModelSetWrapper: public ModelWrapper {
 public:
     ModelSetWrapper();
     ~ModelSetWrapper();
-    virtual SEXP fitmodel(Data data, std::vector<double> parameters);
-    virtual void setModel(ExperimentalDesign exp, ModelStructure mod, int nb_models);
-
-private:
+    SEXP fitmodel(DataSet data, std::vector<double> parameters);
+    //SEXP fitmodel(Data data, std::vector<double> parameters);
+    void setModel(ExperimentalDesign exp, ModelStructure mod);
 };
 
 

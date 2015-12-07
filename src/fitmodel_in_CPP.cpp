@@ -187,8 +187,9 @@ void fitmodel( std::vector <double> &bestfit,
   
   size_t number_of_parameters=model->nr_of_parameters();
   
-  if (!data->data_consistent(model->exp_design())) 
-    throw std::logic_error("Error: Data and Model do not match");
+  if (!data->data_consistent(model->exp_design())) {
+    throw std::logic_error("Data and Model do not match");
+  }
   double p[number_of_parameters];
   
   // starting parameter value
@@ -205,8 +206,7 @@ void fitmodel( std::vector <double> &bestfit,
 
   //  define the measurement value to compare with simulated values divided by the error
   int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0];
-  double *datax;
-  datax = data->dataVector;
+  double *datax = data->dataVector;
 
   // Can't fit if the system is non identifiable
   if (model->modelRank()!=model->nr_of_parameters()) {
