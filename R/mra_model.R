@@ -26,8 +26,10 @@
 MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
 
     # Compute the basal fit if data are present
-    if (class(data) == "Rcpp_Data" ) {
+    if (class(data) == "Rcpp_Data" || class(data) == "Rcpp_DataSet") {
         basefit = sum( ((data$stim_data-data$unstim_data)/data$error)^2 )
+    } else {
+        basefit = NA
     }
 
     return(structure(

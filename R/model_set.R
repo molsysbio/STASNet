@@ -69,7 +69,7 @@ MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, ba
     # An MRAmodelSet is an MRAmodel
     self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(names, collapse=" ")),  infos, param_range, lower_values, upper_values)
     # With some extra attributes
-    class(self) = c(class(self), "MRAmodelSet")
+    class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models
     self$names = names
 

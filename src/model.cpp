@@ -550,6 +550,8 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
     //  assert( (unsigned int)m == nr_of_parameters() );
     //  assert( (unsigned int)n == rows*cols );
+    //std::cout << "Unstim_data: " << rows << ", " << cols << std::endl;
+    //std::cout << "Stim_data: " << data->stim_data.shape()[0] << ", " << data->stim_data.shape()[1] << std::endl;
     
     for (size_t i=0; i< nr_of_parameters(); i++ ) {
         parameters_[independent_parameters_[i]]->set_parameter(p[i]);

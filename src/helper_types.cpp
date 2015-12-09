@@ -4,6 +4,9 @@
 #include "model.hpp"
 #include <fstream>
 
+extern int verbosity;
+extern bool debug;
+
 // Performs a Latin Hypercube Sampling on ]0, 1[
 // Each element of the return vector is a sample
 std::vector< std::vector<double> > LHSampling (const int nb_samples, const int sample_size, const int decimals) {
@@ -368,10 +371,9 @@ void DataSet::addDataFromMatrices(double_matrix unstim_data, double_matrix stim_
 }
 
 bool DataSet::data_consistent(const ExperimentalDesign &expdesign) const {
-    //std::cout << "Calling DataSet data_consistent" << std::endl;
+    if (verbosity > 7) { std::cout << "Calling DataSet data_consistent" << std::endl; }
     if (datas_.size() > 0) {
         return(datas_[0].data_consistent(expdesign));
-        std::cout << "Calling DataSet data_consistent" << std::endl;
     }
     return(false);
 }

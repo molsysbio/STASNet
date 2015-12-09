@@ -354,9 +354,8 @@ ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 ModelSetWrapper::~ModelSetWrapper() {
 }
 
-SEXP ModelSetWrapper::fitmodel(DataSet data, std::vector<double> parameters) {
-//SEXP ModelSetWrapper::fitmodel(Data data, std::vector<double> parameters) {
-    std::cout << "Using ModelSetWrapper fitmodel" << std::endl;
+SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
+    if (debug) {std::cout << "Using ModelSetWrapper fitmodel" << std::endl;}
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
@@ -366,7 +365,7 @@ SEXP ModelSetWrapper::fitmodel(DataSet data, std::vector<double> parameters) {
     model->setNbModels(data.datas_.size());
     try {
         ::fitmodel(parameters, &residual, predictions, model, &data);
-    } catch(std::exception &ex) {	
+    } catch(std::exception &ex) {
 	    forward_exception_to_r(ex);
     } catch(...) { 
 	    ::Rf_error("c++ exception (unknown reason)"); 
@@ -380,20 +379,19 @@ SEXP ModelSetWrapper::fitmodel(DataSet data, std::vector<double> parameters) {
 }
 
 void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
-    std::cout << "Using ModelSetWrapper setModel" << std::endl;
+    if (debug) { std::cout << "Using ModelSetWrapper setModel" << std::endl; }
     model_design_consistent(exp,mod);
 
     if(debug) {std::cout << mod;} // DEBUGGING  
-    std::cout << "Using ModelSetWrapper setModel" << std::endl;
     generate_response(response_full_model,  
 		        symbols_full_model,
 		        mod.getAdjacencyMatrix(),
 		        exp,
 		        mod.getNames());
-    std::cout << "Resizing adjacency matrix" << std::endl;
+    if (verbosity > 4) { std::cout << "Resizing adjacency matrix" << std::endl; }
     adjacency_matrix.resize(boost::extents[mod.getAdjacencyMatrix().shape()[0]]
 			    [mod.getAdjacencyMatrix().shape()[1]]);
-    std::cout << "Retrieving adjacency matrix" << std::endl;
+    if (verbosity > 4) { std::cout << "Retrieving adjacency matrix" << std::endl; }
     adjacency_matrix=mod.getAdjacencyMatrix();
     
     if (model != NULL) delete model;
@@ -431,6 +429,7 @@ RCPP_MODULE(ModelEx) {
     class_<ModelSetWrapper>( "ModelSet" )
         .derives<ModelWrapper>("Model")
         .default_constructor()
+        .method( "fitmodelset", &ModelSetWrapper::fitmodelset )
         ;
 }
 //        .method( "fitmodel" , &ModelSetWrapper::fitmodel )

@@ -25,22 +25,23 @@ ModelSet::ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbo
     */
 }
 
-void ModelSet::eval(const double *p, double *datax, const DataSet &dataset) const {
+void ModelSet::eval(const double *p, double *datax, const Data *data) const {
     // Returns the simulation matrix for the ModelSet, simulating each submodel with either the same set or different parameters
 
+    DataSet* dataset = (DataSet*)data;
     assert(DataSet.datas_.size() == nb_submodels_);
-    size_t rows = dataset.datas_[0].unstim_data.shape()[0], cols = dataset.datas_[0].unstim_data.shape()[1];
+    size_t rows = dataset->datas_[0].unstim_data.shape()[0], cols = dataset->datas_[0].unstim_data.shape()[1];
     // TODO Change to account for the DataSet object
 
     double dataxm[rows * cols];
-    double *ptmp;
+    double ptmp[independent_parameters_.size()];
     std::copy(p, p+independent_parameters_.size(), ptmp);
     for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
         // Change the parameters that vary accross models
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
             ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
         }
-        Model::eval(ptmp, dataxm, &dataset.datas_[mod]);
+        Model::eval(ptmp, dataxm, &(dataset->datas_[mod]));
         std::copy(dataxm, dataxm + rows * cols, datax + mod * rows * cols);
     }
 }
