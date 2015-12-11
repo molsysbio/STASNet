@@ -153,10 +153,12 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     unstim_data = core0$data$unstim_data
     error = core0$data$error
     cv = core0$cv
-    print("Data dimensions~:")
-    print(dim(core0$data$stim_data))
-    print(dim(core0$data$unstim_data))
-    print(dim(core0$data$error))
+    if (verbose > 8) {
+        print("Data dimensions~:")
+        print(dim(core0$data$stim_data))
+        print(dim(core0$data$unstim_data))
+        print(dim(core0$data$error))
+    }
     # Build an extended dataset that contains the data of each model
     data_ = new(fitmodel:::DataSet)
     data_$addData(core0$data, FALSE)
@@ -175,6 +177,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
         stim_data = rbind(stim_data, core$data$stim_data)
         error = rbind(error, core$data$error)
         data_$addData(core$data, FALSE)
+        cv = rbind(cv, core$cv)
     }
     data_$set_stim_data(stim_data)
     data_$set_unstim_data(unstim_data)

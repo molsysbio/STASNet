@@ -86,14 +86,16 @@ MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, ba
 extractSubmodels <- function(modelset) {
     model_list = list()
     model_list[[modelset$nb_models]] = NA
-    for (ii in modelset$nb_models) {
+    model = new(fitmodel:::Model)
+    model$setModel(modelset$design, modelset$structure)
+    for (ii in 1:modelset$nb_models) {
         nb_parameters = length(modelset$parameters)/modelset$nb_models # All submodels have the same set of parameters
-        parameter = modelset$parameters[((ii-1)*nb_parameters+1):(ii*nb_parameters)]
-        data_size = nrows(data)/modelset$nb_models # The data matrix dimensions are the same for all models
+        parameters = modelset$parameters[((ii-1)*nb_parameters+1):(ii*nb_parameters)]
+        data_size = nrow(modelset$data$unstim_data)/modelset$nb_models # The data matrix dimensions are the same for all models
         row_selection = ((ii-1)*data_size+1):(ii*data_size)
-        cv = modelset$data[row_selection,]
-        data = modelset$data[row_selection,]
-        model_list[[ii]] = MRAmodel(modelset$model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, modelset$bestfit, modelset$basefit, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
+        cv = modelset$cv[row_selection,]
+        data = modelset$data$datas_list[[ii]]
+        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, modelset$bestfit, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
     }
     return(model_list)
 }

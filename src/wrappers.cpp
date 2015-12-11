@@ -38,6 +38,7 @@ RCPP_MODULE(DataEx) {
   class_<DataSet>("DataSet")
     .derives<Data>("Data")
     .default_constructor()
+    .field_readonly( "datas_list", &DataSet::datas_, "List of Data composing the DataSet" )
     //.field_readonly ("datas", &DataSet::datas_, "The individual data tables of the dataset")
     .method( "addData", &DataSet::addData, "Add a data table to the dataset")
     .method( "addDataFromMatrices", &DataSet::addDataFromMatrices, "Build a data object and add it to the dataset" )
@@ -86,6 +87,27 @@ namespace Rcpp {
       }
     }
     return a;  
+  }
+
+  template <> Data as( SEXP dtmp ) {
+    XPtr<Data> dd(dtmp);
+    Data ret;
+    ret.setStimData(dd->stim_data);
+    ret.setUnstimData(dd->unstim_data);
+    ret.setError(dd->error);
+    ret.setScale(dd->scale);
+
+    return(ret);
+  }
+
+  template <> SEXP wrap( const Data &dtmp ) {
+    XPtr<Data> ptr( new Data(), true );
+    ptr->setStimData(dtmp.stim_data);
+    ptr->setUnstimData(dtmp.unstim_data);
+    ptr->setError(dtmp.error);
+    ptr->setScale(dtmp.scale);
+    Function maker=Environment::Rcpp_namespace()[ "cpp_object_maker"];
+    return maker( typeid(Data).name(), ptr);
   }
 };
 
