@@ -473,7 +473,6 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES)
     }
 
-
     return(best_results)
 }
 

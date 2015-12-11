@@ -86,6 +86,7 @@ SEXP ModelWrapper::simulate(Data data, std::vector<double> parameters) {
 }
 
 SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+//SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
 
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -107,10 +108,10 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
 }
 
 SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters) {
-    fitmodel_wrapper(data, parameters, std::vector<size_t>());
+    return( fitmodel_wrapper(data, parameters, std::vector<size_t>()) );
 }
 SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
-    fitmodel_wrapper(data, parameters, keep_constant);
+    return( fitmodel_wrapper(data, parameters, keep_constant) );
 }
 
 SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth) {
@@ -198,76 +199,6 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     return ret;
 
 }
-
-/* COMMENTED BECAUSE IT NEEDS rref.hpp which is not in ~/include/fitmodel
- * IF YOU UNCOMMENT THIS, UNCOMMENT THE rref.hpp HEADERS AS WELL
- *
-// Returns the profile likelihood and functionnal relationship for all parameters, does the computation in parallel
-SEXP ModelWrapper::parallelPL(const Data data, std::vector<double> parameters, const unsigned int total_steps = 10000) {
-    if ( parameters.size() != model->nr_of_parameters() ) 
-        throw std::invalid_argument("length of parameter vector invalid");
-
-    std::vector< std::vector<size_t> > keep_constant;
-    std::vector< std::vector< std::vector<double> > > residual_track;
-    std::vector< std::vector<double> > explored;
-    std::vector< bool* > identifiability;
-    std::vector< std::vector<double> > thresholds;
-    std::vector<size_t> target;
-    std::vector< std::vector<double> > params;
-
-    // Creation of the threads
-    //std::vector<boost::thread*> threads;
-    boost::thread_group threads;
-    for (int i=0 ; i<parameters.size() ; i++) {
-        keep_constant.push_back(std::vector<size_t>(1, i));
-        residual_track.push_back(std::vector< std::vector<double> >());
-        explored.push_back(std::vector<double>());
-        identifiability.push_back(new bool[4]);
-        thresholds.push_back(std::vector<double>());
-        target.push_back(i);
-        params.push_back(parameters);
-
-        // Create a new thread for each parameter
-        //threads.add_thread(new boost::thread(::profile_likelihood, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i]));
-        // Ugly cast for bind desambiguation        
-        //threads.create_thread(boost::bind( static_cast< void(*)(const Data&,std::vector<double>,const std::vector<size_t>,std::vector< std::vector<double> >&,std::vector<double>&,const double,const Model*,bool*,std::vector<double>&)>(::profile_likelihood), data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i]));
-        void (*pl) (const Data&,std::vector<double>,const std::vector<size_t>,std::vector< std::vector<double> >&,std::vector<double>&,const double,const Model*,bool*,std::vector<double>&) = &::profile_likelihood;
-        threads.create_thread(boost::bind( pl, data, params[i], keep_constant[i], residual_track[i], explored[i], parameters[i], model, identifiability[i], thresholds[i]));
-        // Without total_steps because it is max 9 arguments plus the function
-    }
-    threads.join_all();
-
-    Rcpp::List ret(parameters.size());
-    Rcpp::List returned;
-    std::vector<std::string> paths;
-    for (int i=0 ; i<parameters.size() ; i++) {
-
-        model->getParametersLinks(paths);
-        Rcpp::NumericMatrix track(parameters.size(), explored.size());
-        for (int k=0 ; k < parameters.size() ; k++) {
-            for (int j=0 ; j < explored.size() ; j++) {
-                track(k, j) = residual_track[i][k][j];
-            }
-        }
-
-        returned["residuals"] = track;
-        returned["explored"] = explored[i];
-        returned["lowt_upper"] = identifiability[i][2];
-        returned["lowt_lower"] = identifiability[i][0];
-        returned["hight_upper"] = identifiability[i][3];
-        returned["hight_lower"] = identifiability[i][1];
-        returned["thresholds"] = thresholds[i];
-        returned["path"] = paths[i];
-        returned["pathid"] = target[i];
-
-        ret[to_string(i)] = returned;
-
-        delete[] identifiability[i];
-    }
-
-    return ret;
-}
-*/
 
 SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {
   
@@ -366,12 +297,11 @@ RCPP_MODULE(ModelEx) {
     .method( "modelRank", &ModelWrapper::modelRank )
     .method( "nr_of_parameters", &ModelWrapper::nr_of_parameters )
     .method( "fitmodel", &ModelWrapper::fitmodel )
-    //.method( "fitmodelWithConstants", &ModelWrapper::fitmodelWithConstants )
+    .method( "fitmodelWithConstants", &ModelWrapper::fitmodelWithConstants )
     .method( "annealingFit", &ModelWrapper::annealingFit )
     .method( "getLocalResponseFromParameter", &ModelWrapper::getLocalResponse )
     .method( "getParameterFromLocalResponse", &ModelWrapper::getParameterFromLocalResponse )
     .method( "profileLikelihood", &ModelWrapper::profileLikelihood)
-    //.method( "parallelPL", &parallelPL )
     .method( "getParametersLinks", &ModelWrapper::getParametersLinks )
     .method( "showPDM", &ModelWrapper::showParameterDependencyMatrix )
     .method( "showUnreducedPDM", &ModelWrapper::showGUnreduced )
