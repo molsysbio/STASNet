@@ -181,14 +181,15 @@ void fitmodel( std::vector <double> &bestfit,
          double * bestresid,
          double_matrix &prediction,
          const Model *model,
-         const Data  *data, 
+         const Data *data, 
          std::vector<size_t> keep_constant
          ) {
   
   size_t number_of_parameters=model->nr_of_parameters();
   
-  if (!data->data_consistent(model->exp_design())) 
-    throw std::logic_error("Error: Data and Model do not match");
+  if (!data->data_consistent(model->exp_design())) {
+    throw std::logic_error("Data and Model do not match");
+  }
   double p[number_of_parameters];
   
   // starting parameter value
@@ -204,18 +205,8 @@ void fitmodel( std::vector <double> &bestfit,
   }
 
   //  define the measurement value to compare with simulated values divided by the error
-  int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0]; 
-  double datax[number_of_measurements];
-  for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
-    for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
-      if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
-        datax[i*data->stim_data.shape()[0]+j]=0;
-      } else {
-        datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
-      }
-    }
-  }
-  assert(data->stim_data.shape()[1]*data->stim_data.shape()[0] == (size_t)number_of_measurements);
+  int number_of_measurements=data->stim_data.shape()[1] * data->stim_data.shape()[0];
+  double *datax = data->dataVector;
 
   // Can't fit if the system is non identifiable
   if (model->modelRank()!=model->nr_of_parameters()) {
@@ -223,7 +214,6 @@ void fitmodel( std::vector <double> &bestfit,
     std::cout << "The system is non identifiable, you need less links or more conditions" << std::endl;
     return;
   }
-
 
   *bestresid=fit_using_lsqnonlin(model, datax, number_of_measurements, p, keep_constant, data);
 

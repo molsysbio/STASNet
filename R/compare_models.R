@@ -7,11 +7,13 @@
 #' @return A modelGroup object
 #' @export
 modelGroup <- function(models=list()) {
+    # Case when there is only one model in the list
     if (class(models) == "MRAmodel") { models = list(models)
     } else if (is.character(models) && !is.vector(models)) { models = list(importModel(models)) }
     if (!is.vector(models) || length(models)<1) {
         stop("You must provide a list of models to build a model group")
     }
+
     count = 0
     residuals = c()
     scores = c()

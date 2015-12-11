@@ -5,6 +5,8 @@
 #include <ginac/matrix.h>                // to obtain matrices which can contain ginac expressions
 #include "helper_types.hpp"
 #include "model.hpp"
+#include "modelset.hpp"
+
 
 void fitmodel( std::vector<double> &bestfit,
            double  * bestresid,

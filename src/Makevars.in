@@ -6,6 +6,7 @@ PKG_CPPFLAGS = -DHAVE_LAPACK @GINACINCLUDE@
 SOURCES = fitmodel_in_CPP.cpp	identifiability.cpp	modelstructure.cpp \
 generate_response.cpp	mathtree.cpp		modelwrapper.cpp \
 helper_types.cpp	model.cpp		wrappers.cpp \
+modelset.cpp \
 levmar-2.5/Axb.c levmar-2.5/lmlec.c \
 levmar-2.5/lmblec.c levmar-2.5/misc.c \
 levmar-2.5/lm.c levmar-2.5/lmbleic.c \

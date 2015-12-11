@@ -46,6 +46,9 @@ An MRAmodel object
 Construct an MRAmodel objects, which contains all the informations recquired to simulate the model, and the data used to build it.
 The model is built using perturbation datas and an input network.
 }
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}
 \seealso{
 \code{\link{createModel}}
 }
