@@ -11,6 +11,11 @@
 verbose = FALSE
 debug = TRUE
 
+# Generates a random number between 0 and 1
+rand <- function(decimals=4) {
+    return(sample(1:10^decimals, size=1) / 10^decimals)
+}
+
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
 #' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
@@ -37,25 +42,11 @@ debug = TRUE
 createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, method="default") {
 
     # Creation of the model structure object
-    links = read.delim(model_links, header=FALSE)
-    model_structure=getModelStructure(links)
-    # Plot the network in a file
-    names=levels(unlist(links))
-    adm=matrix(0,length(names),length(names),dimnames=list(names,names))
-    for (i in 1:nrow(links))
-       adm[match(links[i,2],rownames(adm)),links[i,1]]=1
-    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
-    nodeRenderInfo(g1) <- list(shape="ellipse")
-    g1<-layoutGraph(g1) 
-    name = unlist(strsplit(model_links, "/"))
-    name = name[length(name)]
-    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
-    edgeRenderInfo(g1)<-list(fontsize=10)
-    renderGraph(g1)
-    dev.off()
+    model_structure = extractStructure(model_links)
 
 # TODO extraction of the basal activity with different format
-    basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    #basal_activity = as.character(read.delim(basal_file,header=FALSE)[,1])
+    basal_activity =unlist(read.delim(basal_file,header = F,colClasses = "character"))
     # Create a valid basal activity list from a list of the nodes that do not have basal activity
 # TODO Find a day to switch
 # IDEA Consider it is basal if more than 2/3 of the nodes and not basal if less than 1/3, ask otherwise
@@ -68,7 +59,6 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     core = extractModelCore(model_structure, basal_activity , data.stimulation, data.variation)
     expdes = core$design
     data = core$data
-    model_structure = core$structure
 
     # MODEL SETUP
     model = new(fitmodel:::Model)
@@ -81,15 +71,12 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     if (method == "default") { method = "correlation" }
     print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
     # Different sampling methods
-    if (method == "default") {
-        method = "correlation"
-    }
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "genetic" || method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
@@ -138,12 +125,82 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 
 # Information required to run the model (including the model itself)
     infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-    basefit = sum((data$stim_data-data$unstim_data)^2)
     model_name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(data.stimulation)))
-    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, basefit, name=model_name, infos=infos)
+    model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos)
     print(paste("Residual score =", model_description$bestfitscore))
 
     return(model_description)
+}
+
+#' Build an MRAmodelSet
+#'
+#' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, init_distribution=F, method="default") {
+    if (length(csv_files) != length(var_files)) {
+        if (length(var_files) == 0) {
+            var_files = rep("", length(csv_files))
+        } else {
+            stop("'var_files' must have the same length as 'csv_files' or be of length 0")
+        }
+    }
+    model_structure = extractStructure(model_links)
+    basal_activity = as.character(read.delim(basal_nodes,header=FALSE)[,1])
+
+    core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1])
+    stim_data = core0$data$stim_data
+    unstim_data = core0$data$unstim_data
+    error = core0$data$error
+    cv = core0$cv
+    if (verbose > 8) {
+        print("Data dimensions~:")
+        print(dim(core0$data$stim_data))
+        print(dim(core0$data$unstim_data))
+        print(dim(core0$data$error))
+    }
+    # Build an extended dataset that contains the data of each model
+    data_ = new(fitmodel:::DataSet)
+    data_$addData(core0$data, FALSE)
+    for (ii in 2:length(csv_files)) {
+        core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
+        if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
+            stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
+        } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
+            stop(paste0("dimension of 'error' from model ", ii, " do not match those of model 1"))
+        } else if (!all( dim(core0$data$stim_data)==dim(core$data$stim_data) )) {
+            stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
+        } else if (!all( dim(core0$cv)==dim(core$cv) )) {
+            stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
+        }
+        unstim_data = rbind(unstim_data, core$data$unstim_data)
+        stim_data = rbind(stim_data, core$data$stim_data)
+        error = rbind(error, core$data$error)
+        data_$addData(core$data, FALSE)
+        cv = rbind(cv, core$cv)
+    }
+    data_$set_stim_data(stim_data)
+    data_$set_unstim_data(unstim_data)
+    data_$set_error(error)
+    data_$set_scale(error)
+# TODO add the first fit
+
+    model = new(fitmodel:::ModelSet)
+    model$setModel(core0$design, model_structure)
+
+    print("setting completed")
+    if (nb_cores == 0) { nb_cores = detectCores()-1 }
+    samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
+    results = parallel_initialisation(model, data_, samples, nb_cores)
+    bestid = order(results$residuals)[1]
+    parameters = results$params[bestid,]
+    bestfit = results$residuals[bestid]
+
+    infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
+    names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
+    self = MRAmodelSet(length(csv_files), model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos)
+# param_range, lower_values, upper_values)
+    return(self)
 }
 
 #' Perform an initialisation of the model 
@@ -156,10 +213,10 @@ initModel <- function(model, core, nb_inits, method="default", nb_cores=1, init_
     # Different sampling methods
     if (method == "correlation") {
         samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "random" || method == "sample") {
         samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+        results = parallel_initialisation(model, data, samples, nb_cores)
     } else if (method == "genetic" || method == "explore" || method == "deep") {
         results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
     } else if (method == "annealing" || method == "SA") {
@@ -170,32 +227,6 @@ initModel <- function(model, core, nb_inits, method="default", nb_cores=1, init_
     print("Initial fits completed")
 
     return(results)
-}
-
-# Perform several simulated annealing, one per core
-parallelAnnealing <- function(model, core, max_it, nb_cores, perform_plot=F) {
-    correlation = parametersFromCorrelation(model, core, perform_plot=perform_plot)
-    correlation_list = list()
-    for (i in 1:nb_cores) {
-        correlation_list[[i]] = correlation
-    }
-    # Perform several annealing to select the best
-    annealings = mclapply(correlation_list, simulated_annealing_wrapper, model, core$data, max_it, 0, mc.cores=nb_cores)
-    results = list()
-    results$residuals = c()
-    results$params = c()
-    for (annealing in annealings) {
-        results$residuals = c(results$residuals, annealing$residuals)
-        results$params = rbind(results$params, annealing$parameter)
-    }
-
-    return(results)
-}
-
-# Wrapper for the C++ function because Rcpp does not take into account optionnal arguments (and R crashes if there is not exactly the correct number of arguments)
-# and for the parallelisation
-simulated_annealing_wrapper <- function(correlated_parameters, model, data, max_it=0, max_depth=0) {
-    return(model$annealingFit(data, correlated_parameters, max_it, max_depth))
 }
 
 # TODO put it in deep_initialisation
@@ -358,54 +389,8 @@ correlate_parameters <- function(model, core, perform_plot=F) {
     return(correlated)
 }
 
-# Generates a random number between 0 and 1
-rand <- function(decimals=4) {
-    return(sample(1:10^decimals, size=1) / 10^decimals)
-}
-
-# TODO integrate it into the creation function
-# Explore the parameter space with series of random initialisations and selection after each step of the best fits (mutation only genetic algorithm)
-MIN_SAMPLE_SIZE = 100 # TODO Find a heuristic value depending on the number of parameters to estimate
-deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=100, perform_plot=F) { # TODO Chose to give the total number or the per sampling
-
-    if (depth < 1) { depth = 1 } # We do at least one initialisation
-    #if (nSamples < MIN_SAMPLE_SIZE) { nSamples = MIN_SAMPLE_SIZE }
-    nSamples = ceiling(sqrt(totalSamples / depth))
-    print(paste("Mutations per point =", nSamples))
-    
-    # The first iteration does not use any shift
-    kept = matrix(0, ncol=model$nr_of_parameters())
-    correlation = correlate_parameters(model, core, perform_plot)
-    for (i in 1:depth) {
-        print(paste("Depth :", i))
-        # Create the new samples, with a random initialisation shifted by the previous steps local minimum and recombinations of those previous best steps
-        # We reduce the exploration range at each step
-        samples = c()
-        for (j in 1:nrow(kept)) {
-            # Generate half of the new samples by simple mutation
-            new_sample = sampleWithCorrelation(model, core, ceiling(nSamples * 0.5), kept[j,], correlation, sd=3/i)
-            samples = rbind( samples, new_sample$samples) 
-            # Recombination of the individual j with some of the others
-            for (k in 1:ceiling(nSamples * 0.5)) {
-                new_sample$samples[k,] = (kept[j,] + kept[sample(1:nrow(kept), size=1),]) / 2
-            }
-            samples = rbind( samples, new_sample$samples) 
-        }
-        results = parallel_initialisation(model, core$design, core$data, samples, NB_CORES)
-        if (perform_plot) { hist(log(results$residuals, base=10), breaks="fd") }
-        # Keep the number of samples, and select the best parameters sets for the next iteration
-        kept = results$params[order(results$residuals)[1:nSamples],]
-    }
-
-    # Finish by checking that sampling around the optimum with a high variation still finds several times the optimum
-    new_sample = sampleWithCorrelation(model, core, nSamples, kept[1,], correlation, sd=3)$samples
-    if (perform_plot) { hist(log(parallel_initialisation(model, core$design, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
-
-    return(results) # Return the last set of fit
-}
-
 # Parallel initialisation of the parameters
-parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
+parallel_initialisation <- function(model, data, samples, NB_CORES) {
     # Put the samples under list format, as mclapply only take "one dimension" objects
     parallel_sampling = list()
     nb_samples = dim(samples)[1]
@@ -424,8 +409,23 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         return(result)
     }
 
+    fitmodelset_wrapper <- function(params, data, model) {
+        # TODO add keep_constant control
+        if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a fitmodel::DataSet object") }
+        init = proc.time()[3]
+        result = model$fitmodelset(data, params)
+        if (verbose) {
+            write(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals), stderr())
+        }
+        return(result)
+    }
+
     get_parallel_results <- function(model, data, samplings, NB_CORES) {
-        parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+        if (class(model) == "Rcpp_ModelSet") {
+            parallel_results = mclapply(samplings, fitmodelset_wrapper, data, model, mc.cores=NB_CORES)
+        } else {
+            parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+        }
 
         # Reorder the results to get the same output as the non parallel function
         results = list()
@@ -463,7 +463,7 @@ parallel_initialisation <- function(model, expdes, data, samples, NB_CORES) {
         }
         # The last block is smaller
         if (nb_samples %% 10000 != 0) {
-            results = get_parallel_results(model, data, parallel_sampling[(nb_samples %/% 10000):nb_samples], NB_CORES)
+            results = get_parallel_results(model, data, parallel_sampling[(10000 * nb_samples %/% 10000):nb_samples], NB_CORES)
 
             best = order(results$residuals)[1:20]
             best_results$residuals = c(best_results$residuals, results$residuals[best])
@@ -503,18 +503,16 @@ extractStructure = function(model_links, names="") {
     splitlist = strsplit(structure_file, ",|->|;|\\ |\t")
     if (length(splitlist) < 3) {
         stop("This is a trivial network, you don't need a simulation !")
+    } else if ( length(splitlist[[1]]) == 1 ) {
+        splitlist = splitlist[-1] # If the number of links is indicated at the beginning, remove it
     }
     struct_matrix = c()
-    for (i in 1:length(splitlist)) {
-        struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[i]])) )
+    for (ii in 1:length(splitlist)) {
+        struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[ii]])) )
     }
 
-    # Detect if it is an list of links or an adjacency matrix
+    # Detect if it is a list of links or an adjacency matrix
     if (ncol(struct_matrix) == 2) {
-        # If it is a list of links and the number of links is indicated at the beginning, remove it 
-        if (suppressWarnings( is.na(as.numeric(struct_matrix[1, 1])) )) {
-            struct_matrix = struct_matrix[,-1]
-        }
         links_list = struct_matrix
     } else {
         # Remove the number of nodes
@@ -553,19 +551,11 @@ extractStructure = function(model_links, names="") {
 
     }
 
-    # Plot the graph of the network
-    names=levels(unlist(links_list))
-    adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-    for (i in 1:nrow(links))
-        adm[match(links_list[i,2],rownames(adm)),links_list[i,1]]=1
-    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
-    nodeRenderInfo(g1) <- list(shape="ellipse")
-    g1<-layoutGraph(g1)
+    # Plot the graph of the network in a pdf
     name = unlist(strsplit(model_links, "/"))
     name = name[length(name)]
-    pdf(paste0("graph_", gsub(".tab$", ".pdf", name)))
-    edgeRenderInfo(g1)<-list(fontsize=10)
-    renderGraph(g1)
+    pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
+    plotNetworkGraph(links_list)
     dev.off()
     
     model_structure=getModelStructure(links_list)
@@ -573,15 +563,30 @@ extractStructure = function(model_links, names="") {
     return(model_structure)
 }
 
-# Extracts the data, the experimental design and the structure from the input files
+#' Plot a graph from an adjacency list
+#'
+#' @param links_list A 2-columns matrix. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes.
+plotNetworkGraph <- function(links_list) {
+    names = unique(as.vector(links_list))
+    adm=matrix(0,length(names),length(names),dimnames = list(names,names))
+    for (ii in 1:nrow(links_list))
+        adm[match(links_list[ii,2],rownames(adm)),links_list[ii,1]]=1
+    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
+    nodeRenderInfo(g1) <- list(shape="ellipse")
+    g1<-layoutGraph(g1)
+    edgeRenderInfo(g1)<-list(fontsize=10)
+    renderGraph(g1)
+}
+
+#' Extracts the data, the experimental design and the structure from the input files
+#' links must be a matrix of links [node1, node2]
+#' Experiment file dta_file syntax should be as follows, with one line per replicate
+#'          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
+#' -------------------------------------------------------------------------------------------------------------------------------------------------------------
+#' stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
 extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="") {
-# links must be a matrix of links [node1, node2]
-# Experiment file dta_file syntax should be as follows, with one line per replicate
-#          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
-#--------------------------------------------------------------------------------------------------------------------------------------------------------------
-# stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
     ### READ DATA
-    print("Reading data")
+    print(paste0("Reading data from ", data_filename))
     # Read the experiment design and extract the values
     use_midas = FALSE
     if (grepl(".data$", data_filename)) {
@@ -638,7 +643,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     if (grepl("\\.cv$", var_file) || grepl("\\.var$", var_file)) {
         # We use the CV file if there is one
         # The format and the order of the conditions are assumed to be the same as the data file
-        print("Using var file")
+        print(paste0("Using var file ", var_file))
         if (use_midas) {
             variation.file = read.delim(var_file, sep=",")
             pre_cv = variation.file[, grepl("^DV", colnames(variation.file))]
@@ -670,7 +675,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         cv.values = sd.values[begin_measure:dim(sd.values)[2]] / mean.values[begin_measure:dim(sd.values)[2]]
         # Values too close to the blank are removed because the error is not due to antibody specific binding
         cv.values[!mean.values[,begin_measure:dim(mean.values)[2]] > 2 * matrix(rep(blank.values,each=dim(mean.values)[1]), nrow=dim(mean.values)[1])] = NA
-        cv.stim = cv.values[cv.values$type=="t", begin_measure:dim(cv.values)[2]]
+        cv.stim = sd.values[sd.values$type=="t", begin_measure:dim(sd.values)[2]] # NA if no replicates are in stimulated data
             
         # Generation of error percentage, one cv per antibody calculated using all the replicates available, default.cv if there is only two replicate to calculate the cv
         cv = colMeans(cv.values,na.rm=TRUE)
@@ -792,4 +797,74 @@ rebuildModel <- function(model_file, data_file, var_file="") {
     model$cv = core$cv
 
     return(model)
+}
+
+
+
+
+# Perform several simulated annealing, one per core
+parallelAnnealing <- function(model, core, max_it, nb_cores, perform_plot=F) {
+    correlation = parametersFromCorrelation(model, core, perform_plot=perform_plot)
+    correlation_list = list()
+    for (i in 1:nb_cores) {
+        correlation_list[[i]] = correlation
+    }
+    # Perform several annealing to select the best
+    annealings = mclapply(correlation_list, simulated_annealing_wrapper, model, core$data, max_it, 0, mc.cores=nb_cores)
+    results = list()
+    results$residuals = c()
+    results$params = c()
+    for (annealing in annealings) {
+        results$residuals = c(results$residuals, annealing$residuals)
+        results$params = rbind(results$params, annealing$parameter)
+    }
+
+    return(results)
+}
+
+# Wrapper for the C++ function because Rcpp does not take into account optionnal arguments (and R crashes if there is not exactly the correct number of arguments)
+# and for the parallelisation
+simulated_annealing_wrapper <- function(correlated_parameters, model, data, max_it=0, max_depth=0) {
+    return(model$annealingFit(data, correlated_parameters, max_it, max_depth))
+}
+
+# TODO integrate it into the creation function
+# Explore the parameter space with series of random initialisations and selection after each step of the best fits (mutation only genetic algorithm)
+MIN_SAMPLE_SIZE = 100 # TODO Find a heuristic value depending on the number of parameters to estimate
+deep_initialisation <- function (model, core, NB_CORES, depth=3, totalSamples=100, perform_plot=F) { # TODO Chose to give the total number or the per sampling
+
+    if (depth < 1) { depth = 1 } # We do at least one initialisation
+    #if (nSamples < MIN_SAMPLE_SIZE) { nSamples = MIN_SAMPLE_SIZE }
+    nSamples = ceiling(sqrt(totalSamples / depth))
+    print(paste("Mutations per point =", nSamples))
+    
+    # The first iteration does not use any shift
+    kept = matrix(0, ncol=model$nr_of_parameters())
+    correlation = correlate_parameters(model, core, perform_plot)
+    for (i in 1:depth) {
+        print(paste("Depth :", i))
+        # Create the new samples, with a random initialisation shifted by the previous steps local minimum and recombinations of those previous best steps
+        # We reduce the exploration range at each step
+        samples = c()
+        for (j in 1:nrow(kept)) {
+            # Generate half of the new samples by simple mutation
+            new_sample = sampleWithCorrelation(model, core, ceiling(nSamples * 0.5), kept[j,], correlation, sd=3/i)
+            samples = rbind( samples, new_sample$samples) 
+            # Recombination of the individual j with some of the others
+            for (k in 1:ceiling(nSamples * 0.5)) {
+                new_sample$samples[k,] = (kept[j,] + kept[sample(1:nrow(kept), size=1),]) / 2
+            }
+            samples = rbind( samples, new_sample$samples) 
+        }
+        results = parallel_initialisation(model, core$data, samples, NB_CORES)
+        if (perform_plot) { hist(log(results$residuals, base=10), breaks="fd") }
+        # Keep the number of samples, and select the best parameters sets for the next iteration
+        kept = results$params[order(results$residuals)[1:nSamples],]
+    }
+
+    # Finish by checking that sampling around the optimum with a high variation still finds several times the optimum
+    new_sample = sampleWithCorrelation(model, core, nSamples, kept[1,], correlation, sd=3)$samples
+    if (perform_plot) { hist(log(parallel_initialisation(model, core$data, new_sample, NB_CORES)$residuals, base=10), breaks="fd") }
+
+    return(results) # Return the last set of fit
 }

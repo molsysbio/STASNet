@@ -15,5 +15,5 @@ Depends:
     Rgraphviz,
     pheatmap,
     parallel
-LinkingTo: Rcpp
+LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign

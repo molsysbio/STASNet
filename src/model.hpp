@@ -32,7 +32,7 @@ public:
 
   // Evaluation of the model
   void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;
-  void eval(const double *p, double *datax, const Data *data) const;
+  virtual void eval(const double *p, double *datax, const Data *data) const;
   double score(const double *p, const Data *data) const;
   //  evaluates the model with parameters p  and returns datax.
   // This is to be called from the optimiser
@@ -41,7 +41,8 @@ public:
   }
 
   // returns the number of identifiable parameter combinations
-  size_t nr_of_parameters() const;
+  virtual size_t nr_of_parameters() const;
+  virtual void getSubmodelsParameters(std::vector<double> &parameters) {} // Used for ModelSet
 
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);
@@ -84,7 +85,8 @@ public:
   void printEquation(const size_t r, const size_t c);
 
   size_t modelRank() const { return rank_; }
-
+  
+  virtual void setNbModels(const int nb_submodels) {}
 
 protected:
   // The equations of the reduced model under GiNaC or mathtree format

@@ -13,3 +13,15 @@ new eval() function has to interprete parameters differnently:
 write a wrapper that
 
 
+Evaluation improvements on R side:
+
+- Implement a routine that looks for feedbacks that can be envisioned and ranks them according to the chi2 improvement 
+- Implement network representation form with all identifiable parameters depicted (if combinations set all but one to 1 and give them a unique color!!!)
+- Profile Likelihood improvements:
+	(1) change upper threshold settings (max=upper threshold +1/5 of inter confidence threshold range) (not ylim in the data !!!)
+	(2) seperate nonidentifiable figure from identifiable figures as file dimensions get messed up to being unreadbale for the latter
+	(3) in identifiable figures shows names for changed parameters shown on the left (only those that do change!!!)
+	(4) detect parameter constellations that are better than the optimal fit has found in the first place and report those (replace those?) 
+- Include the actual measurements (with error bar) to compare model prediction in the Predict Model bar graphs (simulations without actual data should still be possible) 
+- Change names in reasonable names (e.g. MIDAS_adjacency_100k.mra  -> MRA_model_100k.mra
+- Accuracy_heatmap adjust scaling to the same color coding for simulation and data !!! (so take the combined limits for both and transfer them)

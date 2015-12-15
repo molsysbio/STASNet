@@ -1,6 +1,7 @@
 #include "modelwrapper.hpp"
 
 #include "model.hpp"
+#include "modelset.hpp"
 #include "generate_response.hpp"
 #include "fitmodel_in_CPP.hpp"
 #include <Rcpp.h>
@@ -51,6 +52,7 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
 }
 
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
+  std::cout << "Using original ModelWrapper setModel" << std::endl;
   model_design_consistent(exp,mod);
 
   if(debug) {std::cout << mod;} // DEBUGGING  
@@ -86,15 +88,15 @@ SEXP ModelWrapper::simulate(Data data, std::vector<double> parameters) {
 }
 
 SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
-//SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters)  {
 
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
     double residual;
     double_matrix predictions;
+    data.computeDataVector();
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {	
 	    forward_exception_to_r(ex);
     } catch(...) { 
@@ -234,7 +236,6 @@ std::vector<double> ModelWrapper::getParameterFromLocalResponse( const double_ma
   model->convert_original_parameter_into_identifiable(parameter,tmpp);
 
   return parameter;
-  
 }
 
 // Gives the links combination for each identifiable response coefficient
@@ -285,6 +286,57 @@ void ModelWrapper::printEquation(const size_t r, const size_t c) {
     model->printEquation(r-1, c-1);
 }
 
+ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
+
+ModelSetWrapper::~ModelSetWrapper() {
+}
+
+SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
+    if (debug) {std::cout << "Using ModelSetWrapper fitmodel" << std::endl;}
+    if ( parameters.size() != model->nr_of_parameters() ) 
+        throw std::invalid_argument("length of parameter vector invalid");
+
+    double residual;
+    double_matrix predictions;
+    data.computeDataVector();
+    model->setNbModels(data.datas_.size());
+    try {
+        ::fitmodel(parameters, &residual, predictions, model, &data);
+    } catch(std::exception &ex) {
+	    forward_exception_to_r(ex);
+    } catch(...) { 
+	    ::Rf_error("c++ exception (unknown reason)"); 
+    }
+    model->getSubmodelsParameters(parameters);
+    Rcpp::List ret;
+    Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
+    ret["parameter"]=pars;
+    ret["residuals"]=residual;
+    return ret;
+}
+
+void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
+    if (debug) { std::cout << "Using ModelSetWrapper setModel" << std::endl; }
+    model_design_consistent(exp,mod);
+
+    if(debug) {std::cout << mod;} // DEBUGGING  
+    generate_response(response_full_model,  
+		        symbols_full_model,
+		        mod.getAdjacencyMatrix(),
+		        exp,
+		        mod.getNames());
+    if (verbosity > 4) { std::cout << "Resizing adjacency matrix" << std::endl; }
+    adjacency_matrix.resize(boost::extents[mod.getAdjacencyMatrix().shape()[0]]
+			    [mod.getAdjacencyMatrix().shape()[1]]);
+    if (verbosity > 4) { std::cout << "Retrieving adjacency matrix" << std::endl; }
+    adjacency_matrix=mod.getAdjacencyMatrix();
+    
+    if (model != NULL) delete model;
+    model = new ModelSet(response_full_model, 
+		      symbols_full_model,
+		      exp, 1); // 1 model by default, value changed by ModelSetWrapper::fitmodel
+}
+
 
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
@@ -310,5 +362,13 @@ RCPP_MODULE(ModelEx) {
     .method( "getEquation", &ModelWrapper::printEquation )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
+    
+    class_<ModelSetWrapper>( "ModelSet" )
+        .derives<ModelWrapper>("Model")
+        .default_constructor()
+        .method( "fitmodelset", &ModelSetWrapper::fitmodelset )
+        ;
 }
+//        .method( "fitmodel" , &ModelSetWrapper::fitmodel )
+//        .method( "setModel", &ModelSetWrapper::setModel )
 
