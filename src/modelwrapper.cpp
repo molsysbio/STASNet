@@ -52,7 +52,7 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
 }
 
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
-  std::cout << "Using original ModelWrapper setModel" << std::endl;
+  if (debug) { std::cout << "Using original ModelWrapper setModel" << std::endl; }
   model_design_consistent(exp,mod);
 
   if(debug) {std::cout << mod;} // DEBUGGING  
@@ -293,13 +293,13 @@ ModelSetWrapper::~ModelSetWrapper() {
 
 SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
     if (debug) {std::cout << "Using ModelSetWrapper fitmodel" << std::endl;}
+    data.computeDataVector();
+    model->setNbModels(data.datas_.size());
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
     double residual;
     double_matrix predictions;
-    data.computeDataVector();
-    model->setNbModels(data.datas_.size());
     try {
         ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {

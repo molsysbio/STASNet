@@ -148,6 +148,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     model_structure = extractStructure(model_links)
     basal_activity = as.character(read.delim(basal_nodes,header=FALSE)[,1])
 
+    nb_submodels = length(csv_files)
     core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1])
     stim_data = core0$data$stim_data
     unstim_data = core0$data$unstim_data
@@ -162,7 +163,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     # Build an extended dataset that contains the data of each model
     data_ = new(fitmodel:::DataSet)
     data_$addData(core0$data, FALSE)
-    for (ii in 2:length(csv_files)) {
+    for (ii in 2:nb_submodels) {
         core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
         if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
             stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
@@ -183,14 +184,13 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     data_$set_unstim_data(unstim_data)
     data_$set_error(error)
     data_$set_scale(error)
-# TODO add the first fit
 
     model = new(fitmodel:::ModelSet)
     model$setModel(core0$design, model_structure)
 
     print("setting completed")
     if (nb_cores == 0) { nb_cores = detectCores()-1 }
-    samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
+    samples = qnorm(randomLHS(inits, model$nr_of_parameters() * nb_submodels), sd=2)
     results = parallel_initialisation(model, data_, samples, nb_cores)
     bestid = order(results$residuals)[1]
     parameters = results$params[bestid,]
@@ -198,7 +198,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
     infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
     names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
-    self = MRAmodelSet(length(csv_files), model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos)
+    self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos)
 # param_range, lower_values, upper_values)
     return(self)
 }

@@ -209,9 +209,9 @@ void fitmodel( std::vector <double> &bestfit,
   double *datax = data->dataVector;
 
   // Can't fit if the system is non identifiable
-  if (model->modelRank()!=model->nr_of_parameters()) {
+  if (model->modelRank() != model->nr_of_parameters()) {
     *bestresid=1000000000000000.0;
-    std::cout << "The system is non identifiable, you need less links or more conditions" << std::endl;
+    std::cerr << "The system is non identifiable, you need less links (currently " << model->nr_of_parameters() << ") or more conditions (currently " << model->modelRank() << ")" << std::endl;
     return;
   }
 
