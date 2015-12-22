@@ -3,8 +3,10 @@
 
 #' @import Rgraphviz
 #' @import pheatmap
+#' @import lattice
 #' @import parallel
 #' @import Rcpp
+#' @import lhs
 #' @useDynLib fitmodel
 
 # Global variable to have more outputs
@@ -34,7 +36,7 @@ debug = TRUE
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, method="default") {
+createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="geneticlhs") {
 
     # Creation of the model structure object
     links = read.delim(model_links, header=FALSE)
@@ -73,30 +75,8 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
-    #results = initModel(model, core, inits, method, nb_cores, init_distribution)
-    # Parallelized version uses all cores but one to keep control
-    if (nb_cores == 0) { nb_cores = detectCores()-1 }
-    if (method == "default") { method = "correlation" }
-    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
-    # Different sampling methods
-    if (method == "default") {
-        method = "correlation"
-    }
-    if (method == "correlation") {
-        samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
-    } else if (method == "random" || method == "sample") {
-        samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
-    } else if (method == "genetic" || method == "explore" || method == "deep") {
-        results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
-    } else if (method == "annealing" || method == "SA") {
-        results = parallelAnnealing(model, core, inits, nb_cores, init_distribution)
-    } else {
-        stop("The selected initialisation method does not exist (valid methods are 'correlation', 'random', 'explore', and 'annealing')")
-    }
-    print("Initial fits completed")
-
+    results <- initModel(model, expdes,data, core, inits, precorrelate, method, nb_cores, init_distribution)
+    
     # Choice of the best fit
     params = results$params
     residuals = results$residuals
@@ -146,28 +126,48 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
-initModel <- function(model, core, nb_inits, method="default", nb_cores=1, init_distribution=F) {
-    # Parallelized version uses all cores but one to keep control
-    if (nb_cores == 0) { nb_cores = detectCores()-1 }
-    if (method == "default") { method = "correlation" }
-    print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
-    # Different sampling methods
-    if (method == "correlation") {
-        samples = sampleWithCorrelation(model, core, inits, perform_plot=init_distribution, sd=2)$samples
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
-    } else if (method == "random" || method == "sample") {
-        samples = qnorm(randomLHS(inits, model$nr_of_parameters()), sd=2)
-        results = parallel_initialisation(model, expdes, data, samples, nb_cores)
-    } else if (method == "genetic" || method == "explore" || method == "deep") {
-        results = deep_initialisation(model, core, nb_cores, 3, inits, init_distribution)
-    } else if (method == "annealing" || method == "SA") {
-        results = parallelAnnealing(model, core, inits, nb_cores, init_distribution)
+initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+  # Parallelized version uses all cores but one to keep control
+  if (nb_cores == 0) { nb_cores = detectCores()-1 }
+  print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
+  # Correlate directly measured and connected nodes -> they will not be sampled
+  nr_known_par=0
+  if (precorrelate){
+    correlated = correlate_parameters(model, core,perform_plot=init_distribution)
+    nr_known_par=length(correlated$list)}
+  # Different sampling methods
+  if (method == "randomlhs" || method == "sample") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) randomLHS(1000, model$nr_of_parameters()-nr_known_par))), sd=2)
+  }  else if (method == "geneticlhs") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) geneticLHS(1000, model$nr_of_parameters()-nr_known_par,pop=50))), sd=2)
+  }  else if (method == "improvedlhs") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) improvedLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
+  }  else if (method == "maximinlhs") {
+    samples = qnorm(do-call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
+  }  else if (method == "optimumlhs") {
+    if(inits>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
+    samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/150),50),function(x) optimumLHS(150, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
+  } else {
+    stop("The selected initialisation method does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')")
+  }
+  
+  # assign sampled and precorrelated samples to the respective parameter positions
+  if(precorrelate){
+  for (i in correlated$list){
+    inset=rep(correlated$values[correlated$list==i], times=nrow(samples))
+    if (i==1){
+      samples=cbind(inset,samples)
     } else {
-        stop("The selected initialisation method does not exist (valid methods are 'correlation', 'random', 'explore', and 'annealing')")
+      samples=cbind(samples[,1:(i-1)],inset,samples[,(i:ncol(samples))])
     }
-    print("Initial fits completed")
-
-    return(results)
+  }
+  print("Sampling terminated.")
+  }
+  
+  #  fit all samples to the model
+  results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+  print("Initial fits completed")
+  return(results)
 }
 
 # Perform several simulated annealing, one per core

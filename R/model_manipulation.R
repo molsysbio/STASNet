@@ -55,8 +55,8 @@ accuracyPlot <- function(model_description) {
 
     simulation = model$simulate(data, init_params)$prediction
     mismatch = (stim_data - simulation) / error
-    simulation = log(simulation / data$unstim_data, base=2)
-    stim_data = log(stim_data / data$unstim_data, base=2)
+    simulation = log2(simulation / data$unstim_data)
+    stim_data = log2(stim_data / data$unstim_data)
 
     # Rebuild the conditions from the design
     nodes = model_description$structure$names
@@ -93,11 +93,15 @@ accuracyPlot <- function(model_description) {
         pheatmap(plotData, color=colorScale, breaks=bk, cluster_rows=F, cluster_col=F, display_numbers=T, main=plotTitle)
     }
     # Comparison of the data and the stimulation in term of error fold change and log fold change
-    comparisonHeatmap(mismatch, "(data - simulation) / error")
-    comparisonHeatmap(stim_data-simulation, "log2(data/simulation)")
-    # Log fold changes for the data and the stimulation
-    comparisonHeatmap(stim_data, "Log-fold change Experimental data")
-    comparisonHeatmap(simulation, "Log-fold change Simulated data")
+    plot_heatmap(mismatch,"(data - simulation) / error")
+    plot_heatmap(stim_data-simulation,"log2(data/simulation)")
+    # Log fold changes for the data and the stimulation with comparable color code
+    lim=min(10,abs(range(quantile(stim_data,0.05),
+                  quantile(simulation,0.05),
+                  quantile(stim_data,0.95),
+                  quantile(simulation,0.95))))
+    plot_heatmap(stim_data, "Log-fold change Experimental data",lim,T)
+    plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test
