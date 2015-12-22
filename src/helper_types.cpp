@@ -4,6 +4,9 @@
 #include "model.hpp"
 #include <fstream>
 
+extern int verbosity;
+extern bool debug;
+
 // Performs a Latin Hypercube Sampling on ]0, 1[
 // Each element of the return vector is a sample
 std::vector< std::vector<double> > LHSampling (const int nb_samples, const int sample_size, const int decimals) {
@@ -200,6 +203,10 @@ bool ExperimentalDesign::read_from_stream(std::istream &is) {
   
 }
 
+Data::Data() {
+    dataVector = new double[1];
+    dataVectorComputed = false;
+}
 
 bool Data::read_from_stream(std::istream &is) {
   std::string label;
@@ -225,7 +232,6 @@ bool Data::read_from_stream(std::istream &is) {
   
 }
 
-
 bool Data::data_consistent(const ExperimentalDesign &expdesign) const {
   return ( (unstim_data.shape()[0]==stim_data.shape()[0]) &&
 	   (unstim_data.shape()[1]==stim_data.shape()[1]) &&
@@ -239,9 +245,7 @@ bool Data::data_consistent(const ExperimentalDesign &expdesign) const {
 	   (expdesign.measured_nodes.size()==unstim_data.shape()[1]) &&
 	   (stim_data.shape()[0]==expdesign.inhibitor.shape()[0]) 
 /*(basal_activity.size()==names.size())*/);
-
 }
-
 
 ExperimentalDesign &ExperimentalDesign::operator=(const ExperimentalDesign &exper) {
   stim_nodes=exper.stim_nodes;
@@ -258,6 +262,10 @@ Data &Data::operator=(const Data &data) {
   copy_matrix(data.stim_data,stim_data);
   copy_matrix(data.error,error);
   copy_matrix(data.scale,scale);
+  delete[] dataVector;
+  dataVector = new double[1];
+  dataVectorComputed = false;
+  computeDataVector();
   return *this;
 }
 
@@ -274,3 +282,99 @@ long unsigned int getSeed()
   int* number = reinterpret_cast<int*>(tmp);
   return (*number);
 }
+
+void Data::computeDataVector() {
+    // define the measurement value to compare with simulated values divided by the error
+    if (!dataVectorComputed && stim_data.shape()[0] == error.shape()[0] && stim_data.shape()[1] == error.shape()[1]) {
+        size_t rows=stim_data.shape()[0], cols=stim_data.shape()[1];
+        nb_measurements = rows * cols;
+
+        if (dataVector != NULL) {
+            //delete[] dataVector; // TODO Fix to avoid memory leaks
+        }
+        dataVector = new double[rows * cols];
+        for (unsigned int i=0; i<cols;i++) { 
+            for (unsigned int j=0; j<rows;j++) {
+                if (std::isnan(error[j][i]) || std::isnan(stim_data[j][i])) {
+                    dataVector[i*stim_data.shape()[0]+j]=0;
+                } else {
+                    dataVector[i*stim_data.shape()[0]+j]=stim_data[j][i]/error[j][i];
+                }
+            }
+        }
+        dataVectorComputed = true;
+    }
+}
+
+DataSet::DataSet() {
+}
+
+DataSet::~DataSet() {
+}
+
+void DataSet::addData(Data &data, bool doDataVectorComputation) {
+    datas_.push_back(data);
+
+    // rbind_matrix generates an 'memory corruption' on the second call, could not figure out why
+    // As a consequence, the rbind matrix must be provided in R (or an override of computeDataVector is necessary)
+    /*
+    rbind_matrix(data.error, error);
+    std::cout << "Finished error !!" << std::endl;
+    std::cout << "Go for scale !!" << std::endl;
+    rbind_matrix(data.scale, scale);
+    std::cout << "Go for unstim_data !!" << std::endl;
+    rbind_matrix(data.unstim_data, unstim_data);
+    std::cout << "Finished unstim_data !!" << std::endl;
+    rbind_matrix(data.stim_data, stim_data);
+    std::cout << "Finished stim_data !!" << std::endl;
+    */
+
+    /*
+    boost::multi_array_types::index_gen indices; // To generate the views
+    typedef boost::multi_array_types::index_range index_range;
+
+    std::vector<size_t> extendlist(2);
+    const size_t* ushape = unstim_data.shape();
+    extendlist[0] = ushape[0]+data.unstim_data.shape()[0]; extendlist[1] = ushape[1];
+    unstim_data.resize(extendlist);
+    unstim_data[ indices[index_range(ushape[0]+1, unstim_data.shape()[0])][index_range(0, ushape[1])] ] = data.unstim_data;
+
+    ushape = stim_data.shape();
+    extendlist[0] = ushape[0]+data.stim_data.shape()[0]; extendlist[1] = ushape[1];
+    stim_data.resize(extendlist);
+    stim_data[ indices[index_range(ushape[0]+1, stim_data.shape()[0])][index_range(0, ushape[1])] ] = data.stim_data;
+
+    ushape = error.shape();
+    extendlist[0] = ushape[0]+data.error.shape()[0]; extendlist[1] = ushape[1];
+    error.resize(extendlist);
+    error[ indices[index_range(ushape[0]+1, error.shape()[0])][index_range(0, ushape[1])] ] = data.error;
+
+    ushape = scale.shape();
+    extendlist[0] = ushape[0]+data.scale.shape()[0]; extendlist[1] = ushape[1];
+    scale.resize(extendlist);
+    scale[ indices[index_range(ushape[0]+1, scale.shape()[0])][index_range(0, ushape[1])] ] = data.scale;
+    */
+
+    if (doDataVectorComputation) {
+        computeDataVector();
+    }
+}
+
+void DataSet::addDataFromMatrices(double_matrix unstim_data, double_matrix stim_data, double_matrix error, double_matrix scale, bool doDataVectorComputation) {
+    Data data;
+    data.setUnstimData(unstim_data);
+    data.setStimData(stim_data);
+    data.setError(error);
+    data.setScale(scale);
+    
+    addData(data, doDataVectorComputation);
+}
+
+bool DataSet::data_consistent(const ExperimentalDesign &expdesign) const {
+    if (verbosity > 7) { std::cout << "Calling DataSet data_consistent" << std::endl; }
+    if (datas_.size() > 0) {
+        return(datas_[0].data_consistent(expdesign));
+    }
+    return(false);
+}
+
