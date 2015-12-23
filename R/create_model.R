@@ -205,7 +205,7 @@ initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="r
   }  else if (method == "improvedlhs") {
     samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) improvedLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
   }  else if (method == "maximinlhs") {
-    samples = qnorm(do-call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
   }  else if (method == "optimumlhs") {
     if(inits>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
     samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/150),50),function(x) optimumLHS(150, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
