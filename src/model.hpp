@@ -84,7 +84,7 @@ public:
   }
   void printEquation(const size_t r, const size_t c);
 
-  size_t modelRank() const { return rank_; }
+  virtual size_t modelRank() const { return rank_; }
   
   virtual void setNbModels(const int nb_submodels) {}
 

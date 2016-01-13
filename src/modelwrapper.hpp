@@ -21,14 +21,15 @@ public:
   bool model_design_consistent(ExperimentalDesign &exp, ModelStructure &mod);
   virtual void setModel(ExperimentalDesign exp, ModelStructure mod);
 
+  SEXP fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant=std::vector<size_t>());
+  SEXP fitmodelWithConstants(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant);
   virtual SEXP fitmodel(Data data, std::vector<double> parameters);
-  SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth); // Can probably be removed
+
+  SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth);
 
   SEXP simulate(Data data, std::vector<double> parameters);
   SEXP getLocalResponse( std::vector<double> p );
   SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps);
-
-  SEXP parallelPL(Data data, std::vector<double> parameters, const unsigned int total_steps); // Can probably be removed
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 
