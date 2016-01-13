@@ -26,7 +26,7 @@ basal_nodes = ""
 variation = ""
 nb_steps = 1000
 inits = 1000
-method = "default"
+method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
 
@@ -98,8 +98,9 @@ model = createModel(network, data, basal_nodes, variation, inits=inits, nb_cores
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
-pdf(paste0("accuracy_heatmap_", conditions, ".pdf"))
-accuracyPlot(model);
+mat=model$data$stim_data
+pdf(paste0("accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
+accuracyPlot(model)
 dev.off()
 printParameters(model)
 
