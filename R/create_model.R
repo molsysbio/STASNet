@@ -227,7 +227,7 @@ initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="r
   }
   
   #  fit all samples to the model
-  results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+  results = parallel_initialisation(model, data, samples, nb_cores)
   print("Initial fits completed")
   return(results)
 }
