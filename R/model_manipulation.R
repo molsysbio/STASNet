@@ -75,31 +75,14 @@ accuracyPlot <- function(model_description) {
     colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
     rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
 
-    # Plot a heatmap with a nice scale, i.e symmetrical and not stretched by the extreme values
-    comparisonHeatmap <- function(plotData, plotTitle, stripOut=0.05) {
-        if (stripOut >= 0.5) { stop("Cannot strip more than 50% of the data to generate the color scale") }
-        redData = sort(plotData)[ceiling(length(plotData)*stripOut):floor(length(plotData)*(1-stripOut))]
-        minRed = min(redData, na.rm=T)
-        maxRed = max(redData, na.rm=T)
-        # Symmetrical scale
-        if (minRed > 0 || abs(minRed) < abs(maxRed)) {
-            minRed = -abs(maxRed)
-        } else if (maxRed < 0 || abs(minRed) > abs(maxRed)) {
-            maxRed = abs(minRed)
-        }
-        bk = unique( c(seq(minRed, 0, length=50), seq(0, maxRed, length=50)) )
-        colorScale = c("deepskyblue", colorRampPalette(c("deepskyblue", "black", "red"))(length(bk)-1), "red")
-        bk = c(min(plotData, na.rm=T), bk, max(plotData, na.rm=T))
-        pheatmap(plotData, color=colorScale, breaks=bk, cluster_rows=F, cluster_col=F, display_numbers=T, main=plotTitle)
-    }
     # Comparison of the data and the stimulation in term of error fold change and log fold change
     plot_heatmap(mismatch,"(data - simulation) / error")
     plot_heatmap(stim_data-simulation,"log2(data/simulation)")
     # Log fold changes for the data and the stimulation with comparable color code
-    lim=min(10,abs(range(quantile(stim_data,0.05),
-                  quantile(simulation,0.05),
-                  quantile(stim_data,0.95),
-                  quantile(simulation,0.95))))
+    lim=min(10,abs(range(quantile(stim_data,0.05, na.rm=T),
+                  quantile(simulation,0.05, na.rm=T),
+                  quantile(stim_data,0.95, na.rm=T),
+                  quantile(simulation,0.95, na.rm=T))))
     plot_heatmap(stim_data, "Log-fold change Experimental data",lim,T)
     plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
 }
