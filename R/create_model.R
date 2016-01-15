@@ -120,7 +120,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, init_distribution=F, method="default") {
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, init_distribution=F, method="geneticlhs") {
     if (length(csv_files) != length(var_files)) {
         if (length(var_files) == 0) {
             var_files = rep("", length(csv_files))
@@ -188,7 +188,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
-initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+initModel <- function(model, expdes, data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
   # Parallelized version uses all cores but one to keep control
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
@@ -196,17 +196,20 @@ initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="r
   nr_known_par=0
   if (precorrelate){
     correlated = correlate_parameters(model, core,perform_plot=init_distribution)
-    nr_known_par=length(correlated$list)}
+    nr_known_par=length(correlated$list)
+  }
   # Different sampling methods
+  method = tolower(method)
+  sub_samples_size = min(1000, inits)
   if (method == "randomlhs" || method == "sample") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) randomLHS(1000, model$nr_of_parameters()-nr_known_par))), sd=2)
-  }  else if (method == "geneticlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) geneticLHS(1000, model$nr_of_parameters()-nr_known_par,pop=50))), sd=2)
-  }  else if (method == "improvedlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) improvedLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
-  }  else if (method == "maximinlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
-  }  else if (method == "optimumlhs") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) randomLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par))), sd=2)
+  } else if (method == "geneticlhs") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) geneticLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par,pop=50))), sd=2)
+  } else if (method == "improvedlhs") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) improvedLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
+  } else if (method == "maximinlhs") {
+    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
+  } else if (method == "optimumlhs") {
     if(inits>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
     samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/150),50),function(x) optimumLHS(150, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
   } else {
@@ -215,16 +218,16 @@ initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="r
   
   # assign sampled and precorrelated samples to the respective parameter positions
   if(precorrelate){
-  for (i in correlated$list){
-    inset=rep(correlated$values[correlated$list==i], times=nrow(samples))
-    if (i==1){
-      samples=cbind(inset,samples)
- } else {
-      samples=cbind(samples[,1:(i-1)],inset,samples[,(i:ncol(samples))])
+    for (ii in correlated$list){
+      inset=rep(correlated$values[correlated$list==ii], times=nrow(samples))
+      if (ii==1){
+        samples=cbind(inset,samples)
+      } else {
+        samples=cbind(samples[,1:(ii-1)],inset,samples[,(ii:ncol(samples))])
+      }
     }
   }
   print("Sampling terminated.")
-  }
   
   #  fit all samples to the model
   results = parallel_initialisation(model, data, samples, nb_cores)
@@ -358,7 +361,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
                 plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name)
                 lines(measurements[,2], result$coefficients[1] + result$coefficients[2] * measurements[,2])
             } else {
-                plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name)
+                plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name, xlab="Conditions")
                 for (measure in 1:nrow(measurements)) {
                     fitted = result$coefficients[1]
                     for (sender in 2:ncol(measurements)) {

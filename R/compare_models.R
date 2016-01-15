@@ -73,7 +73,7 @@ plotScores <- function(x, ...) { UseMethod("plotScores", x) }
 #' Display the scores of the modelGroup object as a barplot
 #' @param model_group Object of class modelGroup
 #' @return Invisibly, the scores ( -log(best_fit/base_fit) )
-#' @seealso \link{\code{MRAmodel}}
+#' @seealso \code{\link{MRAmodel}}
 #' @export
 plotScores.modelGroup <- function(model_group) {
     scores = -log(model_group$scores)
