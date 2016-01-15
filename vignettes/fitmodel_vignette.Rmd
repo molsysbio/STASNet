@@ -1,0 +1,48 @@
+---
+title: "Using the fitmodel package"
+author: "Mathurin Dorel"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using the fitmodel package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Loading the library:
+```{r}
+library(fitmodel)
+```
+
+# Creation of the model
+
+Create the model using the data and the network layout as previous knowledge, both provided as file names
+
+```{r, eval=T}
+setwd("../inst/extdata/")
+model = createModel("network.tab", "HCT116_MIDAS.csv", "basal.dat", inits=10, init_distribution=T,
+                    method="randomlhs");
+```
+
+Evaluate how the simulation compares to the data
+
+```{r}
+accuracyPlot(model)
+plotModelPrediction(model, "all", "all")
+```
+
+```{r}
+simulateModel(model, "all", "all")
+```
+
+## Figures
+
+Then you can use the chunk option `fig.cap = "Your figure caption."` in **knitr**.
+
+## More Examples
+
+You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.], and tables, e.g. using `knitr::kable()`.
+Also a quote using `>`:
+
+> "He who gives up [code] safety for [code] speed deserves neither."
+([via](https://twitter.com/hadleywickham/status/504368538874703872))

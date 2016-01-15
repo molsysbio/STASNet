@@ -10,7 +10,7 @@ Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
 Description: Fits and simulates network model derived from perturbation data
     using Modular Response Analysis and Profile Likelihood
 License: GPLv3
-Depends:
+Depends: 
     Rcpp (>= 0.10.4),
     Rgraphviz,
     pheatmap,
@@ -20,3 +20,5 @@ Depends:
 LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign
 RoxygenNote: 5.0.1
+Suggests: knitr
+VignetteBuilder: knitr
