@@ -10,7 +10,7 @@
 #' @seealso \code{\link{getCombinationMatrix}}
 #' @export
 # TODO Add some check that there is enough inhib/stim left once those not usable have been remove, change the control to put the not enough nodes error after the usability control
-simulateModel <- function(model_description, targets, readouts = "all") {
+simulateModel <- function(model_description, targets="all", readouts = "all") {
     design = model_description$design
     nodes = model_description$structure$names
 
@@ -273,7 +273,7 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 # TODO , plotsPerFrame = 4
 ##' @param maxPlotsPerFrame Maximum number of perturbation per frame
-plotModelPrediction <- function(model, targets, readouts="all", log_axis=F) {
+plotModelPrediction <- function(model, targets="all", readouts="all", log_axis=F) {
     if (log_axis) {
         ylog = "y"
     } else {
