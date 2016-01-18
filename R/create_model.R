@@ -41,7 +41,7 @@ rand <- function(decimals=4) {
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 #' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="geneticlhs") {
+createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="randomlhs") {
 
     # Creation of the model structure object
     model_structure = extractStructure(model_links)
@@ -227,7 +227,7 @@ initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="r
   }
   
   #  fit all samples to the model
-  results = parallel_initialisation(model, expdes, data, samples, nb_cores)
+  results = parallel_initialisation(model,data, samples, nb_cores)
   print("Initial fits completed")
   return(results)
 }
