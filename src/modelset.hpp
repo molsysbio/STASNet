@@ -11,11 +11,14 @@ public:
     ModelSet();
 
     virtual void eval(const double *p, double *datax, const Data *data) const;
-    unsigned int getNbModels() const;
+
     void setNbModels(const int nb_submodels);
+    unsigned int getNbModels() const;
+    void getSubmodelsParameters(std::vector<double> &parameters);
+
     virtual size_t nr_of_parameters() const;
     size_t nr_of_parameters_per_submodel() const;
-    void getSubmodelsParameters(std::vector<double> &parameters);
+    size_t modelRank() const { return nb_submodels_ * rank_; }
 
 protected:
     unsigned int nb_submodels_;

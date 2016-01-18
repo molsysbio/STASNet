@@ -480,8 +480,8 @@ void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
 
 double Model::getPeneltyForConstraints(const double *p) const {
 
-    std::vector<double> p_id(nr_of_parameters());
-    for (size_t i=0; i< nr_of_parameters(); i++ ) { p_id[i]=p[i]; }
+    std::vector<double> p_id(Model::nr_of_parameters());
+    for (size_t i=0; i< Model::nr_of_parameters(); i++ ) { p_id[i]=p[i]; }
     std::vector<double> p_new;
     convert_identifiables_to_original_parameter(p_new, p_id) ;
 
@@ -530,7 +530,7 @@ void Model::predict(const std::vector<double> &p, double_matrix &datax, const Da
     //  assert( (unsigned int)m == nr_of_parameters() );
     //  assert( (unsigned int)n == rows*cols );
     
-    for (size_t i=0; i< nr_of_parameters(); i++ ) {
+    for (size_t i=0; i< Model::nr_of_parameters(); i++ ) {
         parameters_[independent_parameters_[i]]->set_parameter(p[i]);
     }
     for (unsigned int i=0; i<cols;i++) { 
@@ -553,7 +553,7 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
     //std::cout << "Unstim_data: " << rows << ", " << cols << std::endl;
     //std::cout << "Stim_data: " << data->stim_data.shape()[0] << ", " << data->stim_data.shape()[1] << std::endl;
     
-    for (size_t i=0; i< nr_of_parameters(); i++ ) {
+    for (size_t i=0; i< Model::nr_of_parameters(); i++ ) {
         parameters_[independent_parameters_[i]]->set_parameter(p[i]);
     }
         

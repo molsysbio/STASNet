@@ -24,11 +24,11 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
     print(basal.activity[is.na(match(as.character(basal.activity),model.structure$names))])
     stop("problem matching basal.activity names");
   }
-  if ( dim(stimuli) != NULL && dim(inhibitor) != NULL &&  dim(stimuli)[1]!=dim(inhibitor)[1] ) {
+  if ( !is.null(dim(stimuli)) && !is.null(dim(inhibitor)) &&  dim(stimuli)[1]!=dim(inhibitor)[1] ) {
     stop("number of experiments does not match in stimuli / inhibitor");
-  } else if ( dim(stimuli) != NULL && dim(stimuli)[2]!=length(c(stim.nodes)) ) {
+  } else if ( !is.null(dim(stimuli)) && dim(stimuli)[2]!=length(c(stim.nodes))) {
     stop("number stimuli does not match in stimuli / stim.nodes");
-  } else if ( dim(inhibitor) != NULL && dim(inhibitor)[2]!=length(c(inhib.nodes)) ) {
+  } else if ( !is.null(dim(inhibitor)) && dim(inhibitor)[2]!=length(c(inhib.nodes)) ) {
     stop("number inhibitors does not match in inhib.nodes / inhibitor");
   }
 

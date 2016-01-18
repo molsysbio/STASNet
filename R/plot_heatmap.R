@@ -1,7 +1,7 @@
 ########################### plot_heatmap.R ###########################
 # function to generate heatmap with cutoff and colormap scale function
 
-#' Plot a customized heatmap with
+#' Plot a customized heatmap with a symmetrical scale that is not stretched by extreme values
 #' @param mat a numeric matrix that should be plotted
 #' @param lim a single number indicating the maximal range [-lim lim] for the color map
 #' @param fixedRange logical inidicating whether the range of lim should at all means be kept (ensures comparability with other heatmaps)
@@ -15,11 +15,11 @@
 plot_heatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10"){
   # helper functions
   define_breaks <- function(m,lim = Inf,fixedRange = F){ # when containing only one sign: 0...+-limit, otherwise -limit...+limit 
-    if (!fixedRange){
-    limit = min(lim,(max(abs(m),na.rm = T)))
-    return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
-    }else{
-    return(seq(-1.1*lim,1.1*lim,length.out=22))  
+    if (!fixedRange) {
+        limit = min(lim,(max(abs(m),na.rm = T)))
+        return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
+    } else {
+        return(seq(-1.1*lim,1.1*lim,length.out=22))  
     }
   }
   
@@ -27,8 +27,8 @@ plot_heatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,co
   m = mat
   if (stripOut >= 0.5) { stop("Cannot strip more than 50% of the data to generate the color scale") } 
   if (!is.numeric(lim)) {stop("lim should be numeric")}
-  lowLim = max(-lim,quantile(mat,stripOut))
-  upLim = min(lim,quantile(mat,1-stripOut))
+  lowLim = max(-lim,quantile(mat,stripOut, na.rm=T))
+  upLim = min(lim,quantile(mat,1-stripOut, na.rm=T))
   m[m < lowLim] = lowLim
   m[m > upLim] = upLim
   breaks=define_breaks(m,lim,fixedRange)

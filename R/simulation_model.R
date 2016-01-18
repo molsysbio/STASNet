@@ -29,20 +29,21 @@ simulateModel <- function(model_description, targets, readouts = "all") {
         inhibitors = gsub("i$", "", colnames(targets)[grepl("i$", colnames(targets))] )
         stimulators = colnames(targets)[!grepl("i$", colnames(targets))]
         target_matrix = targets
-        colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = inhibitors
+        colnames(target_matrix)[which( grepl("i$", colnames(targets)) )] = paste0(inhibitors, "i")
         colnames(target_matrix)[which( !grepl("i$", colnames(targets)) )] = stimulators
-    } else if (targets[1] == "all") {
-        inhibitors = model_description$structure$names[design$inhib_nodes + 1]
-        stimulators = model_description$structure$names[design$stim_nodes + 1]
+    } else if (targets == "all") {
+        inhibitors = nodes[design$inhib_nodes + 1]
+        stimulators = nodes[design$stim_nodes + 1]
         target_matrix = cbind(design$inhibitor, design$stimuli)
-        colnames(target_matrix) = c(inhibitors, stimulators)
+        colnames(target_matrix) = c(paste0(inhibitors, "i"), stimulators)
     } else if (is.list(targets)) { # TODO distinguish between numeric and character
         # List of perturbation giving nodes names in vectors, TODO
+        stop("Providing a list of target is not an implemented method")
         target_names = unlist(targets)
         inhibitors = unique(c( inhibitors, gsub("i$", "", target_names[grepl("i$", target_names)]) ))
         stimulators = unique(c( stimulators, target_names[!grepl("i$", target_names)] ))
         target_matrix = rep(0, length(c(stimulators, inhibitors)))
-        colnames(target_matrix) = c(stimulators, inhibitors)
+        colnames(target_matrix) = c(stimulators, paste0(inhibitors, "i"))
 
         for (combination in targets) {
             line = 1; # TODO
@@ -59,7 +60,7 @@ simulateModel <- function(model_description, targets, readouts = "all") {
             print(paste0("Node ", node, " is not inhibited in the network and won't be used"))
         } else {
             inhib_nodes = cbind(inhib_nodes, nodes[which(nodes == node)])
-            inhibitions = cbind(inhibitions, target_matrix[, which(colnames(target_matrix) == node)])
+            inhibitions = cbind(inhibitions, target_matrix[, which(colnames(target_matrix) == paste0(node, "i"))])
         }
     }
     if (length(inhib_nodes) == 0) {
