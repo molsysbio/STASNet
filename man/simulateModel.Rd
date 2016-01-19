@@ -5,7 +5,7 @@
 \title{Get the target simulations in a MIDAS design-like or list format
 Simulate a model for a specified set of perturbation}
 \usage{
-simulateModel(model_description, targets, readouts = "all")
+simulateModel(model_description, targets = "all", readouts = "all")
 }
 \arguments{
 \item{model_description}{A MRAmodel object that describes the model to be fitted}
