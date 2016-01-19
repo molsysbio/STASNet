@@ -123,7 +123,7 @@ exportModel(model, paste0(conditions, ".mra"))
 #dev.off()
 # Plot the simulated conditions
 pdf(paste0("model_prediction_", conditions, ".pdf"))
-plotModelSimulation(model, "all")
+plotModelSimulation( simulateModel(model) )
 dev.off()
 
 if (reduction) {
@@ -137,7 +137,7 @@ if (reduction) {
     niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
 # Plot the simulated conditions
     pdf(paste0("reduced_all_", conditions, ".pdf"))
-    plotModelSimulation(reduced_model, "all")
+    plotModelSimulation( simulateModel(reduced_model) )
     dev.off()
 
     get_running_time(init_time, "with the model reduction");

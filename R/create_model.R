@@ -628,6 +628,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
         not_included = colnames(data.values)[!(colnames(data.values) %in% model_structure$names)]
         data.values = data.values[, colnames(data.values) %in% model_structure$names]
+    } else {
+        stop("Incorrect format for the data file")
     }
     # Warn for the measured nodes that have not been found in the network
     if (length(not_included) > 0) {

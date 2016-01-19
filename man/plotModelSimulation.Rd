@@ -6,15 +6,10 @@
 One plot per measured node
 Plot with error bars if available, and give absolute value}
 \usage{
-plotModelSimulation(model, targets = "all", readouts = "all",
-  log_axis = F)
+plotModelSimulation(prediction, log_axis = F)
 }
 \arguments{
-\item{model}{An MRAmodel object}
-
-\item{targets}{A perturbation matrix describing the conditions to be simulated}
-
-\item{readouts}{Vector with the name of the nodes that should be used as readouts}
+\item{prediction}{A list of the model predictions as produced by \link{simulateModel}}
 
 \item{log_axis}{Boolean, whether the ordinate axis should be in log scale}
 
@@ -32,6 +27,6 @@ Plot with error bars if available, and give absolute value
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
 \seealso{
-getCombinationMatrix
+getCombinationMatrix, simulateModel
 }
 
