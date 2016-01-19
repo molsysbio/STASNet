@@ -94,7 +94,7 @@ conditions = gsub(" ", "_", conditions)
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0("distribution_", conditions, ".pdf"))
-model = createModel(network, data, basal_nodes, variation, inits=inits, nb_cores=cores, init_distribution=T, method=method);
+model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, init_distribution=T, method=method);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 

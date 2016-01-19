@@ -20,8 +20,8 @@ rand <- function(decimals=4) {
 
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
-#' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
 #' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
+#' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
 ## CHECK THE IMPLEMENTATION FOR THE NO BASAL
 #' @param data.variation Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.
 #' @param nb_cores Number of cores that should be used for the computation
@@ -37,11 +37,11 @@ rand <- function(decimals=4) {
 #' @seealso importModel, exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @examples
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="geneticlhs") {
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="geneticlhs") {
 
     # Creation of the model structure object
     model_structure = extractStructure(model_links)
@@ -67,7 +67,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
-    results <- initModel(model, expdes,data, core, inits, precorrelate, method, nb_cores, init_distribution)
+    results <- initModel(model, core, inits, precorrelate, method, nb_cores, init_distribution)
     
     # Choice of the best fit
     params = results$params
@@ -173,8 +173,9 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
     print("setting completed")
     if (nb_cores == 0) { nb_cores = detectCores()-1 }
-    samples = qnorm(randomLHS(inits, model$nr_of_parameters() * nb_submodels), sd=2)
+    samples = qnorm(randomLHS(inits, model$nr_of_parameters() * nb_submodels), sd=2) # TODO Change to match the one in "init"
     results = parallel_initialisation(model, data_, samples, nb_cores)
+    #results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, init_distribution, method)
     bestid = order(results$residuals)[1]
     parameters = results$params[bestid,]
     bestfit = results$residuals[bestid]
@@ -188,14 +189,16 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
-initModel <- function(model, expdes, data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+  expdes = core$design
+  data = core$data
   # Parallelized version uses all cores but one to keep control
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
   # Correlate directly measured and connected nodes -> they will not be sampled
   nr_known_par=0
   if (precorrelate){
-    correlated = correlate_parameters(model, core,perform_plot=init_distribution)
+    correlated = correlate_parameters(model, core, perform_plot=init_distribution)
     nr_known_par=length(correlated$list)
   }
   # Different sampling methods
@@ -231,7 +234,7 @@ initModel <- function(model, expdes, data, core, inits, precorrelate=T, method="
   
   #  fit all samples to the model
   results = parallel_initialisation(model, data, samples, nb_cores)
-  print("Initial fits completed")
+  print("Fitting completed")
   return(results)
 }
 
@@ -278,6 +281,10 @@ parametersFromCorrelation <- function(model, core, perform_plot=F) {
         } else {
             param_vector = c(param_vector, 0)
         }
+    }
+    if (class(model) == "Rcpp_ModelSet") {
+        print("Dealing with ModelSet")
+        param_vector = rep(param_vector, model$nb_submodels)
     }
     return(param_vector)
 }
@@ -804,9 +811,6 @@ rebuildModel <- function(model_file, data_file, var_file="") {
 
     return(model)
 }
-
-
-
 
 # Perform several simulated annealing, one per core
 parallelAnnealing <- function(model, core, max_it, nb_cores, perform_plot=F) {
