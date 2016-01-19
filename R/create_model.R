@@ -26,7 +26,7 @@ rand <- function(decimals=4) {
 #' @param data.variation Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.
 #' @param nb_cores Number of cores that should be used for the computation
 #' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
-#' @param init_distribution Whether the distribution of the residuals and the parameters deduced by correlation should be plotted or not
+#' @param perform_plots Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not
 #' @param method Method to be used for the initialisation, available methods are :
 #'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
 #'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
@@ -41,7 +41,7 @@ rand <- function(decimals=4) {
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="geneticlhs") {
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs") {
 
     # Creation of the model structure object
     model_structure = extractStructure(model_links)
@@ -67,7 +67,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
-    results <- initModel(model, core, inits, precorrelate, method, nb_cores, init_distribution)
+    results <- initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
     
     # Choice of the best fit
     params = results$params
@@ -91,7 +91,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
             residuals[order_id[i]] = result$residuals
         }
     }
-    if (init_distribution) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
+    if (perform_plots) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
     if (debug) {
         # Print the 20 smallest residuals to check if the optimum has been found several times
         print("Best residuals :")
@@ -120,7 +120,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, init_distribution=F, method="geneticlhs") {
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs") {
     if (length(csv_files) != length(var_files)) {
         if (length(var_files) == 0) {
             var_files = rep("", length(csv_files))
@@ -175,7 +175,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     if (nb_cores == 0) { nb_cores = detectCores()-1 }
     samples = qnorm(randomLHS(inits, model$nr_of_parameters() * nb_submodels), sd=2) # TODO Change to match the one in "init"
     results = parallel_initialisation(model, data_, samples, nb_cores)
-    #results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, init_distribution, method)
+    #results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots, method)
     bestid = order(results$residuals)[1]
     parameters = results$params[bestid,]
     bestfit = results$residuals[bestid]
@@ -189,7 +189,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
-initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
   expdes = core$design
   data = core$data
   # Parallelized version uses all cores but one to keep control
@@ -198,7 +198,7 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
   # Correlate directly measured and connected nodes -> they will not be sampled
   nr_known_par=0
   if (precorrelate){
-    correlated = correlate_parameters(model, core, perform_plot=init_distribution)
+    correlated = correlate_parameters(model, core, perform_plot=perform_plots)
     nr_known_par=length(correlated$list)
   }
   # Different sampling methods

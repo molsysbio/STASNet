@@ -94,13 +94,13 @@ conditions = gsub(" ", "_", conditions)
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0("distribution_", conditions, ".pdf"))
-model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, init_distribution=T, method=method);
+model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=T, method=method);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
 mat=model$data$stim_data
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
-accuracyPlot(model)
+plotModelAccuracy(model)
 dev.off()
 printParameters(model)
 
@@ -119,11 +119,11 @@ exportModel(model, paste0(conditions, ".mra"))
 
 # Plot the simulation for all combinations of inhibitors 
 #pdf(paste0("combos_", conditions, ".pdf"))
-#plotModelPrediction(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
+#plotModelSimulation(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
 #dev.off()
 # Plot the simulated conditions
 pdf(paste0("model_prediction_", conditions, ".pdf"))
-plotModelPrediction(model, "all")
+plotModelSimulation(model, "all")
 dev.off()
 
 if (reduction) {
@@ -137,7 +137,7 @@ if (reduction) {
     niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
 # Plot the simulated conditions
     pdf(paste0("reduced_all_", conditions, ".pdf"))
-    plotModelPrediction(reduced_model, "all")
+    plotModelSimulation(reduced_model, "all")
     dev.off()
 
     get_running_time(init_time, "with the model reduction");

@@ -6,7 +6,7 @@
 Possibility to use different sampling methods}
 \usage{
 initModel(model, core, inits, precorrelate = T, method = "randomlhs",
-  nb_cores = 1, init_distribution = F)
+  nb_cores = 1, perform_plots = F)
 }
 \description{
 Perform an initialisation of the model

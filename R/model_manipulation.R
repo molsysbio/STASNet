@@ -1,7 +1,7 @@
 ########################### model_manipulation.R ###########################
 # Functions to change and visualise the model
 
-#' Print the value of each path from the model, and add the profile likelihood infos if they are provided
+#' Print the value of each path from the model, with the profile likelihood infos if they are provided
 #' @param model_description An MRAmodel object
 #' @return Nothing
 #' @export
@@ -38,13 +38,13 @@ printParameters <- function(model_description, precision=2) {
     }
 }
 
-#' Plots heatmaps of the model prediction against the data, weighted by the error, as well as the log fold change data and the prediction
-#' @param model_description A list describing the model, as the one produced by createModel or importModel
+#' Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction
+#' @param model_description An MRAmodel object
 #' @return Nothing
 #' @export
-#' @seealso plotModelPrediction, createModel
+#' @seealso plotModelSimulation, createModel, importModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-accuracyPlot <- function(model_description) {
+plotModelAccuracy <- function(model_description) {
     # Calculate the mismatch
     model = model_description$model
     data = model_description$data

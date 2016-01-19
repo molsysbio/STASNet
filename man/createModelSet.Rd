@@ -5,8 +5,7 @@
 \title{Build an MRAmodelSet}
 \usage{
 createModelSet(model_links, basal_nodes, csv_files, var_files = c(),
-  nb_cores = 1, inits = 1000, init_distribution = F,
-  method = "geneticlhs")
+  nb_cores = 1, inits = 1000, perform_plots = F, method = "geneticlhs")
 }
 \description{
 Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models

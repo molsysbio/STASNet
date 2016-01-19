@@ -187,7 +187,7 @@ getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_
 #' @param byStim Whether the perturbations should be ordered according to the stimulations or the inhibtions
 #' @return A perturbation matrix with the names of the nodes as columnnames
 #' @export
-#' @seealso plotModelPrediction
+#' @seealso plotModelSimulation
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1, byStim=T) {
     stimulators = perturbations[!grepl("i$", perturbations)]
@@ -273,7 +273,7 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 # TODO , plotsPerFrame = 4
 ##' @param maxPlotsPerFrame Maximum number of perturbation per frame
-plotModelPrediction <- function(model, targets="all", readouts="all", log_axis=F) {
+plotModelSimulation <- function(model, targets="all", readouts="all", log_axis=F) {
     if (log_axis) {
         ylog = "y"
     } else {
@@ -309,7 +309,8 @@ plotModelPrediction <- function(model, targets="all", readouts="all", log_axis=F
                 high_var = c(high_var, sort(variants, decreasing=T)[1])
             }
             # Plot the bars with the errors
-            barplot(prediction$bestfit[,node], ylim=limits, ylab="Fluorescence intensity (AU)", log=ylog, col="#008000", main=colnames(prediction$bestfit)[node])
+            entity = colnames(prediction$bestfit)[node]
+            barplot(prediction$bestfit[,node], ylim=limits, ylab=paste0(entity, " fluorescence intensity (AU)"), log=ylog, col="#008000", main=entity)
             text_pos = limits[2] - 0.1 * limits[2]
             segments( bars, low_var, bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
             text( bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2],ifelse(X<100000,round(X),signif(X,1)), "") }), pos=2, srt=90,offset=0.2 )
@@ -318,7 +319,8 @@ plotModelPrediction <- function(model, targets="all", readouts="all", log_axis=F
             in_lim=high_var<=limits[2]
 	    segments(bars[in_lim] - space, high_var[in_lim], bars[in_lim] + space, high_var[in_lim])
         } else {
-            barplot(prediction$bestfit[,node], ylab="Fluorescence intensity (AU)", log=ylog)
+            entity = colnames(prediction$bestfit)[node]
+            barplot(prediction$bestfit[,node], ylab=paste0(entity, "fluorescence intensity (AU)"), log=ylog, main=entity)
             low_var=0;
         }
 

@@ -10,7 +10,6 @@
 #' @param col colorRampPalette object indicating the colormap
 #' @param textCol string denoting the color of inset text
 #' @return Nothing
-#' @export
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plot_heatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10"){
   # helper functions
