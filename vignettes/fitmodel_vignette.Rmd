@@ -46,3 +46,28 @@ Also a quote using `>`:
 
 > "He who gives up [code] safety for [code] speed deserves neither."
 ([via](https://twitter.com/hadleywickham/status/504368538874703872))
+
+# Package flowchart
+
+````{r, eval=T, echo=F}
+diagram="@startuml
+    skinparam usecase {
+        BackGroundColor<< S3 Class >> #eeeeee
+    }
+    (ModelSet) << S3 Class >>
+    (MRAmodel) << S3 Class >>
+
+    (createModel) --> MRAmodel
+    (MRAmodel)-->(plotModelPrediction)
+    (MRAmodel)-->(accuracyPlot)
+    (createModelSet) --> ModelSet
+    (ModelSet)-->(extractSubmodels)
+    (extractSubmodels) --> (MRAmodel)
+    (ModelSet)-->(plotParameters)
+    (ModelSet)-->(plotResiduals)
+    @enduml"
+write(diagram, "use_diagram.uml")
+system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
+```
+![Use diagram](use_diagram.png)
+
