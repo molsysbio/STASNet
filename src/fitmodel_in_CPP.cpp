@@ -217,7 +217,12 @@ void fitmodel( std::vector <double> &bestfit,
 
   *bestresid=fit_using_lsqnonlin(model, datax, number_of_measurements, p, keep_constant, data);
 
+  // Return the bestfit after ensuring that the inhibitor parameters have negative values
   bestfit.resize(number_of_parameters);
+  size_t ninhibs = model->exp_design().inhib_nodes.size();
+  for (size_t ii=0; ii < ninhibs ; ii++) {
+    p[number_of_parameters-ninhibs + ii] = -std::abs(p[number_of_parameters-ninhibs + ii]);
+  }
   std::copy(p,p+number_of_parameters,bestfit.begin());
 
    //   model.print_parameter_report(std::cerr, bestfitvectorfuerausgabe);
