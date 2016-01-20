@@ -76,8 +76,9 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     #write(residuals, stderr())
     print(paste( sum(is.na(residuals)), "NA and ", sum(is.infinite(residuals)), "infinite residuals" ))
     # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
-    order_id = order(residuals)[1:20]
-    for ( i in 1:min(20, length(residuals)) ) {
+    order_resid = order(residuals)
+    order_id = order_resid[1:min(20, length(residuals))]
+    for ( i in 1:length(order_id) ) {
         p_res = residuals[order_id[i]]
         if (!is.na(p_res) && !is.infinite(p_res)) {
             repeat {
@@ -97,10 +98,23 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
         print("Best residuals :")
         print(sort(residuals)[1:20])
     }
+    range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
+    paths = sapply(model$getParametersLinks(), simplify_path_name)
+    best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
+    for ( ii in 1:(ncol(params)-1) ) {
+        for (jj in (ii+1):ncol(params)) {
+            setii = params[best_sets,ii] 
+            setjj = params[best_sets,jj]
+            cij = cor(setii, setjj)
+            if (cij > 0.95) {#|| (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
+                plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\ncor=", cij), col=residuals[best_sets])
+            }
+        }
+    }
 
-    best = order(residuals)[1]
-    init_params = params[best,]
-    init_residual = residuals[best]
+    best_id = order(residuals)[1]
+    init_params = params[best_id,]
+    init_residual = residuals[best_id]
     if (verbose) {
         print("Model simulation with optimal parameters :")
         print(model$simulate(data, init_params)$prediction)
