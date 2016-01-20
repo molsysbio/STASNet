@@ -6,9 +6,8 @@
 \usage{
 MRAmodel(model = NULL, design = NULL, structure = NULL,
   basal = matrix(), data = matrix(), cv = matrix(),
-  parameters = vector(), bestfit = NA, basefit = NA, name = "",
-  infos = c(), param_range = list(), lower_values = c(),
-  upper_values = c())
+  parameters = vector(), bestfit = NA, name = "", infos = c(),
+  param_range = list(), lower_values = c(), upper_values = c())
 }
 \arguments{
 \item{model}{An object of class Model}
@@ -27,8 +26,6 @@ MRAmodel(model = NULL, design = NULL, structure = NULL,
 
 \item{bestfit}{The residual chi-2 value associated with the best fit}
 
-\item{basefit}{The chi-2 value associated with the raw data (no fit)}
-
 \item{name}{Name of the model}
 
 \item{infos}{Extra information on the model}
@@ -36,6 +33,8 @@ MRAmodel(model = NULL, design = NULL, structure = NULL,
 \item{param_range}{Alternative parameters sets for the model}
 
 \item{upper_values}{Upper bound on the values of the parameters}
+
+\item{basefit}{The chi-2 value associated with the raw data (no fit)}
 
 \item{lower_value}{Lower bound on the values of the parameters}
 }

@@ -6,7 +6,7 @@
 \usage{
 createModel(model_links, data.stimulation, basal_file, data.variation = "",
   nb_cores = 1, inits = 1000, init_distribution = F, precorrelate = T,
-  method = "geneticlhs")
+  method = "randomlhs")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}

@@ -67,7 +67,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
-    results <- initModel(model, expdes,data, core, inits, precorrelate, method, nb_cores, init_distribution)
+    results <- initModel(model,data, core, inits, precorrelate, method, nb_cores, init_distribution)
     
     # Choice of the best fit
     params = results$params
@@ -188,7 +188,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
-initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+initModel <- function(model,data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
   # Parallelized version uses all cores but one to keep control
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
@@ -207,8 +207,8 @@ initModel <- function(model, expdes,data, core, inits, precorrelate=T, method="r
   }  else if (method == "maximinlhs") {
     samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
   }  else if (method == "optimumlhs") {
-    if(inits>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
-    samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/150),50),function(x) optimumLHS(150, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
+    if(inits>50*100){print("maximum number of optimumlhs exceeded, running with 5000 iterations")}
+    samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/100),50),function(x) optimumLHS(100, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
   } else {
     stop("The selected initialisation method does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')")
   }
@@ -801,8 +801,6 @@ rebuildModel <- function(model_file, data_file, var_file="") {
 
     return(model)
 }
-
-
 
 
 # Perform several simulated annealing, one per core
