@@ -178,5 +178,86 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
     return(model_description)
 }
 
+#' Tries to add one link each and returns a list of ordered chi-squared differences, highlighting the significant ones
+#' @param model_description MRAmodel object describing thze model and its best fit, containing the data
+#' @param nb_cores Number of cores that should be used for the computation
+#' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
+#' @param method Method to be used for the initialisation, available methods are :
+#'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
+#'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
+#'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
+#'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
+#' @return An MRAmodel object describing the model and its best fit, containing the data
+#' @export
+#' @seealso createModel, initModel
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
+#' @examples
+#' ext_list = createModel(model) # Produces a model for the network described in links.tab using the data in data_MIDES.csv
+suggestExtension <- function(model_description,nb_cores=1,inits=1000,method="geneticlhs"){
 
+    # Extra fitting informations from the model description
+    model = model_description$model
+    init_params = model_description$parameters
+    initial_response = model$getLocalResponseFromParameter( init_params )
+    expdes = model_description$design
+    model_structure = model_description$structure
+    adj = model_structure$adjacencyMatrix
+    data = model_description$data
+    if (is.na(model_description$bestfit)) {stop("Data are required to reduce the model")}
+    
+    print("Performing model extension…")
+    initresidual = model_description$bestfit
+    rank = model$modelRank()
+      links.to.test=which(adj==0 & diag(1,nrow(adj),ncol(adj))==0)
+      tmp_adj=adj
+      tmp_model_structure=model_structure
+      tmp_model=model
+      
+      # Each link is added and compared to the previous model
+      extension_mat=NULL
+      for (i in links.to.test) {
+        tmp_adj[i]=1
+        tmp_model_structure$setAdjacencyMatrix( tmp_adj )
+        tmp_model$setModel ( expdes, tmp_model_structure )
+        paramstmp = tmp_model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+        result = tmp_model$fitmodel(data,paramstmp)
+        response.matrix = tmp_model$getLocalResponseFromParameter( result$parameter )
+        new_rank = tmp_model$modelRank()
+        dr = new_rank-rank
+        deltares = initresidual-result$residuals
+        extension_mat=rbind(extension_mat,c(i,
+                                              tmp_model_structure$names[(i-1) %/% dim(adj)[1]+1],
+                                              tmp_model_structure$names[(i-1) %% dim(adj)[1]+1],
+                                              result$residuals,
+                                              new_rank,
+                                              deltares,
+                                              dr,
+                                              1-pchisq(deltares, df=dr)))  
+        print(paste("old :", rank, ", new : ", new_rank))
+        print(paste(extension_mat[nrow(extension_mat),2],
+                    "->",
+                    extension_mat[nrow(extension_mat),3],
+                    ": Delta residual = ",
+                    extension_mat[nrow(extension_mat),6],
+                    "; Delta rank = ",
+                    extension_mat[nrow(extension_mat),7],
+                    ", p-value = ",
+                    extension_mat[nrow(extension_mat),8] ))
+
+        tmp_adj[i]=0; ## Slightly accelerates the computation
+      }
+      colnames(extension_mat) <- c("adj_idx","from","to","residual","df","Res-delta","df-delta","p-val")
+      
+      extension_mat=extension_mat[order(as.numeric(extension_mat[,"Res-delta"]),decreasing=T),]
+      
+      # convert numeric parts into numeric
+      
+    print("Extension trial completed!")
+    print("Significant link extensions:")
+    print(extension_mat[as.numeric(extension_mat[,"p-val"])<=0.05,])R
+    return(extension_mat)
+
+#TODO So far only extension is started from previously best parameterisation and 0 for the new link extension with latin hypercube dioes not guarantee better fit and would take a very very long time     
+# only returns suggestions for the improvment oif the model does not give any insights into whatever
+    }
 
