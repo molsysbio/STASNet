@@ -254,7 +254,7 @@ suggestExtension <- function(model_description,nb_cores=1,inits=1000,method="gen
       
     print("Extension trial completed!")
     print("Significant link extensions:")
-    print(extension_mat[as.numeric(extension_mat[,"p-val"])<=0.05,])R
+    print(extension_mat[as.numeric(extension_mat[,"p-val"])<=0.05,])
     return(extension_mat)
 
 #TODO So far only extension is started from previously best parameterisation and 0 for the new link extension with latin hypercube dioes not guarantee better fit and would take a very very long time     
