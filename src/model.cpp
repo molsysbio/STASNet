@@ -810,7 +810,13 @@ void Model::printEquation(const size_t r, const size_t c) {
     std::cout << response_[r*exp_design_.stimuli.shape()[0] + c] << std::endl;
 }
 
-
+// Ensure inhibitors values are negative as they are treated as such in the equations.
+void Model::setNegativeInhibitions(double *p) const {
+  size_t ninhibs = exp_design_.inhib_nodes.size();
+  for (size_t ii=0; ii < ninhibs ; ii++) {
+    p[nr_of_parameters()-ninhibs + ii] = -std::abs(p[nr_of_parameters()-ninhibs + ii]);
+  }
+}
 
 
 // TODO Maps identifiable parameters to a set of possible original parameters

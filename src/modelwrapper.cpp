@@ -307,12 +307,20 @@ SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) 
     } catch(...) { 
 	    ::Rf_error("c++ exception (unknown reason)"); 
     }
+    for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
     model->getSubmodelsParameters(parameters);
+    for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
     ret["residuals"]=residual;
     return ret;
+}
+void ModelSetWrapper::setVariableParameters(std::vector<size_t> variable_parameters) {
+    for (size_t ii=0; ii < variable_parameters.size(); ii++) {
+        variable_parameters[ii]--;
+    }
+    model->setVariableParameters(variable_parameters);
 }
 
 void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
@@ -337,6 +345,9 @@ void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
 		      exp, 1); // 1 model by default, value changed by ModelSetWrapper::fitmodel
 }
 
+void ModelSetWrapper::setNbModels(size_t nb_submodels) {
+    model->setNbModels(nb_submodels);
+}
 
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
@@ -367,6 +378,8 @@ RCPP_MODULE(ModelEx) {
         .derives<ModelWrapper>("Model")
         .default_constructor()
         .method( "fitmodelset", &ModelSetWrapper::fitmodelset )
+        .method( "setNbModels", &ModelSetWrapper::setNbModels )
+        .method( "setVariableParameters", &ModelSetWrapper::setVariableParameters )
         ;
 }
 //        .method( "fitmodel" , &ModelSetWrapper::fitmodel )

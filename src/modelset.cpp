@@ -31,7 +31,6 @@ void ModelSet::eval(const double *p, double *datax, const Data *data) const {
     DataSet* dataset = (DataSet*)data;
     assert(DataSet.datas_.size() == nb_submodels_);
     size_t rows = dataset->datas_[0].unstim_data.shape()[0], cols = dataset->datas_[0].unstim_data.shape()[1];
-    // TODO Change to account for the DataSet object
 
     double dataxm[rows * cols];
     double ptmp[independent_parameters_.size()];
@@ -40,6 +39,7 @@ void ModelSet::eval(const double *p, double *datax, const Data *data) const {
         // Change the parameters that vary accross models
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
             ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
+            if (debug) { std::cout << "Setting parameter " << *id << " to " << ptmp[*id] << " for model " << mod << std::endl; }
         }
         Model::eval(ptmp, dataxm, &(dataset->datas_[mod]));
         std::copy(dataxm, dataxm + rows * cols, datax + mod * rows * cols);
@@ -52,6 +52,13 @@ unsigned int ModelSet::getNbModels() const {
 
 void ModelSet::setNbModels(const int nb_submodels) {
     nb_submodels_ = nb_submodels;
+}
+void ModelSet::setVariableParameters(const std::vector<size_t> variable_parameters) {
+    for (size_t ii=0; ii<variable_parameters.size(); ii++) {
+        assert(variable_parameters[ii] < nr_of_parameters_per_submodel());
+    }
+    subparameters_ids_ = variable_parameters;
+    sort(subparameters_ids_.begin(), subparameters_ids_.end());
 }
 
 size_t ModelSet::nr_of_parameters() const {
@@ -66,7 +73,7 @@ size_t ModelSet::nr_of_parameters_per_submodel() const {
 // Replaces the parameters vector to reflect the parameters that were effectively fitted
 void ModelSet::getSubmodelsParameters(std::vector<double> &parameters) {
     for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
-        // Use the values at the beginning of the vector for parameters that are fitted simultaneously for all models, do not change those that were fitted independantly
+        // Use the values at the beginning of the vector for parameters that are fitted simultaneously for all models, do not change those that were fitted independently
         std::vector<size_t>::const_iterator sub_id = subparameters_ids_.begin();
         for (size_t ii=0; ii < independent_parameters_.size(); ii++) {
             if (subparameters_ids_.size() <= 0)
@@ -74,9 +81,19 @@ void ModelSet::getSubmodelsParameters(std::vector<double> &parameters) {
             else if (ii != *sub_id) {
                 parameters[mod * independent_parameters_.size() + ii] = parameters[ii];
             } else {
+                std::cout << "Keeping independent parameter " << ii << std::endl;
                 sub_id++;
             }
         }
     }
 }
 
+void ModelSet::setNegativeInhibitions(double *p) const {
+  size_t ninhibs = exp_design_.inhib_nodes.size();
+  for (size_t ii=0; ii < ninhibs ; ii++) {
+    for (size_t jj=1; jj<=nb_submodels_; jj++) {
+        if (debug) { std::cout << "submodel " << jj << ", inhibitor " << ii << std::endl; }
+        p[ jj*nr_of_parameters_per_submodel()-ninhibs + ii ] = -std::abs(p[ jj*nr_of_parameters_per_submodel()-ninhibs + ii ]);
+    }
+  }
+}

@@ -184,15 +184,32 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
     model = new(fitmodel:::ModelSet)
     model$setModel(core0$design, model_structure)
+    model$setNbModels(nb_submodels)
 
     print("setting completed")
-    if (nb_cores == 0) { nb_cores = detectCores()-1 }
-    samples = qnorm(randomLHS(inits, model$nr_of_parameters() * nb_submodels), sd=2) # TODO Change to match the one in "init"
-    results = parallel_initialisation(model, data_, samples, nb_cores)
-    #results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots, method)
+    results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores)
     bestid = order(results$residuals)[1]
     parameters = results$params[bestid,]
     bestfit = results$residuals[bestid]
+
+    for ( ii in 1:(model$nr_of_parameters() / nb_submodels) ) {
+        model$setVariableParameters(c(ii))
+        pset = matrix( rep(parameters, 5), nrow=5, byrow=T)
+        #pset[1, 0*model$nr_of_parameters() /nb_submodels+ ii] = pset[1, ii] * 1.1
+        pset[1,] = pset[1,] + rnorm(model$nr_of_parameters())
+        ressup = parallel_initialisation(model, data_, matrix(pset[1,], nrow=1), NB_CORES=1)
+        print(paste0("Parameter ", ii, ", residual=", ressup$residuals[1]))
+        outsup=""; out=""; outer=""
+        for (jj in 1:nb_submodels) {
+            new_idx = length(parameters)/nb_submodels*(jj-1)+ii
+            outer = paste0(outer, " ", pset[1, new_idx]-parameters[new_idx])
+            out = paste0(out, " ", ressup$params[1, new_idx]-parameters[new_idx])
+            outsup = paste0(outsup, " ", ressup$params[1, new_idx]-pset[1, new_idx])
+        }
+        print(outer)
+        print(out)
+        print(outsup)
+    }
 
     infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
     names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
@@ -230,7 +247,7 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
     if(inits>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
     samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/150),50),function(x) optimumLHS(150, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
   } else {
-    stop("The selected initialisation method does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')")
+    stop(paste0("The selected initialisation method'", method, "' does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')"))
   }
   
   # assign sampled and precorrelated samples to the respective parameter positions

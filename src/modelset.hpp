@@ -13,8 +13,10 @@ public:
     virtual void eval(const double *p, double *datax, const Data *data) const;
 
     void setNbModels(const int nb_submodels);
+    void setVariableParameters(const std::vector<size_t> variable_parameters = std::vector<size_t>());
     unsigned int getNbModels() const;
     void getSubmodelsParameters(std::vector<double> &parameters);
+    void setNegativeInhibitions(double *p) const;
 
     virtual size_t nr_of_parameters() const;
     size_t nr_of_parameters_per_submodel() const;
