@@ -81,7 +81,6 @@ void ModelSet::getSubmodelsParameters(std::vector<double> &parameters) {
             else if (ii != *sub_id) {
                 parameters[mod * independent_parameters_.size() + ii] = parameters[ii];
             } else {
-                std::cout << "Keeping independent parameter " << ii << std::endl;
                 sub_id++;
             }
         }

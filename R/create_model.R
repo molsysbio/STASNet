@@ -11,7 +11,7 @@
 
 # Global variable to have more outputs
 verbose = FALSE
-debug = TRUE
+debug = FALSE
 
 # Generates a random number between 0 and 1
 rand <- function(decimals=4) {
@@ -192,30 +192,81 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     parameters = results$params[bestid,]
     bestfit = results$residuals[bestid]
 
-    for ( ii in 1:(model$nr_of_parameters() / nb_submodels) ) {
-        model$setVariableParameters(c(ii))
-        pset = matrix( rep(parameters, 5), nrow=5, byrow=T)
-        #pset[1, 0*model$nr_of_parameters() /nb_submodels+ ii] = pset[1, ii] * 1.1
-        pset[1,] = pset[1,] + rnorm(model$nr_of_parameters())
-        ressup = parallel_initialisation(model, data_, matrix(pset[1,], nrow=1), NB_CORES=1)
-        print(paste0("Parameter ", ii, ", residual=", ressup$residuals[1]))
-        outsup=""; out=""; outer=""
-        for (jj in 1:nb_submodels) {
-            new_idx = length(parameters)/nb_submodels*(jj-1)+ii
-            outer = paste0(outer, " ", pset[1, new_idx]-parameters[new_idx])
-            out = paste0(out, " ", ressup$params[1, new_idx]-parameters[new_idx])
-            outsup = paste0(outsup, " ", ressup$params[1, new_idx]-pset[1, new_idx])
-        }
-        print(outer)
-        print(out)
-        print(outsup)
-    }
-
     infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
     names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
     self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos)
 # param_range, lower_values, upper_values)
     return(self)
+}
+
+#' See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
+#'
+#' @param modelset An MRAmodelSet object
+#' @param nb_cores Number of cores to use for the refitting with the new variable parameters
+#' @param max_iterations Maximum number of variable parameters to add
+#' @param accuracy Cutoff probability for the chi^2 test
+#' @param method Name of the LHS method to use
+#' @return An updated MRAmodelSet with the new parameter sets
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+addVariableParameters <- function(modelset, nb_cores=0, max_iterations=1, accuracy=0.95, method="randomlhs") {
+    if (nb_cores == 0) { nb_cores = detectCores()-1 }
+    model = modelset$model
+
+    # Look which parameters are not already variables
+    extra_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+    max_iterations = max(max_iterations, length(extra_parameters))
+    if (max_iterations < 0) { stop("Incorrect number of iterations") }
+    for (it in 1:max_iterations) {
+        nb_sub_params = length(extra_parameters)
+        extra_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+        if (length(modelset$variable_parameters) > 0) {
+            extra_parameters = extra_parameters[-c(modelset$variable_parameters)]
+        }
+        psets = list()
+        for (ii in extra_parameters) {
+            var_pars = unique(c( ii, modelset$variable_parameters ))
+            model$setVariableParameters(var_pars)
+            new_pset = matrix( rep(modelset$parameters, 5), ncol=length(modelset$parameters), byrow=T )
+            samples = geneticLHS(nrow(new_pset), modelset$nb_models)
+            samples = getSamples(modelset$nb_models, nrow(new_pset), method=method)
+            for (jj in 1:modelset$nb_models) {
+                new_idx = nb_sub_params*(jj-1)+ii
+                new_pset[,new_idx] = new_pset[,new_idx] + samples[,jj]
+            }
+
+            refit = parallel_initialisation(model, modelset$data, new_pset, NB_CORES=nb_cores)
+
+            if (debug) {
+                for (jj in 1:modelset$nb_models) {
+                    new_idx = nb_sub_params*(jj-1)+ii
+                    outer = paste0(outer, " ", new_pset[1, new_idx]-modelset$parameters[new_idx])
+                    out = paste0(out, " ", refit$params[1, new_idx]-modelset$parameters[new_idx])
+                    outsup = paste0(outsup, " ", refit$params[1, new_idx]-new_pset[1, new_idx])
+                }
+                print(outer)
+                print(out)
+                print(outsup)
+            }
+            psets$residuals = c(psets$residuals, refit$residuals)
+            psets$added_var = c( psets$added_var, rep(ii, length(refit$residuals)) )
+            psets$params = rbind(psets$params, refit$params)
+        }
+        print("so far...")
+        ord_res = order(psets$residuals)
+        if (modelset$bestfit - psets$residuals[ord_res[1]] > qchisq(accuracy, modelset$nb_models) ) {
+            bid = ord_res[1]
+            var_pars = c( modelset$variable_parameters, modelset$variable_parameters[bid] )
+            print("so good")
+            modelset = setVariableParameters(modelset, var_pars)
+            modelset$parameters = psets$params[bid,]
+            modelset = computeFitScore(modelset)
+        } else {
+            break
+        }
+    }
+
+    return(modelset)
 }
 
 #' Perform an initialisation of the model 
@@ -232,23 +283,7 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
     correlated = correlate_parameters(model, core, perform_plot=perform_plots)
     nr_known_par=length(correlated$list)
   }
-  # Different sampling methods
-  method = tolower(method)
-  sub_samples_size = min(1000, inits)
-  if (method == "randomlhs" || method == "sample") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) randomLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par))), sd=2)
-  } else if (method == "geneticlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) geneticLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par,pop=50))), sd=2)
-  } else if (method == "improvedlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) improvedLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
-  } else if (method == "maximinlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(sub_samples_size, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
-  } else if (method == "optimumlhs") {
-    if(inits>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
-    samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/150),50),function(x) optimumLHS(150, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
-  } else {
-    stop(paste0("The selected initialisation method'", method, "' does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')"))
-  }
+  samples = getSamples(model$nr_of_parameters()-nr_known_par, inits, method)
   
   # assign sampled and precorrelated samples to the respective parameter positions
   if(precorrelate){
@@ -267,6 +302,30 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
   results = parallel_initialisation(model, data, samples, nb_cores)
   print("Fitting completed")
   return(results)
+}
+
+#' Get LHS samples
+#'
+#' @param sample_size Size of each sample
+#' @param nb_samples Number of samples
+#' @param method Name of the LHS method to use
+getSamples <- function(sample_size, nb_samples, method="randomlhs") {
+    method = tolower(method)
+    sub_samples_size = min(1000, nb_samples)
+    if (method == "randomlhs" || method == "sample") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) randomLHS(sub_samples_size, sample_size))), sd=2)
+    } else if (method == "geneticlhs") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) geneticLHS(sub_samples_size, sample_size,pop=50))), sd=2)
+    } else if (method == "improvedlhs") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) improvedLHS(sub_samples_size, sample_size,dup=5))), sd=2)
+    } else if (method == "maximinlhs") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) maximinLHS(sub_samples_size, sample_size,dup=5))), sd=2)
+    } else if (method == "optimumlhs") {
+      if(nb_samples>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
+      samples = qnorm(do.call(rbind,lapply(1:min(ceiling(nb_samples/150),50),function(x) optimumLHS(150, sample_size,maxSweeps = 2,eps = 0.1))), sd=2)
+    } else {
+      stop(paste0("The selected initialisation method'", method, "' does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')"))
+    }
 }
 
 # TODO put it in deep_initialisation

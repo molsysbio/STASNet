@@ -307,9 +307,9 @@ SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) 
     } catch(...) { 
 	    ::Rf_error("c++ exception (unknown reason)"); 
     }
-    for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
+    //for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
     model->getSubmodelsParameters(parameters);
-    for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
+    //for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
