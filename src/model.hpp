@@ -48,10 +48,11 @@ public:
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);
 
-  void getParametersLinks(std::vector<std::string> &description);
+  void getParametersLinks(std::vector<std::string> &description) const;
   void showParameterDependencyMatrix();
   void showGUnreduced();
   std::vector< std::vector<int> > getUnreducedParameterDependencyMatrix();
+  double_matrix getParameterDependencyMatrix();
 
   int find_parameter(std::string name) ;
   // TODO Maps identifiable parameters to a set of possible original parameters
@@ -85,6 +86,7 @@ public:
   }
   void printEquation(const size_t r, const size_t c);
   virtual void setNegativeInhibitions(double *p) const;
+  std::vector<size_t> getInhibitorsIds() const;
 
   virtual size_t modelRank() const { return rank_; }
   

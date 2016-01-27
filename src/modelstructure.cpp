@@ -58,13 +58,9 @@ std::ostream& operator<<(std::ostream &os, const ModelStructure &mod) {
     return os;
 }
   
-  
-
 //
 // IMPORTANT: RcppCommon.h, dann wrap, dann Rcpp.h
 //
-
-
 
 RCPP_MODULE(ModelStructureEx){
     using namespace Rcpp ;

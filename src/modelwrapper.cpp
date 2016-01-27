@@ -272,6 +272,10 @@ SEXP ModelWrapper::getUnreducedPDM() {
     return Gunreduced;
 }
 
+SEXP ModelWrapper::getPDM() {
+    return(Rcpp::wrap( model->getParameterDependencyMatrix() ));
+}
+
 SEXP ModelWrapper::getParametersNames() {
     std::vector<std::string> tmp;
     model->getParametersLinks(tmp);
@@ -370,6 +374,7 @@ RCPP_MODULE(ModelEx) {
     .method( "showUnreducedPDM", &ModelWrapper::showGUnreduced )
     .method( "getParametersNames", &ModelWrapper::getParametersNames )
     .method( "getUnreducedPDM", &ModelWrapper::getUnreducedPDM )
+    .method( "getPDM", &ModelWrapper::getPDM )
     .method( "getEquation", &ModelWrapper::printEquation )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;

@@ -40,6 +40,7 @@ public:
   void showParameterDependencyMatrix();
   void showGUnreduced();
   SEXP getUnreducedPDM();
+  SEXP getPDM();
   SEXP getParametersNames();
 
   void printEquation(const size_t r, const size_t c);

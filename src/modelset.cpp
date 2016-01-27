@@ -88,11 +88,12 @@ void ModelSet::getSubmodelsParameters(std::vector<double> &parameters) {
 }
 
 void ModelSet::setNegativeInhibitions(double *p) const {
-  size_t ninhibs = exp_design_.inhib_nodes.size();
-  for (size_t ii=0; ii < ninhibs ; ii++) {
-    for (size_t jj=1; jj<=nb_submodels_; jj++) {
-        if (debug) { std::cout << "submodel " << jj << ", inhibitor " << ii << std::endl; }
-        p[ jj*nr_of_parameters_per_submodel()-ninhibs + ii ] = -std::abs(p[ jj*nr_of_parameters_per_submodel()-ninhibs + ii ]);
+  std::vector<size_t> inhibs_ids = getInhibitorsIds();
+
+  for (std::vector<size_t>::iterator it=inhibs_ids.begin(); it!=inhibs_ids.end(); it++) {
+    for (size_t jj=0; jj<nb_submodels_; jj++) {
+        if (debug) { std::cout << "submodel " << jj << ", inhibitor " << *it << std::endl; }
+        p[ jj*nr_of_parameters_per_submodel() + *it ] = -std::abs(p[ jj*nr_of_parameters_per_submodel() + *it ]);
     }
   }
 }
