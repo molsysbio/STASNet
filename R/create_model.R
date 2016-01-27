@@ -11,7 +11,7 @@
 
 # Global variable to have more outputs
 verbose = FALSE
-debug = FALSE
+debug = TRUE
 
 # Generates a random number between 0 and 1
 rand <- function(decimals=4) {

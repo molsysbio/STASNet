@@ -23,16 +23,9 @@
 #' @return An MRAmodel object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
+MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
 
-    # Compute the basal fit if data are present
-    if (class(data) == "Rcpp_Data" || class(data) == "Rcpp_DataSet") {
-        basefit = sum( ((data$stim_data-data$unstim_data)/data$error)^2 )
-    } else {
-        basefit = NA
-    }
-
-    return(structure(
+    mra_model = structure(
               list(
                    # Objects to build the model
                    model=model,
@@ -44,8 +37,6 @@ MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), da
                    # Optimal parameters of the model
                    parameters=parameters,
                    bestfit=bestfit,
-                   basefit = basefit, # Chi-2 score without any link
-                   bestfitscore = bestfit / basefit,
                    # Name of the model and extra informations
                    name=name,
                    infos=infos,
@@ -54,6 +45,41 @@ MRAmodel <- function(model=NULL, design=NULL, structure=NULL, basal=matrix(), da
                    lower_values=lower_values,
                    upper_values=upper_values
                    ),
-              class="MRAmodel"))
+              class="MRAmodel")
+    mra_model = computeFitScore(mra_model)
+    return(mra_model)
 }
 
+#' Compute the fitting score of a model
+#'
+#' Compute the fitting score of the model (fraction of the variation in the data explained by the network)
+#' Do the computation for each measured node and for the network
+computeFitScore <- function(mra_model) {
+    if (class(data) == "Rcpp_Data" || class(data) == "Rcpp_DataSet") {
+        data = mra_model$data
+    } else {
+        mra_model$abScores = NA
+        mra_model$bestfitscore = NA
+        return()
+    }
+    refit = parallel_initialisation(mra_model$model, mra_model$data, matrix(mra_model$parameters, nrow=1), NB_CORES=1)
+    mra_model$bestfit = refit$residual[1]
+    mra_model$parameters = refit$params[1,]
+    prediction = getSimulation(mra_model)
+    Rscores = c()
+    for ( abc in 1:ncol(prediction) ) {
+        mdata = mean(data$stim_data[,abc])
+        Sbase = sum((data$stim_data[,abc]-mdata)^2)
+        Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2)
+        Rscores[colnames(prediction)[abc]] = 1 - Sfit/Sbase
+    }
+
+    mra_model$abScores = Rscores
+    mra_model$bestfitscore = mean(Rscores)
+
+    return(mra_model)
+}
+
+getMeasuredNodesNames <- function(mra_model) {
+    return(mra_model$structure$names[mra_model$design$measured_nodes+1])
+}

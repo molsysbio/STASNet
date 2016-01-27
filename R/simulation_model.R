@@ -342,9 +342,12 @@ plotModelSimulation <- function(prediction, log_axis=F) {
     # TODO add error multiplier
 }
 
-# TODO Function to plot the simulation with the experimental data
-# can it be integrated in the other function ?
-plotDataSimulation <- function(model, data, plotsPerFrame=4, log_axis=F) {
+#' Simulate the model for the experimental design used for the fitting
+#' @return A matrix containing the simulation with the names of the measured nodes as column names
+getSimulation <- function(mra_model) {
+    prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+    colnames(prediction) = getMeasuredNodesNames(mra_model)
+    return(prediction)
 }
 
 # Plots an empty zone, usefull to write only text

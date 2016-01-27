@@ -87,6 +87,17 @@ plotModelAccuracy <- function(model_description) {
     plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
 }
 
+#' Plot the scores of each antibody
+#'
+#' Plot the scores of the fit for each antibody, which is how much
+#' of the variation in the data is explained by the model
+#' @param mra_model An MRAmodel object
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+plotModelScores <- function(mra_model) {
+    barplot(mra_model$abScores)
+}
+
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test
 #' @param model_description A list describing the model, as the one produced by createModel or importModel
 #' @param accuracy Probability of the confidence interval for the Chi^2 test. The link can be removed if 0 is included in this interval.
