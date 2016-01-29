@@ -25,15 +25,16 @@ diagram="@startuml
     (MRAmodel) << S3 Class >>
     (getCombinationMatrix) << Helper Functions >>
 
-    (createModel)--->MRAmodel
+    (createModel)---->MRAmodel
     (MRAmodel)-->(plotModelPrediction)
     (MRAmodel)-->(plotModelAccuracy)
+    (MRAmodel)-->(simulateModel)
+    (MRAmodel)-->(plotModelScores)
     (createModelSet) --> ModelSet
     (ModelSet)-->(extractSubmodels)
-    (extractSubmodels) --> (MRAmodel)
     (ModelSet)-->(plotParameters)
     (ModelSet)-->(plotResiduals)
-    (MRAmodel)-->(simulateModel)
+    (extractSubmodels) --> (MRAmodel)
     (simulateModel)-->(plotModelSimulation)
     (getCombinationMatrix)-->(simulateModel)
     @enduml"

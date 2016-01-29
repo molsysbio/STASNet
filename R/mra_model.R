@@ -58,9 +58,11 @@ computeFitScore <- function(mra_model, refit_model=F) {
     data = mra_model$data
 # The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason
 # Couldn't find the bug so we do not compute the score for the MRAmodelSet objects
-    if (class(data) != "Rcpp_Data") {# && class(data) != "Rcpp_DataSet") {
+    if (class(data) != "Rcpp_Data" || any(dim(data$stim_data)==0)) {# && class(data) != "Rcpp_DataSet") {
         mra_model$Rscores = NA
         mra_model$bestfitscore = NA
+        mra_model$meanScores = NA
+        mra_model$fitmeanScore = NA
         return(mra_model)
     }
     if (refit_model) {
