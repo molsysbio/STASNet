@@ -19,14 +19,15 @@ rand <- function(decimals=4) {
 }
 
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
+#'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
-#' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
 #' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
+#' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
 ## CHECK THE IMPLEMENTATION FOR THE NO BASAL
 #' @param data.variation Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.
 #' @param nb_cores Number of cores that should be used for the computation
 #' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
-#' @param init_distribution Whether the distribution of the residuals and the parameters deduced by correlation should be plotted or not
+#' @param perform_plots Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not
 #' @param method Method to be used for the initialisation, available methods are :
 #'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
 #'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
@@ -37,11 +38,11 @@ rand <- function(decimals=4) {
 #' @seealso importModel, exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @examples
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", "variation.var") # Uses the variation from a variation file
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
-#' model = createModel("links.tab", "data_MIDAS.csv", "basal.dat", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, data.stimulation, basal_file, data.variation="", nb_cores=1, inits=1000, init_distribution=F, precorrelate=T, method="randomlhs") {
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs") {
 
     # Creation of the model structure object
     model_structure = extractStructure(model_links)
@@ -67,7 +68,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     model$setModel(expdes, model_structure)
 
     # INITIAL FIT
-    results <- initModel(model,data, core, inits, precorrelate, method, nb_cores, init_distribution)
+    results <- initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
     
     # Choice of the best fit
     params = results$params
@@ -76,8 +77,9 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
     #write(residuals, stderr())
     print(paste( sum(is.na(residuals)), "NA and ", sum(is.infinite(residuals)), "infinite residuals" ))
     # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
-    order_id = order(residuals)[1:20]
-    for ( i in 1:min(20, length(residuals)) ) {
+    order_resid = order(residuals)
+    order_id = order_resid[1:min(20, length(residuals))]
+    for ( i in 1:length(order_id) ) {
         p_res = residuals[order_id[i]]
         if (!is.na(p_res) && !is.infinite(p_res)) {
             repeat {
@@ -91,16 +93,29 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
             residuals[order_id[i]] = result$residuals
         }
     }
-    if (init_distribution) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
+    if (perform_plots) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
     if (debug) {
         # Print the 20 smallest residuals to check if the optimum has been found several times
         print("Best residuals :")
         print(sort(residuals)[1:20])
     }
+    range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
+    paths = sapply(model$getParametersLinks(), simplify_path_name)
+    best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
+    for ( ii in 1:(ncol(params)-1) ) {
+        for (jj in (ii+1):ncol(params)) {
+            setii = params[best_sets,ii] 
+            setjj = params[best_sets,jj]
+            cij = cor(setii, setjj)
+            if (cij > 0.999 || (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
+                plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\ncor=", cij), col=residuals[best_sets])
+            }
+        }
+    }
 
-    best = order(residuals)[1]
-    init_params = params[best,]
-    init_residual = residuals[best]
+    best_id = order(residuals)[1]
+    init_params = params[best_id,]
+    init_residual = residuals[best_id]
     if (verbose) {
         print("Model simulation with optimal parameters :")
         print(model$simulate(data, init_params)$prediction)
@@ -120,7 +135,7 @@ createModel <- function(model_links, data.stimulation, basal_file, data.variatio
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, init_distribution=F, method="default") {
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs") {
     if (length(csv_files) != length(var_files)) {
         if (length(var_files) == 0) {
             var_files = rep("", length(csv_files))
@@ -170,11 +185,10 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 
     model = new(fitmodel:::ModelSet)
     model$setModel(core0$design, model_structure)
+    model$setNbModels(nb_submodels)
 
     print("setting completed")
-    if (nb_cores == 0) { nb_cores = detectCores()-1 }
-    samples = qnorm(randomLHS(inits, model$nr_of_parameters() * nb_submodels), sd=2)
-    results = parallel_initialisation(model, data_, samples, nb_cores)
+    results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores)
     bestid = order(results$residuals)[1]
     parameters = results$params[bestid,]
     bestfit = results$residuals[bestid]
@@ -186,50 +200,122 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     return(self)
 }
 
+#' See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
+#'
+#' @param modelset An MRAmodelSet object
+#' @param nb_cores Number of cores to use for the refitting with the new variable parameters
+#' @param max_iterations Maximum number of variable parameters to add
+#' @param accuracy Cutoff probability for the chi^2 test
+#' @param method Name of the LHS method to use
+#' @return An updated MRAmodelSet with the new parameter sets
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+addVariableParameters <- function(modelset, nb_cores=0, max_iterations=1, accuracy=0.95, method="randomlhs") {
+    if (nb_cores == 0) { nb_cores = detectCores()-1 }
+    model = modelset$model
+
+    # Look which parameters are not already variables
+    extra_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+    max_iterations = max(max_iterations, length(extra_parameters))
+    if (max_iterations < 0) { stop("Incorrect number of iterations") }
+    for (it in 1:max_iterations) {
+        nb_sub_params = length(extra_parameters)
+        extra_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+        if (length(modelset$variable_parameters) > 0) {
+            extra_parameters = extra_parameters[-c(modelset$variable_parameters)]
+        }
+        psets = list()
+        for (ii in extra_parameters) {
+            var_pars = unique(c( ii, modelset$variable_parameters ))
+            model$setVariableParameters(var_pars)
+            new_pset = matrix( rep(modelset$parameters, 5), ncol=length(modelset$parameters), byrow=T )
+            samples = geneticLHS(nrow(new_pset), modelset$nb_models)
+            samples = getSamples(modelset$nb_models, nrow(new_pset), method=method)
+            for (jj in 1:modelset$nb_models) {
+                new_idx = nb_sub_params*(jj-1)+ii
+                new_pset[,new_idx] = new_pset[,new_idx] + samples[,jj]
+            }
+
+            refit = parallel_initialisation(model, modelset$data, new_pset, NB_CORES=nb_cores)
+
+            psets$residuals = c(psets$residuals, refit$residuals)
+            psets$added_var = c( psets$added_var, rep(ii, length(refit$residuals)) )
+            psets$params = rbind(psets$params, refit$params)
+        }
+        print("so far...")
+        ord_res = order(psets$residuals)
+        if (modelset$bestfit - psets$residuals[ord_res[1]] > qchisq(accuracy, modelset$nb_models) ) {
+            bid = ord_res[1]
+            var_pars = c( modelset$variable_parameters, modelset$variable_parameters[bid] )
+            print("so good")
+            modelset = setVariableParameters(modelset, var_pars)
+            modelset$parameters = psets$params[bid,]
+            modelset = computeFitScore(modelset)
+        } else {
+            break
+        }
+    }
+
+    return(modelset)
+}
+
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
-initModel <- function(model,data, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, init_distribution=F) {
+initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
+  expdes = core$design
+  data = core$data
   # Parallelized version uses all cores but one to keep control
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
   # Correlate directly measured and connected nodes -> they will not be sampled
   nr_known_par=0
   if (precorrelate){
-    correlated = correlate_parameters(model, core,perform_plot=init_distribution)
-    nr_known_par=length(correlated$list)}
-  # Different sampling methods
-  if (method == "randomlhs" || method == "sample") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) randomLHS(1000, model$nr_of_parameters()-nr_known_par))), sd=2)
-  }  else if (method == "geneticlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) geneticLHS(1000, model$nr_of_parameters()-nr_known_par,pop=50))), sd=2)
-  }  else if (method == "improvedlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) improvedLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
-  }  else if (method == "maximinlhs") {
-    samples = qnorm(do.call(rbind,lapply(1:ceiling(inits/1000),function(x) maximinLHS(1000, model$nr_of_parameters()-nr_known_par,dup=5))), sd=2)
-  }  else if (method == "optimumlhs") {
-    if(inits>50*100){print("maximum number of optimumlhs exceeded, running with 5000 iterations")}
-    samples = qnorm(do.call(rbind,lapply(1:min(ceiling(inits/100),50),function(x) optimumLHS(100, model$nr_of_parameters()-nr_known_par,maxSweeps = 2,eps = 0.1))), sd=2)
-  } else {
-    stop("The selected initialisation method does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')")
+    correlated = correlate_parameters(model, core, perform_plot=perform_plots)
+    nr_known_par=length(correlated$list)
   }
+  samples = getSamples(model$nr_of_parameters()-nr_known_par, inits, method)
   
   # assign sampled and precorrelated samples to the respective parameter positions
   if(precorrelate){
-  for (i in correlated$list){
-    inset=rep(correlated$values[correlated$list==i], times=nrow(samples))
-    if (i==1){
-      samples=cbind(inset,samples)
- } else {
-      samples=cbind(samples[,1:(i-1)],inset,samples[,(i:ncol(samples))])
+    for (ii in correlated$list){
+      inset=rep(correlated$values[correlated$list==ii], times=nrow(samples))
+      if (ii==1){
+        samples=cbind(inset,samples)
+      } else {
+        samples=cbind(samples[,1:(ii-1)],inset,samples[,(ii:ncol(samples))])
+      }
     }
   }
   print("Sampling terminated.")
-  }
   
   #  fit all samples to the model
   results = parallel_initialisation(model, data, samples, nb_cores)
-  print("Initial fits completed")
+  print("Fitting completed")
   return(results)
+}
+
+#' Get LHS samples
+#'
+#' @param sample_size Size of each sample
+#' @param nb_samples Number of samples
+#' @param method Name of the LHS method to use
+getSamples <- function(sample_size, nb_samples, method="randomlhs") {
+    method = tolower(method)
+    sub_samples_size = min(1000, nb_samples)
+    if (method == "randomlhs" || method == "sample") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) randomLHS(sub_samples_size, sample_size))), sd=2)
+    } else if (method == "geneticlhs") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) geneticLHS(sub_samples_size, sample_size,pop=50))), sd=2)
+    } else if (method == "improvedlhs") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) improvedLHS(sub_samples_size, sample_size,dup=5))), sd=2)
+    } else if (method == "maximinlhs") {
+      samples = qnorm(do.call(rbind,lapply(1:ceiling(nb_samples/1000),function(x) maximinLHS(sub_samples_size, sample_size,dup=5))), sd=2)
+    } else if (method == "optimumlhs") {
+      if(nb_samples>50*150){print("maximum number of optimumlhs exceeded, running with 7500 iterations")}
+      samples = qnorm(do.call(rbind,lapply(1:min(ceiling(nb_samples/150),50),function(x) optimumLHS(150, sample_size,maxSweeps = 2,eps = 0.1))), sd=2)
+    } else {
+      stop(paste0("The selected initialisation method'", method, "' does not exist (valid methods are 'randomlhs','improvedlhs','geneticlhs', 'maximinlhs' and 'optimumlhs')"))
+    }
 }
 
 # TODO put it in deep_initialisation
@@ -275,6 +361,10 @@ parametersFromCorrelation <- function(model, core, perform_plot=F) {
         } else {
             param_vector = c(param_vector, 0)
         }
+    }
+    if (class(model) == "Rcpp_ModelSet") {
+        print("Dealing with ModelSet")
+        param_vector = rep(param_vector, model$nb_submodels)
     }
     return(param_vector)
 }
@@ -358,7 +448,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
                 plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name)
                 lines(measurements[,2], result$coefficients[1] + result$coefficients[2] * measurements[,2])
             } else {
-                plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name)
+                plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name, xlab="Conditions")
                 for (measure in 1:nrow(measurements)) {
                     fitted = result$coefficients[1]
                     for (sender in 2:ncol(measurements)) {
@@ -582,9 +672,11 @@ plotNetworkGraph <- function(links_list) {
 }
 
 #' Extracts the data, the experimental design and the structure from the input files
-#' links must be a matrix of links [node1, node2]
-#' Experiment file dta_file syntax should be as follows, with one line per replicate
+#' @param model_structure Matrix of links [node1, node2]
+#' @param data_filename Experimental data file name. Should be as follows, with one line per replicate:
+#'
 #'          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
+#'
 #' -------------------------------------------------------------------------------------------------------------------------------------------------------------
 #' stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
 extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="") {
@@ -618,6 +710,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         colnames(data.values) = gsub("^[A-Z]{2}.", "", colnames(data.values))
         not_included = colnames(data.values)[!(colnames(data.values) %in% model_structure$names)]
         data.values = data.values[, colnames(data.values) %in% model_structure$names]
+    } else {
+        stop("Incorrect format for the data file")
     }
     # Warn for the measured nodes that have not been found in the network
     if (length(not_included) > 0) {
@@ -801,7 +895,6 @@ rebuildModel <- function(model_file, data_file, var_file="") {
 
     return(model)
 }
-
 
 # Perform several simulated annealing, one per core
 parallelAnnealing <- function(model, core, max_it, nb_cores, perform_plot=F) {

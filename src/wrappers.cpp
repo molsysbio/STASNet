@@ -39,7 +39,6 @@ RCPP_MODULE(DataEx) {
     .derives<Data>("Data")
     .default_constructor()
     .field_readonly( "datas_list", &DataSet::datas_, "List of Data composing the DataSet" )
-    //.field_readonly ("datas", &DataSet::datas_, "The individual data tables of the dataset")
     .method( "addData", &DataSet::addData, "Add a data table to the dataset")
     .method( "addDataFromMatrices", &DataSet::addDataFromMatrices, "Build a data object and add it to the dataset" )
     ;

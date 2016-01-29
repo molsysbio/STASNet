@@ -5,3 +5,5 @@
 *Session.vim
 ..pdf
 */tags
+inst/doc
+vignettes

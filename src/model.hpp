@@ -31,7 +31,7 @@ public:
 public:
 
   // Evaluation of the model
-  void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;
+  virtual void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;
   virtual void eval(const double *p, double *datax, const Data *data) const;
   double score(const double *p, const Data *data) const;
   //  evaluates the model with parameters p  and returns datax.
@@ -42,15 +42,17 @@ public:
 
   // returns the number of identifiable parameter combinations
   virtual size_t nr_of_parameters() const;
+  virtual size_t nr_of_parameters_per_submodel() const {};
   virtual void getSubmodelsParameters(std::vector<double> &parameters) {} // Used for ModelSet
 
   // TODO prints a human readable report about the identifiable parameter combinations
   void print_parameter_report(std::ostream &os, const std::vector<double> &d);
 
-  void getParametersLinks(std::vector<std::string> &description);
+  void getParametersLinks(std::vector<std::string> &description) const;
   void showParameterDependencyMatrix();
   void showGUnreduced();
   std::vector< std::vector<int> > getUnreducedParameterDependencyMatrix();
+  double_matrix getParameterDependencyMatrix();
 
   int find_parameter(std::string name) ;
   // TODO Maps identifiable parameters to a set of possible original parameters
@@ -83,10 +85,13 @@ public:
     //    exit(0);
   }
   void printEquation(const size_t r, const size_t c);
+  virtual void setNegativeInhibitions(double *p) const;
+  std::vector<size_t> getInhibitorsIds() const;
 
   virtual size_t modelRank() const { return rank_; }
   
   virtual void setNbModels(const int nb_submodels) {}
+  virtual void setVariableParameters(std::vector<size_t> variable_parameters) {}
 
 protected:
   // The equations of the reduced model under GiNaC or mathtree format

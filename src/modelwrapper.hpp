@@ -40,6 +40,7 @@ public:
   void showParameterDependencyMatrix();
   void showGUnreduced();
   SEXP getUnreducedPDM();
+  SEXP getPDM();
   SEXP getParametersNames();
 
   void printEquation(const size_t r, const size_t c);
@@ -57,7 +58,9 @@ public:
     ModelSetWrapper();
     ~ModelSetWrapper();
     SEXP fitmodelset(DataSet data, std::vector<double> parameters);
+    void setVariableParameters(std::vector<size_t> variable_parameters);
     void setModel(ExperimentalDesign exp, ModelStructure mod);
+    void setNbModels(size_t nb_submodels);
 };
 
 

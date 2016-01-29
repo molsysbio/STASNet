@@ -4,10 +4,10 @@
 \alias{MRAmodel}
 \title{Constructor for MRAmodel objects}
 \usage{
-MRAmodel(model = NULL, design = NULL, structure = NULL,
-  basal = matrix(), data = matrix(), cv = matrix(),
-  parameters = vector(), bestfit = NA, name = "", infos = c(),
-  param_range = list(), lower_values = c(), upper_values = c())
+MRAmodel(model, design, structure, basal = matrix(), data = matrix(),
+  cv = matrix(), parameters = vector(), bestfit = NA, name = "",
+  infos = c(), param_range = list(), lower_values = c(),
+  upper_values = c())
 }
 \arguments{
 \item{model}{An object of class Model}

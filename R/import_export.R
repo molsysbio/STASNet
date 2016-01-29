@@ -35,6 +35,7 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
     # Bestfit and bestfitscore
     writeLines(paste0("BF ", model_description$bestfit), handle)
     writeLines(paste0("BFS ", model_description$bestfitscore), handle)
+    writeLines(paste0("RS ", paste(model_description$Rscores, collapse=" ")), handle)
 
     # Names of the nodes, with info on basal activity
     for (name in model_description$structure$names) {
@@ -124,7 +125,6 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
 #' @seealso exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 importModel <- function(file_name) {
-    model_description = MRAmodel()
 
     if (!grepl(".mra", file_name)) {
         warn("This file does not have the expected .mra extension. Trying to extract a model anyway...")
@@ -137,24 +137,32 @@ importModel <- function(file_name) {
     }
 
     # Model name (cell line, network, ...)
+    infos = ""
     if (grepl("^H", file[lnb])) {
-        model_description$name = gsub("^H[A-Z]?( |\t)", "", file[lnb])
+        name = gsub("^H[A-Z]?( |\t)", "", file[lnb])
         lnb = lnb + 1
     } else {
-        model_description$name = ""
-        model_description$infos = ""
+        name = ""
     }
     while (grepl("^H", file[lnb])) {
-        model_description$infos = c(model_description$infos, gsub("^H[A-Z]?( |\t)", "", file[lnb]))
+        infos = c(infos, gsub("^H[A-Z]?( |\t)", "", file[lnb]))
         lnb = lnb + 1
     }
     # Model fitting residual and score
+    bestfit = NA
     if (grepl("^BF", file[lnb])) {
-        model_description$bestfit = as.numeric(gsub("^BF( |\t)", "", file[lnb]))
+        bestfit = as.numeric(gsub("^BF( |\t)", "", file[lnb]))
         lnb = lnb + 1
     }
+    bestfitscore = NA
     if (grepl("^BFS", file[lnb])) {
-        model_description$bestfitscore = as.numeric(gsub("^BFS( |\t)", "", file[lnb]))
+        bestfitscore = as.numeric(gsub("^BFS( |\t)", "", file[lnb]))
+        lnb = lnb + 1
+    }
+    Rscores = NA
+    if (grepl("^RS", file[lnb])) {
+        Rscores = gsub("^RS( |\t)", "", file[lnb])
+        Rscores = as.numeric( unlist(strsplit(Rscores, " ")) )
         lnb = lnb + 1
     }
 
@@ -169,7 +177,7 @@ importModel <- function(file_name) {
         }
         lnb = lnb + 1
     }
-    model_description$basal = basal_activity
+    basal = basal_activity
 
     # Get the format of the network and put it in a modelStructure object
     links_matrix = c()
@@ -204,38 +212,38 @@ importModel <- function(file_name) {
             }
         }
     }
-    model_description$structure = getModelStructure(links_list)
+    structure = getModelStructure(links_list)
 
     if (!grepl("^P", file[lnb])) {
         stop("This mra file is not valid, the parameters lines should start with a P")
     }
     # Collect the values of the parameters with the limit cases provided by the profile likelihood if available
-    model_description$parameters = c()
-    model_description$lower_values = c()
-    model_description$upper_values = c()
-    model_description$param_range = list()
+    parameters = c()
+    lower_values = c()
+    upper_values = c()
+    param_range = list()
     id = 1
     while (grepl("^P", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;")) # PV fitted_value lower_value upper_value
-        model_description$parameters = c( model_description$parameters, as.numeric(line[2]) )
+        parameters = c( parameters, as.numeric(line[2]) )
         if (length(line) > 2) {
             # NA will be introduced if there is no limit
-            model_description$lower_values = c(model_description$lower_values, suppressWarnings(as.numeric(line[3])) )
-            model_description$upper_values = c(model_description$upper_values, suppressWarnings(as.numeric(line[4])) )
+            lower_values = c(lower_values, suppressWarnings(as.numeric(line[3])) )
+            upper_values = c(upper_values, suppressWarnings(as.numeric(line[4])) )
         }
         lnb = lnb + 1
         # Parameters sets for the extreme values of the confidence interval for the parameter
         if (grepl("^PL|^PU", file[lnb])) {
-            model_description$param_range[[id]] = list()
+            param_range[[id]] = list()
         }
         while (grepl("^PL|^PU", file[lnb])) {
             line = unlist(strsplit(file[lnb], " +|\t|;")) # One parameter set
             line = suppressWarnings(as.numeric( line[2:length(line)] ))
             if (grepl("^PL", file[lnb])) {
-                model_description$param_range[[id]]$low_set = line
+                param_range[[id]]$low_set = line
             }
             if (grepl("^PU", file[lnb])) {
-                model_description$param_range[[id]]$high_set = line
+                param_range[[id]]$high_set = line
             }
             lnb = lnb + 1
         }
@@ -287,14 +295,14 @@ importModel <- function(file_name) {
     }
 
     # Set up the experimental design and the model
-    expDes = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
-    model_description$design = expDes
-    model_description$model = new(fitmodel:::Model)
-    model_description$model$setModel( expDes, model_description$structure )
+    expDes = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
+    design = expDes
+    model = new(fitmodel:::Model)
+    model$setModel( expDes, structure )
 
     # Get the unstimulated data
-    model_description$data = new(fitmodel:::Data)
-    model_description$data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
+    data = new(fitmodel:::Data)
+    data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
 
     # Get the cv values if they are present
     cv_values = c()
@@ -304,9 +312,14 @@ importModel <- function(file_name) {
 
         cv_values = rbind(cv_values, line[2:length(line)])
     }
-    model_description$cv = cv_values
+    cv = cv_values
 # TODO import the data, and calculate the base fit
 
+    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values)
+    model_description$bestfitscore = bestfitscore
+    meas_nodes = getMeasuredNodesNames(model_description)
+    if ( length(Rscores) == length(meas_nodes) ) { names(Rscores) = meas_nodes }
+    model_description$Rscores = Rscores
     return(model_description)
 }
 
