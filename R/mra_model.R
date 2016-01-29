@@ -50,32 +50,40 @@ MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv
     return(mra_model)
 }
 
-#' Compute the fitting score of a model
+#' Compute the fitting scores of a model
 #'
-#' Compute the fitting score of the model (fraction of the variation in the data explained by the network)
+#' Compute 2 fitting scores for the model, the fraction of the variation in the data explained by the network, and the improvement compared to a model with no links
 #' Do the computation for each measured node and for the network
-computeFitScore <- function(mra_model) {
-    if (class(data) == "Rcpp_Data" || class(data) == "Rcpp_DataSet") {
-        data = mra_model$data
-    } else {
-        mra_model$abScores = NA
+computeFitScore <- function(mra_model, refit_model=F) {
+    data = mra_model$data
+# The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason
+# Couldn't find the bug so we do not compute the score for the MRAmodelSet objects
+    if (class(data) != "Rcpp_Data") {# && class(data) != "Rcpp_DataSet") {
+        mra_model$Rscores = NA
         mra_model$bestfitscore = NA
-        return()
+        return(mra_model)
     }
-    refit = parallel_initialisation(mra_model$model, mra_model$data, matrix(mra_model$parameters, nrow=1), NB_CORES=1)
-    mra_model$bestfit = refit$residual[1]
-    mra_model$parameters = refit$params[1,]
+    if (refit_model) {
+        refit = parallel_initialisation(mra_model$model, mra_model$data, matrix(mra_model$parameters, nrow=1), NB_CORES=1)
+        mra_model$bestfit = refit$residual[1]
+        mra_model$parameters = refit$params[1,]
+    }
     prediction = getSimulation(mra_model)
     Rscores = c()
+    meanScores = c()
     for ( abc in 1:ncol(prediction) ) {
         mdata = mean(data$stim_data[,abc])
+        Smean = sum((data$stim_data[,abc]-mdata)^2)
         Sbase = sum((data$stim_data[,abc]-mdata)^2)
         Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2)
         Rscores[colnames(prediction)[abc]] = 1 - Sfit/Sbase
+        meanScores[colnames(prediction)[abc]] = 1 - Sfit/Smean
     }
 
-    mra_model$abScores = Rscores
+    mra_model$Rscores = Rscores
     mra_model$bestfitscore = mean(Rscores)
+    mra_model$meanScores = meanScores
+    mra_model$fitmeanScore = mean(meanScores)
 
     return(mra_model)
 }

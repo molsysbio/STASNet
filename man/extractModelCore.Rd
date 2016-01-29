@@ -2,22 +2,22 @@
 % Please edit documentation in R/create_model.R
 \name{extractModelCore}
 \alias{extractModelCore}
-\title{Extracts the data, the experimental design and the structure from the input files
-links must be a matrix of links [node1, node2]
-Experiment file dta_file syntax should be as follows, with one line per replicate
-         stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
--------------------------------------------------------------------------------------------------------------------------------------------------------------
-stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition}
+\title{Extracts the data, the experimental design and the structure from the input files}
 \usage{
 extractModelCore(model_structure, basal_activity, data_filename,
   var_file = "")
 }
+\arguments{
+\item{model_structure}{Matrix of links [node1, node2]}
+
+\item{data_filename}{Experimental data file name. Should be as follows, with one line per replicate:
+
+         stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition}
+}
 \description{
 Extracts the data, the experimental design and the structure from the input files
-links must be a matrix of links [node1, node2]
-Experiment file dta_file syntax should be as follows, with one line per replicate
-         stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
--------------------------------------------------------------------------------------------------------------------------------------------------------------
-stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
 }
 

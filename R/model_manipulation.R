@@ -94,8 +94,8 @@ plotModelAccuracy <- function(model_description) {
 #' @param mra_model An MRAmodel object
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelScores <- function(mra_model) {
-    barplot(mra_model$abScores)
+plotModelScores.MRAmodel <- function(mra_model, ...) {
+    return(barplot(mra_model$Rscores, ...))
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test

@@ -19,6 +19,7 @@ rand <- function(decimals=4) {
 }
 
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
+#'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
 #' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
 #' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
@@ -237,17 +238,6 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=1, accura
 
             refit = parallel_initialisation(model, modelset$data, new_pset, NB_CORES=nb_cores)
 
-            if (debug) {
-                for (jj in 1:modelset$nb_models) {
-                    new_idx = nb_sub_params*(jj-1)+ii
-                    outer = paste0(outer, " ", new_pset[1, new_idx]-modelset$parameters[new_idx])
-                    out = paste0(out, " ", refit$params[1, new_idx]-modelset$parameters[new_idx])
-                    outsup = paste0(outsup, " ", refit$params[1, new_idx]-new_pset[1, new_idx])
-                }
-                print(outer)
-                print(out)
-                print(outsup)
-            }
             psets$residuals = c(psets$residuals, refit$residuals)
             psets$added_var = c( psets$added_var, rep(ii, length(refit$residuals)) )
             psets$params = rbind(psets$params, refit$params)
@@ -682,9 +672,11 @@ plotNetworkGraph <- function(links_list) {
 }
 
 #' Extracts the data, the experimental design and the structure from the input files
-#' links must be a matrix of links [node1, node2]
-#' Experiment file dta_file syntax should be as follows, with one line per replicate
+#' @param model_structure Matrix of links [node1, node2]
+#' @param data_filename Experimental data file name. Should be as follows, with one line per replicate:
+#'
 #'          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
+#'
 #' -------------------------------------------------------------------------------------------------------------------------------------------------------------
 #' stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
 extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="") {

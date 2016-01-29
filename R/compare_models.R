@@ -62,23 +62,25 @@ plotResiduals <- function(model_group) {
     invisible(model_group$residuals)
 }
 
-#' Plot scores
+#' Plot the fitting scores of the model
 #'
-#' Generic function to plot scores
+#' Generic function to plot scores for measured nodes fitting
 #' @export
-#' @seealso plotScores.modelGroup
-plotScores <- function(x, ...) { UseMethod("plotScores", x) }
-#' Plot the scores of each model in the group
+#' @seealso plotScores.modelGroup, plotScores.MRAmodel
+plotModelScores <- function(x, ...) { UseMethod("plotModelScores", x) }
+#' Plot the measurement scores for a group of models
 #'
-#' Display the scores of the modelGroup object as a barplot
-#' @param model_group Object of class modelGroup
-#' @return Invisibly, the scores ( -log(best_fit/base_fit) )
-#' @seealso \code{\link{MRAmodel}}
+#' Plot the scores for each measured node fitting as a barplot with a bar for each model for each measurement
+#' @param model_group A modelGroup object
+#' @param ... Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements
+#' @return See barplot
 #' @export
-plotScores.modelGroup <- function(model_group) {
-    scores = -log(model_group$scores)
-    barplot(scores, main="Models scores")
-    invisible(scores)
+plotModelScores.modelGroup <- function(model_group, ...) {
+    table = c()
+    for (ii in 1:length(model_group$models)) {
+        table = rbind(table, model_group$models[[ii]]$Rscores)
+    }
+    return(barplot(table, beside=T...))
 }
 
 #' Plot parameters

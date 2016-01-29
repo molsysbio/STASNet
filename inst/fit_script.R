@@ -101,6 +101,7 @@ get_running_time(init_time, paste("to build the model with", inits, "initialisat
 mat=model$data$stim_data
 pdf(paste0("accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
 plotModelAccuracy(model)
+plotModelScores(model, main=paste0("Global R = ", model$bestfitscore))
 dev.off()
 printParameters(model)
 
