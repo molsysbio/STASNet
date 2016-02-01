@@ -106,8 +106,8 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
         for (jj in (ii+1):ncol(params)) {
             setii = params[best_sets,ii] 
             setjj = params[best_sets,jj]
-            cij = cor(setii, setjj)
-            if (cij > 0.999 || (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
+            cij = suppressWarnings(cor(setii, setjj, use="na.or.complete")) # NA if one vector has a standard deviation of 0
+            if ((!is.na(cij) && cij > 0.999) || (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
                 plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\ncor=", cij), col=residuals[best_sets])
             }
         }
