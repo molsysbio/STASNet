@@ -72,17 +72,37 @@ MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, ba
     class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models
     self$names = names
+    self$variable_parameters = c()
 
     return(self)
+}
+
+#' Set the variable parameters of a modelset
+#'
+#' Set the parameters that can vary across submodels for an MRAmodelSet
+#' @param modelset An MRAmodelSet object
+#' @param parameters_ids The ids of the parameters to set as variable across submodels
+#' @return The modified MRAmodelSet
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+setVariableParameters <- function(modelset, parameters_ids) {
+    nb_parameters = modelset$model$nr_of_parameters()/modelset$nb_models
+    for (pid in parameters_ids) {
+        if (pid > nb_parameters) { stop(paste("Invalid parameter id:", pid)) }
+    }
+    parameters_ids = sort(parameters_ids)
+    modelset$variable_parameters = parameters_ids
+    modelset$model$setVariableParameters(parameters_ids)
+    return(modelset)
 }
 
 #' Extract individual models from an MRAmodelSet
 #'
 #' Extract individual models from an MRAmodelSet where they were fitted together and return them in a list where the indices are the names of each submodel.
-#'
 #' @param modelset An MRAmodelSet object
 #' @return A list of MRAmodel objects
 #' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 extractSubmodels <- function(modelset) {
     model_list = list()
     model_list[[modelset$nb_models]] = NA
@@ -95,7 +115,8 @@ extractSubmodels <- function(modelset) {
         row_selection = ((ii-1)*data_size+1):(ii*data_size)
         cv = modelset$cv[row_selection,]
         data = modelset$data$datas_list[[ii]]
-        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, modelset$bestfit, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
+        fit_value = sum( (( model$simulate( data, parameters )$prediction - data$unstim_data) / data$error)^2, na.rm=T)
+        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, fit_value, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
     }
-    return(model_list)
+    return(modelGroup(model_list))
 }

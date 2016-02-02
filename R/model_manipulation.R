@@ -1,7 +1,7 @@
 ########################### model_manipulation.R ###########################
 # Functions to change and visualise the model
 
-#' Print the value of each path from the model, and add the profile likelihood infos if they are provided
+#' Print the value of each path from the model, with the profile likelihood infos if they are provided
 #' @param model_description An MRAmodel object
 #' @return Nothing
 #' @export
@@ -38,35 +38,39 @@ printParameters <- function(model_description, precision=2) {
   }
 }
 
-#' Plots heatmaps of the model prediction against the data, weighted by the error, as well as the log fold change data and the prediction
-#' @param model_description A list describing the model, as the one produced by createModel or importModel
+#' Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction
+#' @param model_description An MRAmodel object
 #' @return Nothing
 #' @export
-#' @seealso plotModelPrediction, createModel
+#' @seealso plotModelSimulation, createModel, importModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-accuracyPlot <- function(model_description) {
-  # Calculate the mismatch
-  model = model_description$model
-  data = model_description$data
-  error = data$error
-  cv = model_description$cv
-  stim_data = data$stim_data
-  init_params = model_description$parameter
-  
-  simulation = model$simulate(data, init_params)$prediction
-  mismatch = (stim_data - simulation) / error
-  simulation = log2(simulation / data$unstim_data)
-  stim_data = log2(stim_data / data$unstim_data)
-  
-  # Rebuild the conditions from the design
-  nodes = model_description$structure$names
-  design = model_description$design
-  treatments = c()
-  for (row in 1:nrow(mismatch)) {
-    stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1]
-    inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]
-    if (length(inhib_names) > 0) {
-      inhib_names = paste(inhib_names, "i", sep="")
+
+plotModelAccuracy <- function(model_description) {
+    # Calculate the mismatch
+    model = model_description$model
+    data = model_description$data
+    error = data$error
+    cv = model_description$cv
+    stim_data = data$stim_data
+    init_params = model_description$parameter
+
+    simulation = model$simulate(data, init_params)$prediction
+    mismatch = (stim_data - simulation) / error
+    simulation = log2(simulation / data$unstim_data)
+    stim_data = log2(stim_data / data$unstim_data)
+
+    # Rebuild the conditions from the design
+    nodes = model_description$structure$names
+    design = model_description$design
+    treatments = c()
+    for (row in 1:nrow(mismatch)) {
+        stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1]
+        inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]
+        if (length(inhib_names) > 0) {
+            inhib_names = paste(inhib_names, "i", sep="")
+        }
+        treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
+
     }
     treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
   }
@@ -85,6 +89,17 @@ accuracyPlot <- function(model_description) {
                        quantile(simulation,0.95, na.rm=T))))
   plot_heatmap(stim_data, "Log-fold change Experimental data",lim,T)
   plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
+}
+
+#' Plot the scores of each antibody
+#'
+#' Plot the scores of the fit for each antibody, which is how much
+#' of the variation in the data is explained by the model
+#' @param mra_model An MRAmodel object
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+plotModelScores.MRAmodel <- function(mra_model, ...) {
+    return(barplot(mra_model$Rscores, ...))
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test

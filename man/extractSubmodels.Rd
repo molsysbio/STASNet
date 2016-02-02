@@ -15,4 +15,7 @@ A list of MRAmodel objects
 \description{
 Extract individual models from an MRAmodelSet where they were fitted together and return them in a list where the indices are the names of each submodel.
 }
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}
 

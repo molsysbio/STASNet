@@ -314,6 +314,7 @@ DataSet::~DataSet() {
 
 void DataSet::addData(Data &data, bool doDataVectorComputation) {
     datas_.push_back(data);
+    //std::cout << "rows=" << data.unstim_data.shape()[0] << ", cols=" << data.unstim_data.shape()[1] << std::endl;
 
     // rbind_matrix generates an 'memory corruption' on the second call, could not figure out why
     // As a consequence, the rbind matrix must be provided in R (or an override of computeDataVector is necessary)

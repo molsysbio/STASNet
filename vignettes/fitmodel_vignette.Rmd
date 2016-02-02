@@ -1,0 +1,67 @@
+---
+title: "Using the fitmodel package"
+author: "Mathurin Dorel"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using the fitmodel package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# The MRA package
+---------
+
+## Package flowchart
+
+````{r, eval=T, echo=F}
+diagram="@startuml
+    skinparam usecase {
+        BackGroundColor<< S3 Class >> #eeeeee
+
+        BackGroundColor<< Helper Functions >> #88ee88
+    }
+    (ModelSet) << S3 Class >>
+    (MRAmodel) << S3 Class >>
+    (getCombinationMatrix) << Helper Functions >>
+
+    (createModel)---->MRAmodel
+    (MRAmodel)-->(plotModelPrediction)
+    (MRAmodel)-->(plotModelAccuracy)
+    (MRAmodel)-->(simulateModel)
+    (MRAmodel)-->(plotModelScores)
+    (createModelSet) --> ModelSet
+    (ModelSet)-->(extractSubmodels)
+    (ModelSet)-->(plotParameters)
+    (ModelSet)-->(plotResiduals)
+    (extractSubmodels) --> (MRAmodel)
+    (simulateModel)-->(plotModelSimulation)
+    (getCombinationMatrix)-->(simulateModel)
+    @enduml"
+write(diagram, "use_diagram.uml")
+system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
+```
+![Use diagram](use_diagram.png)
+
+Loading the library:
+```{r}
+library(fitmodel)
+```
+
+## Creation of the model
+
+Create the model using the data and the network layout as previous knowledge, both provided as file names
+
+```{r, eval=T}
+setwd("../inst/extdata/")
+model = createModel("network.tab", "basal.dat", "HCT116_MIDAS.csv", inits=10, perform_plots=T,
+                    method="randomlhs");
+```
+
+Evaluate how the simulation compares to the data
+
+```{r}
+plotModelAccuracy(model)
+simulation = plotModelSimulation(simulateModel(model, "all", "all"))
+print(simulation)
+```

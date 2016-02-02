@@ -686,7 +686,7 @@ void Model::print_parameter_report(std::ostream &os, const std::vector<double> &
 }
 
 // Returns the strings corresponding to the expression of the parameters
-void Model::getParametersLinks(std::vector<std::string> &description) {
+void Model::getParametersLinks(std::vector<std::string> &description) const {
     description = std::vector<std::string>();
     for (size_t j=0; j<independent_parameters_.size(); ++j) {
         description.push_back(to_string(paths_[independent_parameters_[j]]));
@@ -712,6 +712,10 @@ void Model::showParameterDependencyMatrix() {
         output += "\n";
     }
     std::cout << output << std::endl;
+}
+
+double_matrix Model::getParameterDependencyMatrix() {
+    return(parameter_dependency_matrix_);
 }
 
 std::vector< std::vector<int> > Model::getUnreducedParameterDependencyMatrix() {
@@ -810,7 +814,26 @@ void Model::printEquation(const size_t r, const size_t c) {
     std::cout << response_[r*exp_design_.stimuli.shape()[0] + c] << std::endl;
 }
 
+// Ensure inhibitors values are negative as they are treated as such in the equations.
+void Model::setNegativeInhibitions(double *p) const {
+  std::vector<size_t> inhibs_ids = getInhibitorsIds();
+  for (std::vector<size_t>::iterator it=inhibs_ids.begin(); it!=inhibs_ids.end(); it++) {
+    p[*it] = -std::abs(p[*it]);
+  }
+}
 
+std::vector<size_t> Model::getInhibitorsIds() const {
+  std::vector<size_t> inhibs_ids;
+  std::vector<std::string> plinks;
+
+  getParametersLinks(plinks);
+  for (size_t ii=0; ii < plinks.size() ; ii++) {
+    if (plinks[ii][0] == 'i') {
+        inhibs_ids.push_back(ii);
+    }
+  }
+  return(inhibs_ids);
+}
 
 
 // TODO Maps identifiable parameters to a set of possible original parameters
@@ -869,6 +892,7 @@ void Model::convert_identifiables_to_original_parameter(std::vector<double> &p_n
             }
         }
         //std::cout << " = "; //
+        // Rebuild the value of the original parameters using the values of the independent parameters and the path informations
         double tmp=1.0;
         for (size_t j=0; j<independent_parameters_.size(); j++) {
             if(std::abs(parameter_dependency_matrix_[i][symbols_.size()+independent_parameters_[j]])>0.000001){
