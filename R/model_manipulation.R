@@ -46,49 +46,47 @@ printParameters <- function(model_description, precision=2) {
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 
 plotModelAccuracy <- function(model_description) {
-    # Calculate the mismatch
-    model = model_description$model
-    data = model_description$data
-    error = data$error
-    cv = model_description$cv
-    stim_data = data$stim_data
-    init_params = model_description$parameter
-
-    simulation = model$simulate(data, init_params)$prediction
-    mismatch = (stim_data - simulation) / error
-    simulation = log2(simulation / data$unstim_data)
-    stim_data = log2(stim_data / data$unstim_data)
-
-    # Rebuild the conditions from the design
-    nodes = model_description$structure$names
-    design = model_description$design
-    treatments = c()
-    for (row in 1:nrow(mismatch)) {
-        stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1]
-        inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]
-        if (length(inhib_names) > 0) {
-            inhib_names = paste(inhib_names, "i", sep="")
-        }
-        treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
-
+  # Calculate the mismatch
+  model = model_description$model
+  data = model_description$data
+  error = data$error
+  cv = model_description$cv
+  stim_data = data$stim_data
+  init_params = model_description$parameter
+  
+  simulation = model$simulate(data, init_params)$prediction
+  mismatch = (stim_data - simulation) / error
+  simulation = log2(simulation / data$unstim_data)
+  stim_data = log2(stim_data / data$unstim_data)
+  
+  # Rebuild the conditions from the design
+  nodes = model_description$structure$names
+  design = model_description$design
+  treatments = c()
+  for (row in 1:nrow(mismatch)) {
+    stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1]
+    inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]
+    if (length(inhib_names) > 0) {
+      inhib_names = paste(inhib_names, "i", sep="")
     }
     treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
   }
-  print("Treatments : ")
-  print(treatments)
-  colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
-  rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
-  
-  # Comparison of the data and the stimulation in term of error fold change and log fold change
-  plot_heatmap(mismatch,"(data - simulation) / error")
-  plot_heatmap(stim_data-simulation,"log2(data/simulation)")
-  # Log fold changes for the data and the stimulation with comparable color code
-  lim=min(10,abs(range(quantile(stim_data,0.05, na.rm=T),
-                       quantile(simulation,0.05, na.rm=T),
-                       quantile(stim_data,0.95, na.rm=T),
-                       quantile(simulation,0.95, na.rm=T))))
-  plot_heatmap(stim_data, "Log-fold change Experimental data",lim,T)
-  plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
+
+print("Treatments : ")
+print(treatments)
+colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
+rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
+
+# Comparison of the data and the stimulation in term of error fold change and log fold change
+plot_heatmap(mismatch,"(data - simulation) / error")
+plot_heatmap(stim_data-simulation,"log2(data/simulation)")
+# Log fold changes for the data and the stimulation with comparable color code
+lim=min(10,abs(range(quantile(stim_data,0.05, na.rm=T),
+                     quantile(simulation,0.05, na.rm=T),
+                     quantile(stim_data,0.95, na.rm=T),
+                     quantile(simulation,0.95, na.rm=T))))
+plot_heatmap(stim_data, "Log-fold change Experimental data",lim,T)
+plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
 }
 
 #' Plot the scores of each antibody
@@ -99,7 +97,7 @@ plotModelAccuracy <- function(model_description) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelScores.MRAmodel <- function(mra_model, ...) {
-    return(barplot(mra_model$Rscores, ...))
+  return(barplot(mra_model$Rscores, ...))
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test
@@ -193,22 +191,55 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   return(model_description)
 }
 
-#' Tries to add one link each and returns a list of ordered chi-squared differences, highlighting the significant ones
+#' Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model
+#' This list can then be based and compared to literature knowledge and if considered suitable manually added to the starting network and rerun with the createModel function.
 #' @param model_description MRAmodel object describing thze model and its best fit, containing the data
-#' @param nb_cores Number of cores that should be used for the computation
-#' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
-#' @param method Method to be used for the initialisation, available methods are :
+#' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
+#' @param mc Number of cores that should be used for the computation
+#' @param print Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"
+#' @param inits DEFUNCT Number of initialisation steps which should be performed (see method for the exact meaning of this value)
+#' @param method DEFUNCT Method to be used for the initialisation, available methods are :
 #'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
 #'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
-#' @return An MRAmodel object describing the model and its best fit, containing the data
+#' @return a data.frame sorting the links from most significant to least significant
 #' @export
-#' @seealso createModel, initModel
+#' @seealso selectMinimalModel, createModel
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 #' @examples
-#' ext_list = createModel(model) # Produces a model for the network described in links.tab using the data in data_MIDES.csv
-suggestExtension <- function(model_description,nb_cores=1,inits=1000,method="geneticlhs",print=F){
+#' ext_list = suggestExtension(MRAmodel) 
+suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
+  addLink <-  function(new_link,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample){
+    adj[new_link] = 1
+    model_structure$setAdjacencyMatrix( adj )
+    model$setModel ( expdes, model_structure )
+    best_res = Inf
+    for (jj in sample){
+      initial_response$local_response[new_link]=jj
+      paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+      tmp_result = model$fitmodel( data,paramstmp )
+      if ( tmp_result$residuals < best_res ){
+        best_res = tmp_result$residuals
+        result = tmp_result
+      }
+    }
+    response_matrix = model$getLocalResponseFromParameter( result$parameter )
+    new_rank = model$modelRank()
+    dr = new_rank-rank
+    deltares = initresidual-result$residuals
+    extension_mat = matrix(c(new_link,
+                             model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
+                             model_structure$names[(new_link-1) %% dim(adj)[1]+1],
+                             response_matrix$local_response[new_link],
+                             result$residuals,
+                             new_rank,
+                             deltares,
+                             dr,
+                             1-pchisq(deltares, df=dr)),nrow=1)  
+    colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
+    return(extension_mat)
+  }
   
   # Extra fitting informations from the model description
   model = model_description$model
@@ -223,78 +254,78 @@ suggestExtension <- function(model_description,nb_cores=1,inits=1000,method="gen
   writeLines("Performing model extension…")
   initresidual = model_description$bestfit
   rank = model$modelRank()
-  links.to.test=which(adj==0 & diag(1,nrow(adj),ncol(adj))==0)
-  writeLines(paste0(length(links.to.test)," links will be tested..."))
-  tmp_adj=adj
+  links_to_test=which( adj==0 & diag(1,nrow(adj),ncol(adj))==0 )
+  writeLines(paste0(length(links_to_test)," links will be tested..."))
+  sample = c(-1,0,1)
   
   # Each link is added and compared to the previous model
-  extension_mat=NULL
-  sample=c(-1,0,1)
-  for (i in links.to.test) {
-    tmp_adj[i]=1
-    model_structure$setAdjacencyMatrix( tmp_adj )  
-    model$setModel ( expdes, model_structure )
-    best_res=Inf
-    for (j in sample){
-      initial_response$local_response[i]=j
-      paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
-      tmp_result = model$fitmodel(data,paramstmp)
-      writeLines(paste0("for ", j ," : ",tmp_result$residuals))
-      if (tmp_result$residuals<best_res){
-        best_res=tmp_result$residuals
-        result=tmp_result
+  if (parallel == T){
+    extension_mat=mclapply(links_to_test,addLink,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample,mc.cores=mc)  
+    extension_mat=as.data.frame(do.call("rbind",extension_mat))
+  }else{
+    tmp_adj=adj
+    extension_mat=NULL
+    for (i in links_to_test) {
+      tmp_adj[i] = 1
+      model_structure$setAdjacencyMatrix( tmp_adj )
+      model$setModel ( expdes, model_structure )
+      best_res = Inf
+      for (j in sample){
+        initial_response$local_response[i]=j
+        paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+        tmp_result = model$fitmodel(data,paramstmp)
+        writeLines( paste0( "for ", j ," : ",tmp_result$residuals ) )
+        if ( tmp_result$residuals < best_res ){
+          best_res = tmp_result$residuals
+          result = tmp_result
+        }
       }
+      response_matrix = model$getLocalResponseFromParameter( result$parameter )
+      new_rank = model$modelRank()
+      dr = new_rank-rank
+      deltares = initresidual-result$residuals
+      extension_mat = rbind(extension_mat,c(i,
+                                            model_structure$names[(i-1) %/% dim(adj)[1]+1],
+                                            model_structure$names[(i-1) %% dim(adj)[1]+1],
+                                            response_matrix$local_response[i],
+                                            result$residuals,
+                                            new_rank,
+                                            deltares,
+                                            dr,
+                                            1-pchisq(deltares, df=dr)))  
+      writeLines(paste("[",which(links_to_test == i), "]" ,
+                       " old :", rank, 
+                       ", new : ", new_rank,
+                       extension_mat[nrow(extension_mat),2],"->",
+                       extension_mat[nrow(extension_mat),3],
+                       ": Delta residual = ",
+                       extension_mat[nrow(extension_mat),7],
+                       "; Delta rank = ",
+                       extension_mat[nrow(extension_mat),8],
+                       ", p-value = ",
+                       extension_mat[nrow(extension_mat),9] ))
+      
+      tmp_adj[i] = 0
+      model_structure$setAdjacencyMatrix( tmp_adj )
+      model$setModel ( expdes, model_structure )
+      
     }
-    response_matrix = model$getLocalResponseFromParameter( result$parameter )
-    new_rank = model$modelRank()
-    dr = new_rank-rank
-    deltares = initresidual-result$residuals
-    extension_mat=rbind(extension_mat,c(i,
-                                        model_structure$names[(i-1) %/% dim(adj)[1]+1],
-                                        model_structure$names[(i-1) %% dim(adj)[1]+1],
-                                        response_matrix$local_response[i],
-                                        result$residuals,
-                                        new_rank,
-                                        deltares,
-                                        dr,
-                                        1-pchisq(deltares, df=dr)))  
-    writeLines(paste("[",which(links.to.test==i), "]" ,
-                     " old :", rank, 
-                     ", new : ", new_rank,
-                     extension_mat[nrow(extension_mat),2],"->",
-                extension_mat[nrow(extension_mat),3],
-                ": Delta residual = ",
-                extension_mat[nrow(extension_mat),7],
-                "; Delta rank = ",
-                extension_mat[nrow(extension_mat),8],
-                ", p-value = ",
-                extension_mat[nrow(extension_mat),9] ))
-    
-    tmp_adj[i]=0; ## Slightly accelerates the computation
-    initial_response$local_response[i]=0
-    model_structure$setAdjacencyMatrix( tmp_adj )
-    model$setModel ( expdes, model_structure )
+    colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
+    extension_mat=data.frame(extension_mat)
   }
-  colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
-  
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
-  extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(extension_mat$pval,method="BH"))
-  
-  # convert numeric parts into numeric
+  extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method="BH"))
   
   writeLines("Extension trial completed!")
-  if (any(extension_mat$adj_pval<=0.05)){
-  print("Significant link extensions:")
-  print(extension_mat[extension_mat$adj_pval<=0.05,])
-  }else{
-  print("no significant extension could be found!")  
+  if (length(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)>0){
+    print("Significant link extensions:")
+    print(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,])
   }
   if(print)
     write.table(extension_mat,"Additional_link_suggestion.txt",quote = F,row.names = F)
   
   return(extension_mat)
   
-  #TODO So far only extension is started from previously best parameterisation and -1 0 and 1 as starting value for the new parameter-> local extension   
-  # only returns suggestions for the improvment if the model does not give any insights into whatever
+  #TODO so far only locally explores extension by assuming the starting values of all previously fitted parameters and a starting value of the new parameter of either -1,0, or 1
 }
 
