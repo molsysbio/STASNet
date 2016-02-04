@@ -711,7 +711,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         not_included = colnames(data.values)[!(colnames(data.values) %in% model_structure$names)]
         data.values = data.values[, colnames(data.values) %in% model_structure$names]
     } else {
-        stop("Incorrect format for the data file")
+        stop("Incorrect format for the data file, check the extension")
     }
     # Warn for the measured nodes that have not been found in the network
     if (length(not_included) > 0) {
@@ -719,7 +719,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     }
 
     # Means of basal activity of the network and of the blank fixation of the antibodies
-    unstim.values = colMeans(data.values[data_file$type=="c",])
+    unstim.values = colMeans(data.values[data_file$type=="c"|data_file$type=="control",])
     lapply(unstim.values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are required to simulate the network")}})
     blank.values = colMeans(data.values[data_file$type=="blank",])
     blank.values[is.nan(blank.values)] = 0; # For conditions without blank values
@@ -802,6 +802,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
         }
         error = matrix(rep(blank.values,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])+matrix(rep(cv,each=dim(data.stim)[1]),nrow=dim(data.stim)[1])*data.stim
     }
+    error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt
 
 ### SET UP DATA OBJECT
 

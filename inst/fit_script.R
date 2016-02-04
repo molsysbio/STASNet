@@ -19,6 +19,7 @@ get_running_time <- function(init_time, text="") {
 
 reduction = FALSE
 perform_pl = TRUE
+perf_plots = TRUE
 
 data = ""
 network = ""
@@ -72,6 +73,8 @@ for (argument in cargs) {
         method = gsub("^-m", "", argument)
     } else if (argument == "--nopl") {
         perform_pl = FALSE
+    } else if (argument == "--noplots") {
+        perf_plots = FALSE
     }
 }
 if (cores == 0) {
@@ -94,7 +97,7 @@ conditions = gsub(" ", "_", conditions)
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0("distribution_", conditions, ".pdf"))
-model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=T, method=method);
+model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
