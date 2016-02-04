@@ -12,12 +12,16 @@
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plot_heatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10"){
-  # helper functions
-  define_breaks <- function(m,lim = Inf,fixedRange = F){ # when containing only one sign: 0...+-limit, otherwise -limit...+limit 
+  # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
+  define_breaks <- function(m,lim = Inf,fixedRange = F) {
     if (!fixedRange) {
         limit = min(lim,(max(abs(m),na.rm = T)))
+        print(paste("limit=",limit))
         return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
     } else {
+        if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
+            stop("'lim' is invalid, cannot generate breaks within a fixed range")
+        }
         return(seq(-1.1*lim,1.1*lim,length.out=22))  
     }
   }
