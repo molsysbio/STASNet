@@ -25,6 +25,8 @@ diagram="@startuml
     (MRAmodel) << S3 Class >>
     (getCombinationMatrix) << Helper Functions >>
 
+    (importModel) --> MRAmodel
+    (rebuildModel) --> MRAmodel
     (createModel)---->MRAmodel
     (MRAmodel)-->(plotModelPrediction)
     (MRAmodel)-->(plotModelAccuracy)
@@ -62,6 +64,7 @@ Evaluate how the simulation compares to the data
 
 ```{r}
 plotModelAccuracy(model)
+plotModelScores(model)
 simulation = plotModelSimulation(simulateModel(model, "all", "all"))
 print(simulation)
 ```
