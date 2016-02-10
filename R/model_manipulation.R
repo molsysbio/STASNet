@@ -210,37 +210,6 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' @examples
 #' ext_list = suggestExtension(MRAmodel) 
 suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
-  addLink <-  function(new_link,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample){
-    adj[new_link] = 1
-    model_structure$setAdjacencyMatrix( adj )
-    model$setModel ( expdes, model_structure )
-    best_res = Inf
-    for (jj in sample){
-      initial_response$local_response[new_link]=jj
-      paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
-      tmp_result = model$fitmodel( data,paramstmp )
-      if ( tmp_result$residuals < best_res ){
-        best_res = tmp_result$residuals
-        result = tmp_result
-      }
-    }
-    response_matrix = model$getLocalResponseFromParameter( result$parameter )
-    new_rank = model$modelRank()
-    dr = new_rank-rank
-    deltares = initresidual-result$residuals
-    extension_mat = matrix(c(new_link,
-                             model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
-                             model_structure$names[(new_link-1) %% dim(adj)[1]+1],
-                             response_matrix$local_response[new_link],
-                             result$residuals,
-                             new_rank,
-                             deltares,
-                             dr,
-                             1-pchisq(deltares, df=dr)),nrow=1)  
-    colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
-    return(extension_mat)
-  }
-  
   # Extra fitting informations from the model description
   model = model_description$model
   init_params = model_description$parameters
@@ -329,3 +298,43 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   #TODO so far only locally explores extension by assuming the starting values of all previously fitted parameters and a starting value of the new parameter of either -1,0, or 1
 }
 
+#' add Link routine
+#'
+#' @param new_link link whose addition is to be tested
+#' @param adj original adjacency matrix excluding the new_link 
+#' @param initresidual sum-squared error of original network
+#' @param model MRAmodel object of original network
+#' @param initial_response list containing the local_response matrix and inhibitor strength of original network
+#' @param init_residual sum-squared error of original network
+#' @param init_residual sum-squared error of original network
+#' @param init_residual sum-squared error of original network
+addLink <-  function(new_link,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample){
+  adj[new_link] = 1
+  model_structure$setAdjacencyMatrix( adj )
+  model$setModel ( expdes, model_structure )
+  best_res = Inf
+  for (jj in sample){
+    initial_response$local_response[new_link]=jj
+    paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+    tmp_result = model$fitmodel( data,paramstmp )
+    if ( tmp_result$residuals < best_res ){
+      best_res = tmp_result$residuals
+      result = tmp_result
+    }
+  }
+  response_matrix = model$getLocalResponseFromParameter( result$parameter )
+  new_rank = model$modelRank()
+  dr = new_rank-rank
+  deltares = initresidual-result$residuals
+  extension_mat = matrix(c(new_link,
+                           model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
+                           model_structure$names[(new_link-1) %% dim(adj)[1]+1],
+                           response_matrix$local_response[new_link],
+                           result$residuals,
+                           new_rank,
+                           deltares,
+                           dr,
+                           1-pchisq(deltares, df=dr)),nrow=1)  
+  colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
+  return(extension_mat)
+}
