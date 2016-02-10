@@ -16,7 +16,8 @@ Depends:
     pheatmap,
     parallel,
     lhs,
-    lattice
+    lattice,
+    RhpcBLASctl
 LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign
 RoxygenNote: 5.0.1

@@ -7,6 +7,7 @@
 #' @import parallel
 #' @import Rcpp
 #' @import lhs
+#' @import RhpcBLASctl
 #' @useDynLib fitmodel
 
 # Global variable to have more outputs
@@ -43,7 +44,7 @@ rand <- function(decimals=4) {
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
 createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs") {
-  
+  blas_set_num_threads(1)
   # Creation of the model structure object
   model_structure = extractStructure(model_links)
   
@@ -83,7 +84,6 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     p_res = residuals[order_id[i]]
     if (!is.na(p_res) && !is.infinite(p_res)) {
       repeat {
-        result = model$fitmodel(core$data, params[order_id[i],])
         if (p_res == result$residuals) {
           break
         }
@@ -492,6 +492,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 
 # Parallel initialisation of the parameters
 parallel_initialisation <- function(model, data, samples, NB_CORES) {
+  blas_set_num_threads(1)
   # Put the samples under list format, as mclapply only take "one dimension" objects
   parallel_sampling = list()
   nb_samples = dim(samples)[1]
@@ -511,6 +512,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
   }
   
   fitmodelset_wrapper <- function(params, data, model) {
+    blas_set_num_threads(1)
     # TODO add keep_constant control
     if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a fitmodel::DataSet object") }
     init = proc.time()[3]
@@ -580,6 +582,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
 # Initialise the parameters with a one core processing
 # needs corrections, not used anyway
 classic_initialisation <- function(model, data, samples) {
+  blas_set_num_threads(1)
   for (i in 1:nb_samples) {
     result = model$fitmodel( data, samples[i,] )
     residuals = c(residuals,result$residuals)
@@ -891,6 +894,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples
 #' rebuildModel("model.mra", "data.csv", "data.var")
 rebuildModel <- function(model_file, data_file, var_file="") {
+  blas_set_num_threads(1)
   if (!grep(".mra$", model_file)) {
     stop("The model file does not have the mra extension")
   }

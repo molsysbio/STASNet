@@ -107,6 +107,7 @@ plotModelScores.MRAmodel <- function(mra_model, ...) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 selectMinimalModel <- function(model_description, accuracy=0.95) {
+  blas_set_num_threads(1)
   # Extra fitting informations from the model description
   model = model_description$model
   init_params = model_description$parameters
@@ -210,6 +211,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' @examples
 #' ext_list = suggestExtension(MRAmodel) 
 suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
+  blas_set_num_threads(1)
   # Extra fitting informations from the model description
   model = model_description$model
   init_params = model_description$parameters
@@ -263,7 +265,6 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
                                             dr,
                                             1-pchisq(deltares, df=dr)))  
       writeLines(paste("[",which(links_to_test == i), "]" ,
-                       " old :", rank, 
                        ", new : ", new_rank,
                        extension_mat[nrow(extension_mat),2],"->",
                        extension_mat[nrow(extension_mat),3],
@@ -309,6 +310,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 #' @param init_residual sum-squared error of original network
 #' @param init_residual sum-squared error of original network
 addLink <-  function(new_link,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample){
+  blas_set_num_threads(1)
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
