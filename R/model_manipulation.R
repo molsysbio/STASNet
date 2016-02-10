@@ -107,7 +107,6 @@ plotModelScores.MRAmodel <- function(mra_model, ...) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 selectMinimalModel <- function(model_description, accuracy=0.95) {
-  blas_set_num_threads(1)
   # Extra fitting informations from the model description
   model = model_description$model
   init_params = model_description$parameters
@@ -119,7 +118,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   if (is.na(model_description$bestfit)) {stop("Data are recquired to reduce the model")}
   
   print("Performing model reduction…")
-  initresidual = model_description$bestfit
+  init_residual = model_description$bestfit
   rank = model$modelRank()
   reduce=TRUE
   while (reduce) {
@@ -146,7 +145,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
       if (verbose) {
         dr = rank - new_rank
         print(paste("old :", rank, ", new : ", new_rank))
-        deltares = residuals[length(residuals)]-initresidual
+        deltares = residuals[length(residuals)]-init_residual
         print(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
       }
       
@@ -157,14 +156,14 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
     # The loss of degree of freedom is equal to the difference in the ranks of the matrices
     new_rank = ranks[order.res[1]]
     dr = rank - new_rank
-    deltares = residuals[order.res[1]]-initresidual
+    deltares = residuals[order.res[1]]-init_residual
     # Some boundary cases might give low improvement of the fit
     if (deltares < 0) { warning(paste("Negative delta residual :", deltares)) ; deltares = -deltares  }
     if (deltares < qchisq(accuracy, df=dr)) {
       adj[links.to.test[order.res[1]]]=0
       rank = new_rank
       initial_response=params[,order.res[1]]
-      initresidual = residuals[order.res[1]]
+      init_residual = residuals[order.res[1]]
       #print(initial_response)
       print(paste0("Remove ",
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
@@ -211,7 +210,6 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' @examples
 #' ext_list = suggestExtension(MRAmodel) 
 suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
-  blas_set_num_threads(1)
   # Extra fitting informations from the model description
   model = model_description$model
   init_params = model_description$parameters
@@ -223,15 +221,15 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   if (is.na(model_description$bestfit)) {stop("Data are required to reduce the model")}
   
   writeLines("Performing model extension…")
-  initresidual = model_description$bestfit
+  init_residual = model_description$bestfit
   rank = model$modelRank()
-  links_to_test=which( adj==0 & diag(1,nrow(adj),ncol(adj))==0 )
+  links_to_test=which( adj==0 & diag(1,nrow(adj),ncol(adj))==0)
   writeLines(paste0(length(links_to_test)," links will be tested..."))
-  sample = c(-1,0,1)
+  sample = c(10^c(2:-6),0,-10^c(2:-6)) 
   
   # Each link is added and compared to the previous model
   if (parallel == T){
-    extension_mat=mclapply(links_to_test,addLink,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample,mc.cores=mc)  
+    extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,mc.cores=mc)  
     extension_mat=as.data.frame(do.call("rbind",extension_mat))
   }else{
     tmp_adj=adj
@@ -254,7 +252,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
       response_matrix = model$getLocalResponseFromParameter( result$parameter )
       new_rank = model$modelRank()
       dr = new_rank-rank
-      deltares = initresidual-result$residuals
+      deltares = init_residual-result$residuals
       extension_mat = rbind(extension_mat,c(i,
                                             model_structure$names[(i-1) %/% dim(adj)[1]+1],
                                             model_structure$names[(i-1) %% dim(adj)[1]+1],
@@ -301,16 +299,16 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 
 #' add Link routine
 #'
-#' @param new_link link whose addition is to be tested
-#' @param adj original adjacency matrix excluding the new_link 
-#' @param initresidual sum-squared error of original network
+#' @param new_link integer link whose addition is to be tested
+#' @param adj integer matrix original adjacency matrix excluding the new_link 
+#' @param init_residual numeric sum-squared error of original network
 #' @param model MRAmodel object of original network
 #' @param initial_response list containing the local_response matrix and inhibitor strength of original network
-#' @param init_residual sum-squared error of original network
-#' @param init_residual sum-squared error of original network
-#' @param init_residual sum-squared error of original network
-addLink <-  function(new_link,adj,rank,initresidual,model,initial_response,expdes,data,model_structure,links_to_test,sample){
-  blas_set_num_threads(1)
+#' @param expdes design object of MRAmodel object 
+#' @param data data object of MRAmodel object
+#' @param model_structure structure object of MRAmodel object
+#' @param sample numeric vector containing all starting values for new_link
+addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
@@ -327,7 +325,7 @@ addLink <-  function(new_link,adj,rank,initresidual,model,initial_response,expde
   response_matrix = model$getLocalResponseFromParameter( result$parameter )
   new_rank = model$modelRank()
   dr = new_rank-rank
-  deltares = initresidual-result$residuals
+  deltares = init_residual-result$residuals
   extension_mat = matrix(c(new_link,
                            model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
                            model_structure$names[(new_link-1) %% dim(adj)[1]+1],
