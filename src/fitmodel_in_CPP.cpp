@@ -130,11 +130,11 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
   opts[4]=LM_DIFF_DELTA/10.0;//relevant only if the finite differences Jacobian version is used
   unsigned int max_steps = 10000;
 
+  // Save the initial parameter set
   std::vector<double> parameters_fixed;
-  if (keep_constant.size()>0) {
-    parameters_fixed.resize(model->nr_of_parameters());
-    for (size_t i=0; i<model->nr_of_parameters(); i++) 
-      parameters_fixed[i]=param[i];
+  parameters_fixed.resize(model->nr_of_parameters());
+  for (size_t i=0; i<model->nr_of_parameters(); i++) {
+    parameters_fixed[i]=param[i];
   }
 
   levmar_pass_info lpi(model, keep_constant, parameters_fixed, data);
@@ -174,7 +174,13 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
       termination_why << std::endl;
       }
   
-   return info[1];
+  // If levmar did not find a better fit, return the value for the original set of parameters
+  if (info[1] < info[0]) {
+    return(info[1]);
+  } else {
+    std::copy(parameters_fixed.begin(), parameters_fixed.end(), param);
+    return(info[0]);
+  }
 }
 
 void fitmodel( std::vector <double> &bestfit,

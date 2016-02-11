@@ -4,7 +4,7 @@
 \alias{getSamples}
 \title{Get LHS samples}
 \usage{
-getSamples(sample_size, nb_samples, method = "randomlhs")
+getSamples(sample_size, nb_samples, method = "randomlhs", nb_cores = 1)
 }
 \arguments{
 \item{sample_size}{Size of each sample}
