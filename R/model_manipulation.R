@@ -97,7 +97,11 @@ plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelScores.MRAmodel <- function(mra_model, ...) {
-  return(barplot(mra_model$Rscores, ...))
+    bb=barplot(mra_model$Rscores, xaxt="n", ...)
+    lablist = names(mra_model$Rscores)
+    text(bb, par("usr")[3] - 0.05, labels=lablist, srt=45, pos=1, xpd=TRUE)
+
+    invisible(bb)
 }
 
 #' Selection of a minimal model by the removal of non significant links with a Chi^2 test
