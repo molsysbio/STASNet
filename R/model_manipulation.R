@@ -81,10 +81,10 @@ rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
 plot_heatmap(mismatch,"(data - simulation) / error")
 plot_heatmap(stim_data-simulation,"log2(data/simulation)")
 # Log fold changes for the data and the stimulation with comparable color code
-lim=min(10,abs(range(quantile(stim_data,0.05, na.rm=T),
+lim=min(10, max( range(quantile(stim_data,0.05, na.rm=T),
                      quantile(simulation,0.05, na.rm=T),
                      quantile(stim_data,0.95, na.rm=T),
-                     quantile(simulation,0.95, na.rm=T))))
+                     quantile(simulation,0.95, na.rm=T)) ))
 plot_heatmap(stim_data, "Log-fold change Experimental data",lim,T)
 plot_heatmap(simulation, "Log-fold change Simulated data",lim,T)
 }
