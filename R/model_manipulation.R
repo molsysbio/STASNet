@@ -227,63 +227,25 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   writeLines("Performing model extension…")
   init_residual = model_description$bestfit
   rank = model$modelRank()
-  links_to_test=which( adj==0 & diag(1,nrow(adj),ncol(adj))==0)
+  #determine the links that should be added, exclude self links and links acting on a stimulus
+  exclude=diag(1,nrow(adj),ncol(adj))
+  exclude[expdes$stim_nodes+1,]=1 
+  links_to_test=which( adj==0 & exclude==0)
   writeLines(paste0(length(links_to_test)," links will be tested..."))
-  sample = c(10^c(2:-6),0,-10^c(2:-6)) 
+  sample = c(10^c(2:-6),0,-10^c(-6:2))
   
   # Each link is added and compared to the previous model
   if (parallel == T){
     extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,mc.cores=mc)  
     extension_mat=as.data.frame(do.call("rbind",extension_mat))
   }else{
-    tmp_adj=adj
-    extension_mat=NULL
-    for (i in links_to_test) {
-      tmp_adj[i] = 1
-      model_structure$setAdjacencyMatrix( tmp_adj )
+    cnames=c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
+    extension_mat=data.frame(matrix(NA,nrow=length(links_to_test),ncol=length(cnames),byrow=T))
+    for (ii in links_to_test){
+      extension_mat[ii,]=addLink(links_to_test[ii],adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=T)
+      model_structure$setAdjacencyMatrix( adj )
       model$setModel ( expdes, model_structure )
-      best_res = Inf
-      for (j in sample){
-        initial_response$local_response[i]=j
-        paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
-        tmp_result = model$fitmodel(data,paramstmp)
-        writeLines( paste0( "for ", j ," : ",tmp_result$residuals ) )
-        if ( tmp_result$residuals < best_res ){
-          best_res = tmp_result$residuals
-          result = tmp_result
-        }
-      }
-      response_matrix = model$getLocalResponseFromParameter( result$parameter )
-      new_rank = model$modelRank()
-      dr = new_rank-rank
-      deltares = init_residual-result$residuals
-      extension_mat = rbind(extension_mat,c(i,
-                                            model_structure$names[(i-1) %/% dim(adj)[1]+1],
-                                            model_structure$names[(i-1) %% dim(adj)[1]+1],
-                                            response_matrix$local_response[i],
-                                            result$residuals,
-                                            new_rank,
-                                            deltares,
-                                            dr,
-                                            1-pchisq(deltares, df=dr)))  
-      writeLines(paste("[",which(links_to_test == i), "]" ,
-                       ", new : ", new_rank,
-                       extension_mat[nrow(extension_mat),2],"->",
-                       extension_mat[nrow(extension_mat),3],
-                       ": Delta residual = ",
-                       extension_mat[nrow(extension_mat),7],
-                       "; Delta rank = ",
-                       extension_mat[nrow(extension_mat),8],
-                       ", p-value = ",
-                       extension_mat[nrow(extension_mat),9] ))
-      
-      tmp_adj[i] = 0
-      model_structure$setAdjacencyMatrix( tmp_adj )
-      model$setModel ( expdes, model_structure )
-      
     }
-    colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
-    extension_mat=data.frame(extension_mat)
   }
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
   extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method="BH"))
@@ -298,7 +260,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   
   return(extension_mat)
   
-  #TODO so far only locally explores extension by assuming the starting values of all previously fitted parameters and a starting value of the new parameter of either -1,0, or 1
+  #TODO so far only locally explores extension by assuming the starting values of all previously fitted parameters and a range of different starting values for the candidate link
 }
 
 #' add Link routine
@@ -312,7 +274,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 #' @param data data object of MRAmodel object
 #' @param model_structure structure object of MRAmodel object
 #' @param sample numeric vector containing all starting values for new_link
-addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample){
+addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
@@ -321,6 +283,8 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
     initial_response$local_response[new_link]=jj
     paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
     tmp_result = model$fitmodel( data,paramstmp )
+    if ( verbose == T )
+    writeLines( paste0( "for ", jj ," : ",tmp_result$residuals ) )
     if ( tmp_result$residuals < best_res ){
       best_res = tmp_result$residuals
       result = tmp_result
@@ -340,5 +304,17 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                            dr,
                            1-pchisq(deltares, df=dr)),nrow=1)  
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
+  if ( verbose == T ){
+    writeLines(paste("[",extension_mat[1], "]" ,
+                     ", new : ", new_rank,
+                     extension_mat[2],"->",
+                     extension_mat[3],
+                     ": Delta residual = ",
+                     ifelse(extension_mat[7]>1,round(extension_mat,2),signif(extension_mat[7],2)),
+                     "; Delta rank = ",
+                     extension_mat[8],
+                     ", p-value = ",
+                     signif(extension_mat[9],2) ))  
+  }
   return(extension_mat)
 }
