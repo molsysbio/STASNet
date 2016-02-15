@@ -285,7 +285,7 @@ long unsigned int getSeed()
 
 void Data::computeDataVector() {
     // define the measurement value to compare with simulated values divided by the error
-    if (!dataVectorComputed && stim_data.shape()[0] == error.shape()[0] && stim_data.shape()[1] == error.shape()[1]) {
+    if (stim_data.shape()[0] == error.shape()[0] && stim_data.shape()[1] == error.shape()[1]) {
         size_t rows=stim_data.shape()[0], cols=stim_data.shape()[1];
         nb_measurements = rows * cols;
 
