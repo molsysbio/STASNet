@@ -11,27 +11,20 @@
 #' @param textCol string denoting the color of inset text
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plot_heatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10"){
+plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10"){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
-  define_breaks <- function(m,lim = Inf,fixedRange = F) {
-    if (!fixedRange) {
-        limit = min(lim,(max(abs(m),na.rm = T)))
-        print(paste("limit=",limit))
-        return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
-    } else {
-        if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
-            stop("'lim' is invalid, cannot generate breaks within a fixed range")
-        }
-        return(seq(-1.1*lim,1.1*lim,length.out=22))  
-    }
-  }
   
   # cutoff and transformation of colour
   m = mat
   if (stripOut >= 0.5) { stop("Cannot strip more than 50% of the data to generate the color scale") } 
   if (!is.numeric(lim)) {stop("lim should be numeric")}
-  lowLim = max(-lim,quantile(mat,stripOut, na.rm=T))
-  upLim = min(lim,quantile(mat,1-stripOut, na.rm=T))
+  if (!fixedRange) {
+      lowLim = max(-lim,quantile(mat,stripOut, na.rm=T))
+      upLim = min(lim,quantile(mat,1-stripOut, na.rm=T))
+  } else {
+      lowLim = -lim
+      upLim = lim
+  }
   m[m < lowLim] = lowLim
   m[m > upLim] = upLim
   breaks=define_breaks(m,lim,fixedRange)
@@ -58,4 +51,16 @@ plot_heatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,co
                                  col = textCol,
                                  cex = 0.8)})
   print(p)
+}
+
+define_breaks <- function(m,lim = Inf,fixedRange = F) {
+  if (!fixedRange) {
+      limit = min(lim,(max(abs(m),na.rm = T)))
+      return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
+  } else {
+      if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
+          stop("'lim' is invalid, cannot generate breaks within a fixed range")
+      }
+      return(seq(-1.1*lim,1.1*lim,length.out=22))  
+  }
 }
