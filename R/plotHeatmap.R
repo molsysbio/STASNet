@@ -1,4 +1,4 @@
-########################### plot_heatmap.R ###########################
+########################### plotHeatmap.R ###########################
 # function to generate heatmap with cutoff and colormap scale function
 
 #' Plot a customized heatmap with a symmetrical scale that is not stretched by extreme values
