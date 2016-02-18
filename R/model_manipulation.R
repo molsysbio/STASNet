@@ -227,12 +227,13 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   writeLines("Performing model extension…")
   init_residual = model_description$bestfit
   rank = model$modelRank()
-  #determine the links that should be added, exclude self links and links acting on a stimulus
+  #determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)
   exclude=diag(1,nrow(adj),ncol(adj))
-  exclude[expdes$stim_nodes+1,]=1 
+  if (length(setdiff(expdes$stim_nodes,expdes$measured_nodes))>0)
+    exclude[setdiff(expdes$stim_nodes,expdes$measured_nodes)+1,]=1 
   links_to_test=which( adj==0 & exclude==0)
   writeLines(paste0(length(links_to_test)," links will be tested..."))
-  sample = c(10^c(2:-6),0,-10^c(-6:2))
+  sample = c(10^c(2:-1),0,-10^c(-1:2))
   
   # Each link is added and compared to the previous model
   if (parallel == T){
@@ -241,12 +242,9 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   }else{
     cnames=c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
     extension_mat=data.frame(matrix(NA,nrow=length(links_to_test),ncol=length(cnames),byrow=T))
-    for (ii in links_to_test){
+    for (ii in 1:length(links_to_test))
       extension_mat[ii,]=addLink(links_to_test[ii],adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=T)
-      model_structure$setAdjacencyMatrix( adj )
-      model$setModel ( expdes, model_structure )
-    }
-  }
+  } 
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
   extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method="BH"))
   
@@ -304,17 +302,20 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                            dr,
                            1-pchisq(deltares, df=dr)),nrow=1)  
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
-  if ( verbose == T ){
+  adj[new_link] = 0
+  model_structure$setAdjacencyMatrix( adj )
+  model$setModel ( expdes, model_structure )
+    if ( verbose == T ){
     writeLines(paste("[",extension_mat[1], "]" ,
                      ", new : ", new_rank,
                      extension_mat[2],"->",
                      extension_mat[3],
                      ": Delta residual = ",
-                     ifelse(extension_mat[7]>1,round(extension_mat,2),signif(extension_mat[7],2)),
+                     ifelse(as.numeric(extension_mat[7])>1,round(as.numeric(extension_mat[7]),2),signif(as.numeric(extension_mat[7]),2)),
                      "; Delta rank = ",
                      extension_mat[8],
                      ", p-value = ",
-                     signif(extension_mat[9],2) ))  
+                     signif(as.numeric(extension_mat[9]),2) ))  
   }
   return(extension_mat)
 }
