@@ -174,13 +174,13 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
       termination_why << std::endl;
       }
   
-  // If levmar did not find a better fit, return the value for the original set of parameters
-  if (info[1] < info[0]) {
-    return(info[1]);
-  } else {
-    std::copy(parameters_fixed.begin(), parameters_fixed.end(), param);
-    return(info[0]);
-  }
+   // If levmar did not find a better fit, return the value for the original set of parameters
+   if (info[1] < info[0]) {
+     return(info[1]);
+   } else {
+     std::copy(parameters_fixed.begin(), parameters_fixed.end(), param);
+     return(info[0]);
+   }
 }
 
 void fitmodel( std::vector <double> &bestfit,
@@ -421,10 +421,16 @@ void profile_likelihood(const Data &data,
         if (residual > thresholds.simultaneous_threshold && first_high) {
             thresholds.hn_threshold = true;
             first_high = false;
-            // If the residual reaches both thresholds at once, there is a bad fit at this point and the parameters would have no sense so we use the previous set
+            // If the residual reaches both thresholds at once, there is a bad fit at this point and the parameters would have no sense so we use the previous set for the next iteration
             if (first_low) {
-                for (int j=0 ; j < parameters.size() ; j++) {
-                    parameters[j] = dec_residual[j][i-1];
+                if (i > 0) {
+                    for (int j=0 ; j < parameters.size() ; j++) {
+                        parameters[j] = dec_residual[j][i-1];
+                    }
+                } else {
+                    for (int j=0 ; j < parameters.size() ; j++) {
+                        parameters[j] = bestfit[j];
+                    }
                 }
             }
         }
@@ -492,10 +498,16 @@ void profile_likelihood(const Data &data,
         if (first_high && residual > thresholds.simultaneous_threshold) {
             thresholds.hp_threshold = true;
             first_high = false;
-            // If the residual reaches both thresholds at once, there is a bad fit at this point and the parameters would have no sense so we use the previous set
+            // If the residual reaches both thresholds at once, there is a bad fit at this point and the parameters would have no sense so we use the previous set for the next iteration
             if (first_low) {
-                for (int j=0 ; j < parameters.size() ; j++) {
-                    parameters[j] = residual_track[j][i-1];
+                if (i > 0) {
+                    for (int j=0 ; j < parameters.size() ; j++) {
+                        parameters[j] = residual_track[j][i-1];
+                    }
+                } else {
+                    for (int j=0 ; j < parameters.size() ; j++) {
+                        parameters[j] = bestfit[j];
+                    }
                 }
             }
         }

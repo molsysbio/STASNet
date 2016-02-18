@@ -94,12 +94,11 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
 
     double residual;
     double_matrix predictions;
-    data.computeDataVector();
     try {
         ::fitmodel(parameters, &residual, predictions, model, &data);
-    } catch(std::exception &ex) {	
+    } catch(std::exception &ex) {
 	    forward_exception_to_r(ex);
-    } catch(...) { 
+    } catch(...) {
 	    ::Rf_error("c++ exception (unknown reason)"); 
     }
     Rcpp::List ret;
@@ -157,11 +156,11 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     thresholds.decision = 0.95;
     
     try {
-      ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, thresholds, total_steps);
+        ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, thresholds, total_steps);
     } catch(std::exception &ex) {	
-	forward_exception_to_r(ex);
+        forward_exception_to_r(ex);
     } catch(...) { 
-	::Rf_error("c++ exception (unknown reason)"); 
+        ::Rf_error("c++ exception (unknown reason)"); 
     }
     
     Rcpp::List ret;

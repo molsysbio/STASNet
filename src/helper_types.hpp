@@ -146,8 +146,8 @@ public:
   bool dataVectorComputed;
 
   void setUnstimData(double_matrix new_unstim) { copy_matrix(new_unstim,unstim_data); }
-  void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); dataVectorComputed=false; }
-  void setError(double_matrix new_error) { copy_matrix(new_error,error); dataVectorComputed=false; }
+  void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); computeDataVector(); }
+  void setError(double_matrix new_error) { copy_matrix(new_error,error); computeDataVector(); }
   void setScale(double_matrix new_scale) { copy_matrix(new_scale,scale); }
 
   bool read_from_stream(std::istream &is);
