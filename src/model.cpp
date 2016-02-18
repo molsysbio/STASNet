@@ -560,10 +560,11 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
     double penelty=getPeneltyForConstraints(p);
     for (unsigned int i=0; i<cols;i++) { 
         for (unsigned int j=0; j<rows;j++) {
-            if (penelty>1) {
-                // Positive feedback loops create forking, so we eliminate the parameters sets which involve such feedback
-                datax[i*rows+j] = 100000*penelty*data->stim_data[j][i]/data->error[j][i];
-            } else if (linear_approximation_) {
+            //if (penelty>1) {
+            //    // Positive feedback loops create forking, so we eliminate the parameters sets which involve such feedback
+            //    datax[i*rows+j] = 100000*penelty*data->stim_data[j][i]/data->error[j][i];
+            //} else
+            if (linear_approximation_) {
                 datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
             } else {
                 datax[i*rows+j]=( data->unstim_data[j][i] *exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
