@@ -93,16 +93,18 @@ power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
 conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", basename(data_name)), "_", gsub(".tab", "", basename(network)), "_", inits%/%(1000^power_init), power[1+power_init]);
 conditions = gsub(" ", "_", conditions)
+folder = paste0( conditions, Sys.Date(), "/" )
+dir.create(folder)
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
-pdf(paste0("distribution_", conditions, ".pdf"))
+pdf(paste0(folder, "distribution_", conditions, ".pdf"))
 model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
 mat=model$data$stim_data
-pdf(paste0("accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
+pdf(paste0(folder, "accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
 plotModelAccuracy(model)
 plotModelScores(model, main=paste0("Global R = ", model$bestfitscore))
 dev.off()
@@ -117,16 +119,16 @@ if (perform_pl) {
     profiles = profileLikelihood(model, nb_steps, nb_cores=min(cores, length(model$parameters)));
     model = addPLinfos(model, profiles);
     get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
-    niplotPL(profiles, data_name=conditions)
+    niplotPL(profiles, data_name=conditions, folder=folder)
 }
-exportModel(model, paste0(conditions, ".mra"))
+exportModel(model, paste0(folder, conditions, ".mra"))
 
 # Plot the simulation for all combinations of inhibitors 
 #pdf(paste0("combos_", conditions, ".pdf"))
 #plotModelSimulation(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
 #dev.off()
 # Plot the simulated conditions
-pdf(paste0("model_prediction_", conditions, ".pdf"))
+pdf(paste0(folder, "model_prediction_", conditions, ".pdf"))
 plotModelSimulation( simulateModel(model) )
 dev.off()
 
@@ -137,10 +139,10 @@ if (reduction) {
 # Profile likelihood on the reduced model
     reduced_profiles = profileLikelihood(reduced_model, nb_steps, nb_cores=min(cores, length(reduced_model$parameters)));
     reduced_model = addPLinfos(reduced_model, reduced_profiles)
-    exportModel(reduced_model, paste0("reduced_", conditions, ".mra"));
+    exportModel(reduced_model, paste0(folder, "reduced_", conditions, ".mra"));
     niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
 # Plot the simulated conditions
-    pdf(paste0("reduced_all_", conditions, ".pdf"))
+    pdf(paste0(folder, "reduced_all_", conditions, ".pdf"))
     plotModelSimulation( simulateModel(reduced_model) )
     dev.off()
 
