@@ -292,7 +292,7 @@ void Data::computeDataVector() {
         if (dataVector != NULL) {
             //delete[] dataVector; // TODO Fix to avoid memory leaks
         }
-        dataVector = new double[rows * cols];
+        dataVector = new double[nb_measurements];
         for (unsigned int i=0; i<cols;i++) { 
             for (unsigned int j=0; j<rows;j++) {
                 if (std::isnan(error[j][i]) || std::isnan(stim_data[j][i])) {
