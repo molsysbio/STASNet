@@ -175,6 +175,7 @@ double fit_using_lsqnonlin(const Model * model, double *datax, size_t number_of_
       }
   
    // If levmar did not find a better fit, return the value for the original set of parameters
+   if (verbosity > 11) std::cerr << "infos: " << info[0] << ", " << info[1] << std::endl;
    if (info[1] < info[0]) {
      return(info[1]);
    } else {
@@ -200,12 +201,16 @@ void fitmodel( std::vector <double> &bestfit,
   
   // starting parameter value
   if (bestfit.size()==number_of_parameters) {
-    if (verbosity>10) std::cerr << "Use existing parameter vector: ";
     for (size_t tmp=0; tmp<number_of_parameters; tmp++) {
         p[tmp]=bestfit[tmp];
-        if (verbosity>10) std::cerr << p[tmp] << ", ";
     }
-    if (verbosity>10) std::cerr << std::endl;
+    if (verbosity>10) {
+        std::cerr << "Use existing parameter vector: ";
+        for (size_t tmp=0; tmp<number_of_parameters; tmp++) {
+            std::cerr << p[tmp] << ", ";
+        }
+        std::cerr << std::endl;
+    }
   } else {
     for (size_t tmp=0; tmp<number_of_parameters; tmp++) p[tmp]=0.39;            
   }
@@ -221,6 +226,23 @@ void fitmodel( std::vector <double> &bestfit,
     return;
   }
 
+  if (verbosity > 6) {
+      double dataz[number_of_measurements];
+      model->eval(p, dataz, data);
+      double sumsquares = 0;
+      for (size_t ii=0; ii < number_of_measurements; ii++) {
+        sumsquares += std::pow(dataz[ii]-data->dataVector[ii], 2);
+      }
+      if (verbosity > 10) {
+          for (size_t ii=0; ii<data->stim_data.shape()[0]; ii++) {
+              for (size_t jj=0; jj<data->stim_data.shape()[1]; jj++) {
+                std::cerr << dataz[ii*data->stim_data.shape()[1] + jj] << ", ";
+              }
+              std::cerr << std::endl;
+          }
+      }
+      std::cerr << "Initial fit: " << sumsquares << std::endl;
+  }
   *bestresid=fit_using_lsqnonlin(model, datax, number_of_measurements, p, keep_constant, data);
 
   // Return the bestfit after ensuring that the inhibitor parameters have negative values

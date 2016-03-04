@@ -160,11 +160,12 @@ addPLinfos <- function(model_description, profiles) {
 #' and redirect it in a pdf file.
 #' @param profiles A list of the likelihood profiles of the parameters of the model
 #' @param data_name Name for the output pdf file
+#' @param folder Path to the folder for the output pdf file (must end with /)
 #' @return Nothing
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @seealso \code{\link{profileLikelihood}}
-niplotPL <- function(profiles, data_name="default") {
+niplotPL <- function(profiles, data_name="default", folder="./") {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
     for (profile in profiles) {
         residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[2]
@@ -186,7 +187,7 @@ niplotPL <- function(profiles, data_name="default") {
         dimension = 7
     }
 
-    pdf(paste0("NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
+    pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
     #limx = i_profiles[[1]]$
     if (nbni > 0) {
         margin = c(2, 2, 0.5, 0.5)
