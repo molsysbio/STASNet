@@ -73,8 +73,10 @@ for (argument in cargs) {
         method = gsub("^-m", "", argument)
     } else if (argument == "--nopl") {
         perform_pl = FALSE
-    } else if (argument == "--noplots") {
+    } else if (argument == "--noplots" || argument == "--noplot") {
         perf_plots = FALSE
+    } else {
+        print(paste0("Unknown argument: '", argument, "'"))
     }
 }
 if (cores == 0) {
@@ -93,7 +95,7 @@ power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
 conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", basename(data_name)), "_", gsub(".tab", "", basename(network)), "_", inits%/%(1000^power_init), power[1+power_init]);
 conditions = gsub(" ", "_", conditions)
-folder = paste0( conditions, Sys.Date(), "/" )
+folder = paste0( "run_", conditions, "_", Sys.Date(), "/" )
 dir.create(folder)
 
 #### Creates the model from network and basal files and fits a minimal model to the data

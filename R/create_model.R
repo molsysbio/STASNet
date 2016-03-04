@@ -93,12 +93,12 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
       residuals[order_id[i]] = result$residuals
     }
   }
-  if (perform_plots) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
   if (debug) {
     # Print the 20 smallest residuals to check if the optimum has been found several times
     print("Best residuals :")
     print(sort(residuals)[1:20])
   }
+  if (perform_plots) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)
   best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
@@ -677,6 +677,7 @@ plotNetworkGraph <- function(links_list) {
   g1<-layoutGraph(g1)
   edgeRenderInfo(g1)<-list(fontsize=10)
   renderGraph(g1)
+  invisible(g1)
 }
 
 #' Extracts the data, the experimental design and the structure from the input files
@@ -873,7 +874,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   core$design = expdes
   core$data = data
   core$structure = model_structure
-  core$basal = basal_activity
+  core$basal = expdes$basal_activity
   core$cv = as.matrix(cv.stim)
   
   return(core)

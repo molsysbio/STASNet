@@ -19,6 +19,7 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
   if ( sum(is.na(match(as.character(measured.nodes),model.structure$names))) > 0 ) {
     stop("problem matching measured.nodes names");
   }
+  basal.activity = as.character(basal.activity[as.character(basal.activity) %in% model.structure$names])
   if ( sum(is.na(match(as.character(basal.activity),model.structure$names))) > 0 ) {
     print("Unmatched names :")
     print(basal.activity[is.na(match(as.character(basal.activity),model.structure$names))])
