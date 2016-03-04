@@ -59,7 +59,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   #           basal = c(basal, node)
   #       }
   #   }
-  core = extractModelCore(model_structure, basal_activity , data.stimulation, data.variation)
+  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation)
   expdes = core$design
   data = core$data
   
@@ -599,17 +599,24 @@ classic_initialisation <- function(model, data, samples) {
 
 # Detect the format of the structure file and extract the structure of the network
 extractStructure = function(model_links, names="") {
-  # Read the file, and extract the matrix corresponding to it
-  structure_file = readLines(model_links)
-  splitlist = strsplit(structure_file, ",|->|;|\\ |\t")
-  if (length(splitlist) < 3) {
-    stop("This is a trivial network, you don't need a simulation !")
-  } else if ( length(splitlist[[1]]) == 1 ) {
-    splitlist = splitlist[-1] # If the number of links is indicated at the beginning, remove it
-  }
-  struct_matrix = c()
-  for (ii in 1:length(splitlist)) {
-    struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[ii]])) )
+  if (class(model_links)=="character") {
+      # Read the file, and extract the matrix corresponding to it
+      structure_file = readLines(model_links)
+      splitlist = strsplit(structure_file, ",|->|;|\\ |\t")
+      if (length(splitlist) < 3) {
+        stop("This is a trivial network, you don't need a simulation !")
+      } else if ( length(splitlist[[1]]) == 1 ) {
+        splitlist = splitlist[-1] # If the number of links is indicated at the beginning, remove it
+      }
+      struct_matrix = c()
+      for (ii in 1:length(splitlist)) {
+        struct_matrix = suppressWarnings( rbind(struct_matrix, unlist(splitlist[[ii]])) )
+      }
+      name = unlist(strsplit(model_links, "/"))
+      name = name[length(name)]
+  } else {
+      struct_matrix = model_links
+      name = "unknow"
   }
   
   # Detect if it is a list of links or an adjacency matrix
@@ -653,8 +660,6 @@ extractStructure = function(model_links, names="") {
   }
   
   # Plot the graph of the network in a pdf
-  name = unlist(strsplit(model_links, "/"))
-  name = name[length(name)]
   pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
   plotNetworkGraph(links_list)
   dev.off()
@@ -666,18 +671,37 @@ extractStructure = function(model_links, names="") {
 
 #' Plot a graph from an adjacency list
 #'
-#' @param links_list A 2-columns matrix. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes.
-plotNetworkGraph <- function(links_list) {
-  names = unique(as.vector(links_list))
-  adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-  for (ii in 1:nrow(links_list))
-    adm[match(links_list[ii,2],rownames(adm)),links_list[ii,1]]=1
-  g1 <- graphAM(adjMat=t(adm),edgemode="directed")
-  nodeRenderInfo(g1) <- list(shape="ellipse")
-  g1<-layoutGraph(g1)
-  edgeRenderInfo(g1)<-list(fontsize=10)
-  renderGraph(g1)
-  invisible(g1)
+#' @param links_list A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
+#' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present.
+# @export
+plotNetworkGraph <- function(links_list, expdes="") {
+    if (class(links_list) == "matrix") {
+        names = unique(as.vector(links_list))
+        adm=matrix(0,length(names),length(names),dimnames = list(names,names))
+        for (ii in 1:nrow(links_list)) {
+            adm[match(links_list[ii,2],rownames(adm)), links_list[ii,1]] = 1
+        }
+    } else if (class(links_list) == "Rcpp_ModelStructure") {
+        adm = links_list$adjacencyMatrix
+        colnames(adm) = rownames(adm) = links_list$names
+    } else {
+        stop("Invalid 'links_list' in plotNetworkGraph, must be an edge list or a ModelStructure")
+    }
+    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
+    nodeRenderInfo(g1) <- list(shape="ellipse")
+    g1 <- layoutGraph(g1)
+    edgeRenderInfo(g1) <- list(fontsize=10)
+    # Add the experimental setup if provided
+    if (class(expdes) == "Rcpp_ExperimentalDesign") {
+      nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
+      nodeRenderInfo(g1)$lwd = 1 # Create the field
+      nodeRenderInfo(g1)$lwd[1+c(expdes$inhib_nodes, expdes$stim_nodes)] = 4 # Populate for perturbations
+      print(nodeRenderInfo(g1))
+      nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
+      nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
+    }
+    renderGraph(g1)
+    invisible(g1)
 }
 
 #' Extracts the data, the experimental design and the structure from the input files

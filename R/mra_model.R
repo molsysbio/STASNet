@@ -93,3 +93,7 @@ computeFitScore <- function(mra_model, refit_model=F) {
 getMeasuredNodesNames <- function(mra_model) {
     return(mra_model$structure$names[mra_model$design$measured_nodes+1])
 }
+
+plotModelGraph <- function(mra_model) {
+    plotNetworkGraph(mra_model$structure, mra_model.R$design)
+}

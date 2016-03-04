@@ -4,10 +4,12 @@
 \alias{plotNetworkGraph}
 \title{Plot a graph from an adjacency list}
 \usage{
-plotNetworkGraph(links_list)
+plotNetworkGraph(links_list, expdes = "")
 }
 \arguments{
-\item{links_list}{A 2-columns matrix. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes.}
+\item{links_list}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.}
+
+\item{expdes}{An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present.}
 }
 \description{
 Plot a graph from an adjacency list
