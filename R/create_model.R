@@ -62,7 +62,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation)
   expdes = core$design
   data = core$data
-  
+
   # MODEL SETUP
   model = new(fitmodel:::Model)
   model$setModel(expdes, model_structure)
@@ -616,7 +616,7 @@ extractStructure = function(model_links, names="") {
       name = name[length(name)]
   } else {
       struct_matrix = model_links
-      name = "unknow"
+      if (name == "") { name = "unknow" }
   }
   
   # Detect if it is a list of links or an adjacency matrix
@@ -659,11 +659,6 @@ extractStructure = function(model_links, names="") {
     
   }
   
-  # Plot the graph of the network in a pdf
-  pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
-  plotNetworkGraph(links_list)
-  dev.off()
-  
   model_structure=getModelStructure(links_list)
   
   return(model_structure)
@@ -696,7 +691,6 @@ plotNetworkGraph <- function(links_list, expdes="") {
       nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
       nodeRenderInfo(g1)$lwd = 1 # Create the field
       nodeRenderInfo(g1)$lwd[1+c(expdes$inhib_nodes, expdes$stim_nodes)] = 4 # Populate for perturbations
-      print(nodeRenderInfo(g1))
       nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
       nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
     }

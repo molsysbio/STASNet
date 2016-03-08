@@ -105,6 +105,11 @@ model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 
+# Plot the graph of the network in a pdf
+pdf(paste0( folder, "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", basename(network)) ) ))
+plotModelGraph(model)
+dev.off()
+
 mat=model$data$stim_data
 pdf(paste0(folder, "accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
 plotModelAccuracy(model)
