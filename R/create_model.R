@@ -669,7 +669,7 @@ extractStructure = function(model_links, names="") {
 #' @param links_list A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present.
 # @export
-plotNetworkGraph <- function(links_list, expdes="") {
+plotNetworkGraph <- function(links_list, expdes="", local_values="") {
     if (class(links_list) == "matrix") {
         names = unique(as.vector(links_list))
         adm=matrix(0,length(names),length(names),dimnames = list(names,names))
@@ -693,6 +693,25 @@ plotNetworkGraph <- function(links_list, expdes="") {
       nodeRenderInfo(g1)$lwd[1+c(expdes$inhib_nodes, expdes$stim_nodes)] = 4 # Populate for perturbations
       nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
       nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
+    }
+    if (suppressWarnings(local_values != "")) {
+        edgeRenderInfo(g1)$lwd = 1
+        edgeRenderInfo(g1)$label = ""
+        edgeRenderInfo(g1)$labelJust = 3
+        from = edgeRenderInfo(g1)$enamesFrom
+        to = edgeRenderInfo(g1)$enamesTo
+        nodeX = nodeRenderInfo(g1)$nodeX
+        nodeY = nodeRenderInfo(g1)$nodeY
+        ii = 1
+        for (vv in local_values$local_response) {
+            if (vv != 0) {
+                edgeRenderInfo(g1)$lwd[ii] = vv
+                edgeRenderInfo(g1)$label[ii] = signif(vv, 2)
+                edgeRenderInfo(g1)$labelX[ii] = (nodeX[from[ii]] + nodeX[to[ii]]) / 2
+                edgeRenderInfo(g1)$labelY[ii] = (nodeY[from[ii]] + nodeY[to[ii]]) / 2
+                ii = ii + 1
+            }
+        }
     }
     renderGraph(g1)
     invisible(g1)
