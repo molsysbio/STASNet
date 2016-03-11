@@ -35,7 +35,6 @@ if (!exists("cargs")) {
     cargs = commandArgs()
 } else if (is.character(cargs)) {
     cargs = strsplit(cargs, " ")[[1]]
-
 }
 
 # Collect the filenames based on their extension

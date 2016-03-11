@@ -616,7 +616,7 @@ extractStructure = function(model_links, names="") {
       name = name[length(name)]
   } else {
       struct_matrix = model_links
-      if (name == "") { name = "unknow" }
+      if (names == "") { name = "unknow" }
   }
   
   # Detect if it is a list of links or an adjacency matrix
@@ -634,15 +634,13 @@ extractStructure = function(model_links, names="") {
       if (suppressWarnings( is.na(as.numeric(struct_matrix[1,1])) )) {
         struct_matrix = struct_matrix[,-1]
       }
-      rownames(struct_matrix) = colnames(struct_matrix)
-    } else if (length(name) == ncol(struct_matrix)) {
+    } else if (length(names) == ncol(struct_matrix)) {
       colnames(struct_matrix) = names
-      rownames(struct_matrix) = names
-    } else {
+    } else if (is.null(colnames(struct_matrix))) {
       print("No names were provided for the nodes, using numbers instead")
-      colnames(struct_matrix) = 1:ncol(struct_matrix)
-      rownames(struct_matrix) = 1:ncol(struct_matrix)
+      colnames(struct_matrix) = paste0("node", 1:ncol(struct_matrix))
     }
+    rownames(struct_matrix) = colnames(struct_matrix)
     # Check that the dimensions are correct
     if ( ncol(struct_matrix) != nrow(struct_matrix) ) {
       stop("The adjacency matrix is not square. Abort...")
@@ -651,7 +649,7 @@ extractStructure = function(model_links, names="") {
     links_list = c();
     for (i in 1:nrow(struct_matrix)) {
       for (j in 1:ncol(struct_matrix)) {
-        if (as.numeric(struct_matrix[i,j]) == 1) {
+        if (i != j && as.numeric(struct_matrix[i,j]) != 0) {
           links_list = rbind(links_list, c(colnames(struct_matrix)[j], rownames(struct_matrix)[i]))
         }
       }

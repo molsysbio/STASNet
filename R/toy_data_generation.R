@@ -24,11 +24,11 @@ generateToyNetwork <- function(ninputs, p_link=0.2, layers=c(3, 3), nfeedbacks=0
     for (ii in 1:nlayers) {
         network[[ii]] = paste0(ii, LETTERS[1:layers[ii]])
     }
-    links_list = addLinks( links_list, inputs, network[[1]], p_link[1])
-    links_list = addLinks( links_list, network[[1]], network[[1]], p_layer_link[1], FALSE )
+    links_list = addLayerLinks( links_list, inputs, network[[1]], p_link[1])
+    links_list = addLayerLinks( links_list, network[[1]], network[[1]], p_layer_link[1], FALSE )
     for (ll in 2:nlayers) {
-        links_list = addLinks( links_list, network[[ll-1]], network[[ll]], p_link[ll] )
-        links_list = addLinks( links_list, network[[ll]], network[[ll]], p_layer_link[ll], FALSE )
+        links_list = addLayerLinks( links_list, network[[ll-1]], network[[ll]], p_link[ll] )
+        links_list = addLayerLinks( links_list, network[[ll]], network[[ll]], p_layer_link[ll], FALSE )
     }
     # Add feedbacks
     if (nfeedbacks > 0) {
@@ -64,7 +64,7 @@ generateToyNetwork <- function(ninputs, p_link=0.2, layers=c(3, 3), nfeedbacks=0
 #' @param ldown List of nodes of the lower layer
 #' @param p_link Probability of linking two nodes between the layer
 #' @param connect_bottom Whether each node of the lower layer must have at least on link
-addLinks <- function(links, lup, ldown, p_link=0.2, connect_bottom = TRUE) {
+addLayerLinks <- function(links, lup, ldown, p_link=0.2, connect_bottom = TRUE) {
     if (p_link > 0) {
         for (ndown in ldown) {
             linkup = FALSE
@@ -116,5 +116,98 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
 
     design = getExperimentalDesign(structure, stimulated, inhibited, measured, stimulations, inhibitions, nodes)
     return(design)
+}
+
+#' Create simulated data
+#'
+#' Simulate data with noise from a network and a perturbation scheme
+#' @param input_network The input network. A 2 or 3 columns matrix representing an adjacency list, or an adjacency matrix. Alternatively, the name of a csv file where such matrix is writen (without headers for an adjacency list, with the nodes names in the first line for an adjacency matrix). In case of a 2 columns adjacency list, the values of all links is assumed to be 1, if 3 columns, the 3rd columns is used as coefficient.
+#' @param perturbation The experimental design. A matrix where the column names are the names of the perturbation: NODE for a stimulation and NODEi for an inhibition. Alternatively, the name of csv file where the matrix is writen, the first line is used as column names.
+#' @param measured A list of nodes to be the measured nodes
+#' @param noise A numeric between 0 and 1 giving the noise level, interpreted as a coefficient of variation. 0 means no noise at all.
+#' @export
+#' @seealso \code{\link{generateToyNetwork}}, \code{\link{generateToyNetwork}}, \code{\link{getCombinationMatrix}}
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+createSimulation <- function(input_network, perturbations, measured, inhibitions=0.5, noise=0, replicates=3) {
+    if (!is.matrix(input_network)) {
+        input_network = as.matrix(read.csv(input_network, header=F))
+        # Adjacency list
+        if (ncol(input_network) <= 3) {
+            values = rep(1, nrow(input_network))
+            if (ncol(input_network) == 3) {
+                values = input_network[,3]
+                input_network = input_network[,1:2]
+            }
+            nodes = length(unique(as.character(input_network)))
+            nnodes = length(nodes)
+            adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
+            for (ii in 1:nnodes) { adm[ii,ii]=-1 }
+            for (rr in 1:nrow(input_network)) {
+                adm[nodes[rr,1],nodes[rr,2]] = values[rr]
+            }
+        } else { # Adjacency matrix
+            if (is.character(input_network)) {
+                colnames(input_network) = input_network[1,]
+                input_network = matrix( as.numeric(input_network[-1,]), ncol=ncol(input_network), dimnames=list(NULL, colnames(input_network)) )
+            }
+            if (ncol(input_network) != nrow(input_network)) {
+                stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
+            }
+            rownames(input_network) = colnames(input_network)
+            adm = input_network
+        }
+    } else {
+        adm = input_network
+    }
+    structure = extractStructure(input_network)
+
+    if (!is.matrix(perturbations)) {
+        perturbations = as.matrix(read.csv(perturbations))
+    }
+    measured = unlist(measured)
+
+    # Extract stimuli and inhibitors for the experimental design
+    stim_nodes = colnames(perturbations)[grepl("[^i]$", colnames(perturbations))]
+    stimuli = matrix(perturbations[,stim_nodes], ncol=length(stim_nodes), dimnames=list(NULL, stim_nodes))
+    inhib_nodes = sub("i$", "", colnames(perturbations)[grepl("i$", colnames(perturbations))])
+    inhibitors = matrix(perturbations[,paste0(inhib_nodes, "i")], ncol=length(inhib_nodes), dimnames=list(NULL, paste0(inhib_nodes, "i")))
+    expdes = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured, stimuli, inhibitors, structure$names)
+    if (length(inhibitions) != length(inhib_nodes)) {
+        if (length(inhibitions) != 1) { warning("Incorrect number of inhibitions, the first one will be repeated") }
+        inhibitions = rep(inhibitions[1], length(inhib_nodes))
+    }
+
+    data = new(fitmodel:::Data)
+    data$set_unstim_data( matrix( rep(10, nrow(stimuli)*length(measured)), nrow=nrow(stimuli) ))
+
+    model = new(fitmodel:::Model)
+    model$setModel(expdes, structure)
+    mra_model = MRAmodel(model, expdes, structure, basal=structure$names, parameters=model$getParameterFromLocalResponse(adm, inhibitions), data=data)
+
+    simulated_data = simulateModel( mra_model, inhibition_effect=inhibitions )$bestfit
+    colnames(simulated_data) = paste0("DV:", colnames(simulated_data))
+    colnames(stimuli) = paste0("TR:", colnames(stimuli))
+    colnames(inhibitors) = paste0("TR:", colnames(inhibitors))
+    results = list(model=mra_model, simulation=simulated_data, noise_free_simulation=simulated_data)
+    results$noise_free_simulation = cbind(stimuli, inhibitors, results$noise_free_simulation)
+    if (noise > 0) {
+        replicates = floor(replicates)
+        if (replicates < 1) { replicates=1 }
+        if (replicates > 1) { # Simulate replicate experiments
+            stimuli = apply(stimuli, 2, rep, replicates)
+            simulated_data = apply(simulated_data, 2, rep, replicates)
+            inhibitors = apply(inhibitors, 2, rep, replicates)
+        }
+        noise_coef = rnorm(length(simulated_data), sd=noise)
+        noise_coef[noise_coef > 0.99] = 0.99
+        noise_coef[noise_coef < -0.99] = -0.99
+        noisy_simulation = simulated_data * (1 + noise_coef)
+        results$simulation = noisy_simulation
+        results$simulation = cbind(stimuli, inhibitors, results$simulation)
+        results$simulation = results$simulation[order(matrix( 1:(nrow(results$simulation)), ncol=replicates, byrow=T )),] # Put replicates next to each other
+
+    }
+
+    return(results)
 }
 
