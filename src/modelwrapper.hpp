@@ -44,6 +44,7 @@ public:
   SEXP getParametersNames();
 
   void printEquation(const size_t r, const size_t c);
+  void printEquationMatrix();
 
 protected:
   GiNaC::matrix response_full_model; 
