@@ -149,6 +149,8 @@ createSimulation <- function(input_network, perturbations, measured, inhibitions
             if (is.character(input_network)) {
                 colnames(input_network) = input_network[1,]
                 input_network = matrix( as.numeric(input_network[-1,]), ncol=ncol(input_network), dimnames=list(NULL, colnames(input_network)) )
+            } else if (all( colnames(input_network) == paste0("V", 1:ncol(input_network)) )) {
+                colnames(input_network) = NULL
             }
             if (ncol(input_network) != nrow(input_network)) {
                 stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
@@ -161,10 +163,23 @@ createSimulation <- function(input_network, perturbations, measured, inhibitions
     }
     structure = extractStructure(input_network)
 
+    # If perturbations or measured are not set, consider the first node as a stimulation, and measure and inhibit all the others
     if (!is.matrix(perturbations)) {
-        perturbations = as.matrix(read.csv(perturbations))
+        if (perturbations == "") {
+            perturbations = getCombinationMatrix( c(structure$names[1], paste0(structure$names[-1], "i")), 1, 1 )
+        } else if (length(perturbations) == 1) {
+            perturbations = as.matrix(read.csv(perturbations))
+            if (nrow(perturbations) == 1) {
+                perturbations = getCombinationMatrix(c(perturbations), 1, 1)
+            }
+        } else {
+            perturbations = getCombinationMatrix(perturbations, 1, 1)
+        }
     }
     measured = unlist(measured)
+    if (suppressWarnings(measured == "")) {
+        measured = structure$names[-1]
+    }
 
     # Extract stimuli and inhibitors for the experimental design
     stim_nodes = colnames(perturbations)[grepl("[^i]$", colnames(perturbations))]
@@ -202,10 +217,11 @@ createSimulation <- function(input_network, perturbations, measured, inhibitions
         noise_coef[noise_coef > 0.99] = 0.99
         noise_coef[noise_coef < -0.99] = -0.99
         noisy_simulation = simulated_data * (1 + noise_coef)
-        results$simulation = noisy_simulation
-        results$simulation = cbind(stimuli, inhibitors, results$simulation)
+        results$simulation = cbind(stimuli, inhibitors, noisy_simulation)
         results$simulation = results$simulation[order(matrix( 1:(nrow(results$simulation)), ncol=replicates, byrow=T )),] # Put replicates next to each other
 
+    } else {
+        results$simulation = results$noise_free_simulation
     }
 
     return(results)
