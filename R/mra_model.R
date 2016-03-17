@@ -104,3 +104,12 @@ getMeasuredNodesNames <- function(mra_model) {
 plotModelGraph <- function(mra_model) {
     plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters))
 }
+
+#' Return the paths corresponding to each parameter
+#'
+#' @param mra_model An MRAmodel object.
+#' @return A vector containing the names of the parameters
+#' @export
+getParametersNames <- function(mra_model) {
+    return(sapply(mra_model$model$getParametersLinks(), simplify_path_name))
+}

@@ -118,6 +118,45 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
     return(design)
 }
 
+#' Get an adjacency matrix from a file
+#'
+#' Get the adjacency matrix from a various formats of network files
+#' @param network_file The name of the file containing a network structure as an adjacency matrix, or an adjacency list.
+readNetworkAdj <- function(network_file) {
+    if (!is.matrix(network_file)) {
+        network_file = as.matrix(read.csv(network_file, header=F))
+        # Adjacency list
+        if (ncol(network_file) <= 3) {
+            values = rep(1, nrow(network_file))
+            if (ncol(network_file) == 3) {
+                values = network_file[,3]
+                network_file = network_file[,1:2]
+            }
+            nodes = length(unique(as.character(network_file)))
+            nnodes = length(nodes)
+            adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
+            for (ii in 1:nnodes) { adm[ii,ii]=-1 }
+            for (rr in 1:nrow(network_file)) {
+                adm[nodes[rr,1],nodes[rr,2]] = values[rr]
+            }
+        } else { # Adjacency matrix
+            if (is.character(network_file)) {
+                colnames(network_file) = network_file[1,]
+                network_file = matrix( as.numeric(network_file[-1,]), ncol=ncol(network_file), dimnames=list(NULL, colnames(network_file)) )
+            } else if (all( colnames(network_file) == paste0("V", 1:ncol(network_file)) )) {
+                colnames(network_file) = NULL
+            }
+            if (ncol(network_file) != nrow(network_file)) {
+                stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
+            }
+            rownames(network_file) = colnames(network_file)
+            adm = network_file
+        }
+    } else {
+        adm = network_file
+    }
+}
+
 #' Create simulated data
 #'
 #' Simulate data with noise from a network and a perturbation scheme
@@ -129,38 +168,7 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
 #' @seealso \code{\link{generateToyNetwork}}, \code{\link{generateToyNetwork}}, \code{\link{getCombinationMatrix}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 createSimulation <- function(input_network, perturbations, measured, inhibitions=0.5, noise=0, replicates=3) {
-    if (!is.matrix(input_network)) {
-        input_network = as.matrix(read.csv(input_network, header=F))
-        # Adjacency list
-        if (ncol(input_network) <= 3) {
-            values = rep(1, nrow(input_network))
-            if (ncol(input_network) == 3) {
-                values = input_network[,3]
-                input_network = input_network[,1:2]
-            }
-            nodes = length(unique(as.character(input_network)))
-            nnodes = length(nodes)
-            adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
-            for (ii in 1:nnodes) { adm[ii,ii]=-1 }
-            for (rr in 1:nrow(input_network)) {
-                adm[nodes[rr,1],nodes[rr,2]] = values[rr]
-            }
-        } else { # Adjacency matrix
-            if (is.character(input_network)) {
-                colnames(input_network) = input_network[1,]
-                input_network = matrix( as.numeric(input_network[-1,]), ncol=ncol(input_network), dimnames=list(NULL, colnames(input_network)) )
-            } else if (all( colnames(input_network) == paste0("V", 1:ncol(input_network)) )) {
-                colnames(input_network) = NULL
-            }
-            if (ncol(input_network) != nrow(input_network)) {
-                stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
-            }
-            rownames(input_network) = colnames(input_network)
-            adm = input_network
-        }
-    } else {
-        adm = input_network
-    }
+    adm = readNetworkAdj(input_network)
     structure = extractStructure(input_network)
 
     # If perturbations or measured are not set, consider the first node as a stimulation, and measure and inhibit all the others
