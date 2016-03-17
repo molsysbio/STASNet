@@ -167,7 +167,7 @@ readNetworkAdj <- function(network_file) {
 #' @export
 #' @seealso \code{\link{generateToyNetwork}}, \code{\link{generateToyNetwork}}, \code{\link{getCombinationMatrix}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createSimulation <- function(input_network, perturbations, measured, inhibitions=0.5, noise=0, replicates=3) {
+createSimulation <- function(input_network, perturbations, measured="", inhibitions=0.5, noise=0, replicates=3) {
     adm = readNetworkAdj(input_network)
     structure = extractStructure(input_network)
 
@@ -184,10 +184,14 @@ createSimulation <- function(input_network, perturbations, measured, inhibitions
             perturbations = getCombinationMatrix(perturbations, 1, 1)
         }
     }
-    measured = unlist(measured)
-    if (suppressWarnings(measured == "")) {
-        measured = structure$names[-1]
+    if (length(measured) == 1) {
+        if (measured == "") {
+            measured = structure$names[-1]
+        } else {
+            measured = c(as.matrix( read.table(measured) ))
+        }
     }
+    measured = unlist(measured)
 
     # Extract stimuli and inhibitors for the experimental design
     stim_nodes = colnames(perturbations)[grepl("[^i]$", colnames(perturbations))]
