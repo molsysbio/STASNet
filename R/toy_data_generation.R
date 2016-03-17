@@ -170,11 +170,14 @@ readNetworkAdj <- function(network_file) {
 createSimulation <- function(input_network, perturbations, measured="", inhibitions=0.5, noise=0, replicates=3) {
     adm = readNetworkAdj(input_network)
     structure = extractStructure(input_network)
+    input_nodes = which(apply(structure$adjacencyMatrix, 1, sum)==0)
+    if (length(input_nodes)==0) { input_nodes = 1 }
+    output_nodes = which(apply(structure$adjacencyMatrix, 2, sum)==0)
 
-    # If perturbations or measured are not set, consider the first node as a stimulation, and measure and inhibit all the others
+    # If perturbations or measured are not set, stimulate all input nodes,  measure all the others, and inhibit all the others but the output nodes
     if (!is.matrix(perturbations)) {
         if (perturbations == "") {
-            perturbations = getCombinationMatrix( c(structure$names[1], paste0(structure$names[-1], "i")), 1, 1 )
+            perturbations = getCombinationMatrix( c(structure$names[input_nodes], paste0(structure$names[-c(input_nodes, output_nodes)], "i")), 1, 1 )
         } else if (length(perturbations) == 1) {
             perturbations = as.matrix(read.csv(perturbations))
             if (nrow(perturbations) == 1) {
@@ -184,9 +187,10 @@ createSimulation <- function(input_network, perturbations, measured="", inhibiti
             perturbations = getCombinationMatrix(perturbations, 1, 1)
         }
     }
+
     if (length(measured) == 1) {
         if (measured == "") {
-            measured = structure$names[-1]
+            measured = structure$names[-input_nodes]
         } else {
             measured = c(as.matrix( read.table(measured) ))
         }
