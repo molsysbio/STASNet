@@ -25,6 +25,7 @@
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
 
+    if (class(data) != "Rcpp_Data") { stop("A Data object with the basal activity of the measured nodes is required") }
     mra_model = structure(
               list(
                    # Objects to build the model
@@ -94,6 +95,21 @@ getMeasuredNodesNames <- function(mra_model) {
     return(mra_model$structure$names[mra_model$design$measured_nodes+1])
 }
 
+#' Plot the network used in the model
+#'
+#' Plot the network used in the model with the experimental design on top of it
+#' @param mra_model An MRAmodel object.
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelGraph <- function(mra_model) {
-    plotNetworkGraph(mra_model$structure, mra_model.R$design)
+    plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters))
+}
+
+#' Return the paths corresponding to each parameter
+#'
+#' @param mra_model An MRAmodel object.
+#' @return A vector containing the names of the parameters
+#' @export
+getParametersNames <- function(mra_model) {
+    return(sapply(mra_model$model$getParametersLinks(), simplify_path_name))
 }

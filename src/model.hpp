@@ -85,6 +85,7 @@ public:
     //    exit(0);
   }
   void printEquation(const size_t r, const size_t c);
+  void printEquationMatrix();
   virtual void setNegativeInhibitions(double *p) const;
   std::vector<size_t> getInhibitorsIds() const;
 
