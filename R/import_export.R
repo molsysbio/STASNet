@@ -127,7 +127,7 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
 importModel <- function(file_name) {
 
     if (!grepl(".mra", file_name)) {
-        warn("This file does not have the expected .mra extension. Trying to extract a model anyway...")
+        warning("This file does not have the expected .mra extension. Trying to extract a model anyway...")
     }
 
     file = readLines(file_name)

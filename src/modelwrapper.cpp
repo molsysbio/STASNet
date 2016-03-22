@@ -289,6 +289,10 @@ void ModelWrapper::printEquation(const size_t r, const size_t c) {
     model->printEquation(r-1, c-1);
 }
 
+void ModelWrapper::printEquationMatrix() {
+    model->printEquationMatrix();
+}
+
 ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 
 ModelSetWrapper::~ModelSetWrapper() {
@@ -374,7 +378,8 @@ RCPP_MODULE(ModelEx) {
     .method( "getParametersNames", &ModelWrapper::getParametersNames )
     .method( "getUnreducedPDM", &ModelWrapper::getUnreducedPDM )
     .method( "getPDM", &ModelWrapper::getPDM )
-    .method( "getEquation", &ModelWrapper::printEquation )
+    .method( "printEquation", &ModelWrapper::printEquation )
+    .method( "printEquationMatrix", &ModelWrapper::printEquationMatrix )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
     

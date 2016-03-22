@@ -62,7 +62,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation)
   expdes = core$design
   data = core$data
-  
+
   # MODEL SETUP
   model = new(fitmodel:::Model)
   model$setModel(expdes, model_structure)
@@ -616,7 +616,7 @@ extractStructure = function(model_links, names="") {
       name = name[length(name)]
   } else {
       struct_matrix = model_links
-      name = "unknow"
+      if (names == "") { name = "unknow" }
   }
   
   # Detect if it is a list of links or an adjacency matrix
@@ -634,15 +634,13 @@ extractStructure = function(model_links, names="") {
       if (suppressWarnings( is.na(as.numeric(struct_matrix[1,1])) )) {
         struct_matrix = struct_matrix[,-1]
       }
-      rownames(struct_matrix) = colnames(struct_matrix)
-    } else if (length(name) == ncol(struct_matrix)) {
+    } else if (length(names) == ncol(struct_matrix)) {
       colnames(struct_matrix) = names
-      rownames(struct_matrix) = names
-    } else {
+    } else if (is.null(colnames(struct_matrix))) {
       print("No names were provided for the nodes, using numbers instead")
-      colnames(struct_matrix) = 1:ncol(struct_matrix)
-      rownames(struct_matrix) = 1:ncol(struct_matrix)
+      colnames(struct_matrix) = paste0("node", 1:ncol(struct_matrix))
     }
+    rownames(struct_matrix) = colnames(struct_matrix)
     # Check that the dimensions are correct
     if ( ncol(struct_matrix) != nrow(struct_matrix) ) {
       stop("The adjacency matrix is not square. Abort...")
@@ -651,18 +649,13 @@ extractStructure = function(model_links, names="") {
     links_list = c();
     for (i in 1:nrow(struct_matrix)) {
       for (j in 1:ncol(struct_matrix)) {
-        if (as.numeric(struct_matrix[i,j]) == 1) {
+        if (i != j && as.numeric(struct_matrix[i,j]) != 0) {
           links_list = rbind(links_list, c(colnames(struct_matrix)[j], rownames(struct_matrix)[i]))
         }
       }
     }
     
   }
-  
-  # Plot the graph of the network in a pdf
-  pdf(paste0( "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", name)) ))
-  plotNetworkGraph(links_list)
-  dev.off()
   
   model_structure=getModelStructure(links_list)
   
@@ -674,7 +667,7 @@ extractStructure = function(model_links, names="") {
 #' @param links_list A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present.
 # @export
-plotNetworkGraph <- function(links_list, expdes="") {
+plotNetworkGraph <- function(links_list, expdes="", local_values="") {
     if (class(links_list) == "matrix") {
         names = unique(as.vector(links_list))
         adm=matrix(0,length(names),length(names),dimnames = list(names,names))
@@ -696,9 +689,27 @@ plotNetworkGraph <- function(links_list, expdes="") {
       nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
       nodeRenderInfo(g1)$lwd = 1 # Create the field
       nodeRenderInfo(g1)$lwd[1+c(expdes$inhib_nodes, expdes$stim_nodes)] = 4 # Populate for perturbations
-      print(nodeRenderInfo(g1))
       nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
       nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
+    }
+    if (suppressWarnings(local_values != "")) {
+        edgeRenderInfo(g1)$lwd = 1
+        edgeRenderInfo(g1)$label = ""
+        edgeRenderInfo(g1)$labelJust = 3
+        from = edgeRenderInfo(g1)$enamesFrom
+        to = edgeRenderInfo(g1)$enamesTo
+        nodeX = nodeRenderInfo(g1)$nodeX
+        nodeY = nodeRenderInfo(g1)$nodeY
+        ii = 1
+        for (vv in local_values$local_response) {
+            if (vv != 0) {
+                edgeRenderInfo(g1)$lwd[ii] = vv
+                edgeRenderInfo(g1)$label[ii] = signif(vv, 2)
+                edgeRenderInfo(g1)$labelX[ii] = (nodeX[from[ii]] + nodeX[to[ii]]) / 2
+                edgeRenderInfo(g1)$labelY[ii] = (nodeY[from[ii]] + nodeY[to[ii]]) / 2
+                ii = ii + 1
+            }
+        }
     }
     renderGraph(g1)
     invisible(g1)
