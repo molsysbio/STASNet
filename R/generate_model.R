@@ -7,17 +7,13 @@ getModelStructure <- function(links) {
 getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, measured.nodes, stimuli, inhibitor, basal.activity = c()) {
     # Consistency checks
   if ( sum(is.na(match(as.character(stim.nodes),model.structure$names))) > 0 ) {
-    print(stim.nodes)
-    print(model.structure$names)
-    stop("problem matching stim.nodes names");
+    stop(paste0("problem matching stim.nodes names, could not match ", stim.nodes[!stim.nodes%in%model.structure$names]) );
   }
   if ( sum(is.na(match(as.character(inhib.nodes),model.structure$names))) > 0 ) {
-    print(inhib.nodes)
-    print(model.structure$names)
-    stop("problem matching inhib.nodes names");
+    stop(paste0("problem matching inhib.nodes names, could not match ", inhib.nodes[!inhib.nodes%in%model.structure$names]) );
   }
   if ( sum(is.na(match(as.character(measured.nodes),model.structure$names))) > 0 ) {
-    stop("problem matching measured.nodes names");
+    stop(paste0("problem matching measured.nodes names, could not match ", measured.nodes[!measured.nodes%in%model.structure$names]) );
   }
   basal.activity = as.character(basal.activity[as.character(basal.activity) %in% model.structure$names])
   if ( sum(is.na(match(as.character(basal.activity),model.structure$names))) > 0 ) {

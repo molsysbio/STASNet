@@ -124,20 +124,22 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
 #' @param network_file The name of the file containing a network structure as an adjacency matrix, or an adjacency list.
 readNetworkAdj <- function(network_file) {
     if (!is.matrix(network_file)) {
-        network_file = as.matrix(read.csv(network_file, header=F))
+        #network_file = as.matrix(read.csv(network_file, header=F))
+        network_split = strsplit(readLines(network_file), ",|->|;|\\ |\t")
+        network_file = t(sapply(network_split, function(X){X}))
         # Adjacency list
         if (ncol(network_file) <= 3) {
             values = rep(1, nrow(network_file))
             if (ncol(network_file) == 3) {
-                values = network_file[,3]
+                values = as.numeric(network_file[,3])
                 network_file = network_file[,1:2]
             }
-            nodes = length(unique(as.character(network_file)))
+            nodes = unique(as.character(network_file))
             nnodes = length(nodes)
             adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
             for (ii in 1:nnodes) { adm[ii,ii]=-1 }
             for (rr in 1:nrow(network_file)) {
-                adm[nodes[rr,1],nodes[rr,2]] = values[rr]
+                adm[network_file[rr,1],network_file[rr,2]] = values[rr]
             }
         } else { # Adjacency matrix
             if (is.character(network_file)) {
@@ -161,13 +163,13 @@ readNetworkAdj <- function(network_file) {
 #'
 #' Simulate data with noise from a network and a perturbation scheme
 #' @param input_network The input network. A 2 or 3 columns matrix representing an adjacency list, or an adjacency matrix. Alternatively, the name of a csv file where such matrix is writen (without headers for an adjacency list, with the nodes names in the first line for an adjacency matrix). In case of a 2 columns adjacency list, the values of all links is assumed to be 1, if 3 columns, the 3rd columns is used as coefficient.
-#' @param perturbation The experimental design. A matrix where the column names are the names of the perturbation: NODE for a stimulation and NODEi for an inhibition. Alternatively, the name of csv file where the matrix is writen, the first line is used as column names.
+#' @param perturbations The experimental design. A matrix where the column names are the names of the perturbation: NODE for a stimulation and NODEi for an inhibition. Alternatively, the name of csv file where the matrix is writen, the first line is used as column names.
 #' @param measured A list of nodes to be the measured nodes
 #' @param noise A numeric between 0 and 1 giving the noise level, interpreted as a coefficient of variation. 0 means no noise at all.
 #' @export
 #' @seealso \code{\link{generateToyNetwork}}, \code{\link{generateToyNetwork}}, \code{\link{getCombinationMatrix}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createSimulation <- function(input_network, perturbations, measured="", inhibitions=0.5, noise=0, replicates=3) {
+createSimulation <- function(input_network, perturbations="", measured="", inhibitions=0.5, noise=0, replicates=3) {
     adm = readNetworkAdj(input_network)
     structure = extractStructure(input_network)
     input_nodes = which(apply(structure$adjacencyMatrix, 1, sum)==0)
@@ -179,9 +181,10 @@ createSimulation <- function(input_network, perturbations, measured="", inhibiti
         if (perturbations == "") {
             perturbations = getCombinationMatrix( c(structure$names[input_nodes], paste0(structure$names[-c(input_nodes, output_nodes)], "i")), 1, 1 )
         } else if (length(perturbations) == 1) {
+            pfile = perturbations
             perturbations = as.matrix(read.csv(perturbations))
-            if (nrow(perturbations) == 1) {
-                perturbations = getCombinationMatrix(c(perturbations), 1, 1)
+            if (nrow(perturbations) == 1 || ncol(perturbations) == 1) {
+                perturbations = getCombinationMatrix(c(as.matrix(read.csv(pfile, header=F))), 1, 1)
             }
         } else {
             perturbations = getCombinationMatrix(perturbations, 1, 1)
@@ -192,7 +195,7 @@ createSimulation <- function(input_network, perturbations, measured="", inhibiti
         if (measured == "") {
             measured = structure$names[-input_nodes]
         } else {
-            measured = c(as.matrix( read.table(measured) ))
+            measured = unlist(strsplit( readLines(measured), ",|->|;|\\ |\t" ))
         }
     }
     measured = unlist(measured)
