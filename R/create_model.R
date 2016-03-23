@@ -231,6 +231,8 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
   for (it in 1:max_iterations) {
     if (length(modelset$variable_parameters) > 0) {
       extra_parameters = total_parameters[-modelset$variable_parameters]
+    } else{
+      extra_parameters = total_parameters
     }
     # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
     psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)

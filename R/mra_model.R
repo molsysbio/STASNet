@@ -25,7 +25,7 @@
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c()) {
 
-    if (class(data) != "Rcpp_Data" || class(data) != "Rcpp_DataSet") { stop("A Data object with unstimulated measurements is required") }
+    if (class(data) != "Rcpp_Data" && class(data) != "Rcpp_DataSet") { stop("A Data object with unstimulated measurements is required") }
     mra_model = structure(
               list(
                    # Objects to build the model
