@@ -235,19 +235,6 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
     # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
     psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
     
-    #psets = list()
-    #for (ii in extra_parameters) {
-    #  var_pars = unique(c( ii, modelset$variable_parameters ))
-    #  model$setVariableParameters(var_pars)
-    #  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol=length(modelset$parameters), byrow=T )
-    #  samples = getSamples(modelset$nb_models, nb_samples, method, nb_cores)
-    #  new_pset[,seq(from=ii, to=model$nr_of_parameters(), by=nb_sub_params)] = samples
-    #  refit = parallel_initialisation(model, modelset$data, new_pset, NB_CORES=nb_cores)
-    #  psets$residuals = c(psets$residuals, refit$residuals)
-    #  psets$added_var = c( psets$added_var, rep(ii, length(refit$residuals)) )
-    #  psets$params = rbind(psets$params, refit$params)
-    #}
-    
     bestres = min(unlist(psets["residuals",]))
     deltares = modelset$bestfit - bestres
     if (deltares > qchisq(accuracy, modelset$nb_models) ) {
