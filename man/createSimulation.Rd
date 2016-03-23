@@ -4,17 +4,17 @@
 \alias{createSimulation}
 \title{Create simulated data}
 \usage{
-createSimulation(input_network, perturbations, measured = "",
+createSimulation(input_network, perturbations = "", measured = "",
   inhibitions = 0.5, noise = 0, replicates = 3)
 }
 \arguments{
 \item{input_network}{The input network. A 2 or 3 columns matrix representing an adjacency list, or an adjacency matrix. Alternatively, the name of a csv file where such matrix is writen (without headers for an adjacency list, with the nodes names in the first line for an adjacency matrix). In case of a 2 columns adjacency list, the values of all links is assumed to be 1, if 3 columns, the 3rd columns is used as coefficient.}
 
+\item{perturbations}{The experimental design. A matrix where the column names are the names of the perturbation: NODE for a stimulation and NODEi for an inhibition. Alternatively, the name of csv file where the matrix is writen, the first line is used as column names.}
+
 \item{measured}{A list of nodes to be the measured nodes}
 
 \item{noise}{A numeric between 0 and 1 giving the noise level, interpreted as a coefficient of variation. 0 means no noise at all.}
-
-\item{perturbation}{The experimental design. A matrix where the column names are the names of the perturbation: NODE for a stimulation and NODEi for an inhibition. Alternatively, the name of csv file where the matrix is writen, the first line is used as column names.}
 }
 \description{
 Simulate data with noise from a network and a perturbation scheme

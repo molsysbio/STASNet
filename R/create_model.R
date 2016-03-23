@@ -622,6 +622,8 @@ extractStructure = function(model_links, names="") {
   # Detect if it is a list of links or an adjacency matrix
   if (ncol(struct_matrix) == 2) {
     links_list = struct_matrix
+  } else if (ncol(struct_matrix) == 3) {
+    links_list = struct_matrix[,1:2] # Values are given, do not use them
   } else {
     # Remove the number of nodes
     if ( length(unique(struct_matrix[1,])) == 1 && struct_matrix[1, 1] != 1) {
