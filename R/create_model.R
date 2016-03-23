@@ -19,6 +19,14 @@ rand <- function(decimals=4) {
   return(sample(1:10^decimals, size=1) / 10^decimals)
 }
 
+get_running_time <- function(init_time, text="") {
+  run_time = proc.time()["elapsed"]-init_time
+  run_hours = run_time %/% 3600;
+  run_minutes = (run_time - 3600 * run_hours) %/% 60;
+  run_seconds = round(run_time - 3600 * run_hours - 60 * run_minutes,0);
+  print(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
+}
+
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
@@ -204,60 +212,83 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
 #'
 #' @param modelset An MRAmodelSet object
 #' @param nb_cores Number of cores to use for the refitting with the new variable parameters
-#' @param max_iterations Maximum number of variable parameters to add
+#' @param max_iterations Maximum number of variable parameters to add (if 0 takes as many as possible)
 #' @param accuracy Cutoff probability for the chi^2 test
 #' @param method Name of the LHS method to use
 #' @return An updated MRAmodelSet with the new parameter sets
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-addVariableParameters <- function(modelset, nb_cores=0, max_iterations=1, accuracy=0.95, method="randomlhs") {
+addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+  init_time = proc.time()["elapsed"];
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   model = modelset$model
   
-  # Look which parameters are not already variables
-  extra_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
-  max_iterations = max(max_iterations, length(extra_parameters))
-  if (max_iterations < 0) { stop("Incorrect number of iterations") }
+  # Look which parameters are not already variable
+  total_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+  nb_sub_params = length(total_parameters)
+  max_iterations = ifelse(max_iterations<=0,nb_sub_params,max_iterations)
+  
   for (it in 1:max_iterations) {
-    nb_sub_params = length(extra_parameters)
-    extra_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
     if (length(modelset$variable_parameters) > 0) {
-      extra_parameters = extra_parameters[-c(modelset$variable_parameters)]
+      extra_parameters = total_parameters[-modelset$variable_parameters]
     }
-    psets = list()
-    for (ii in extra_parameters) {
-      var_pars = unique(c( ii, modelset$variable_parameters ))
-      model$setVariableParameters(var_pars)
-      new_pset = matrix( rep(modelset$parameters, 5), ncol=length(modelset$parameters), byrow=T )
-      samples = geneticLHS(nrow(new_pset), modelset$nb_models)
-      samples = getSamples(modelset$nb_models, nrow(new_pset), method=method,nb_cores)
-      for (jj in 1:modelset$nb_models) {
-        new_idx = nb_sub_params*(jj-1)+ii
-        new_pset[,new_idx] = new_pset[,new_idx] + samples[,jj]
-      }
+    # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
+    psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+    
+    #psets = list()
+    #for (ii in extra_parameters) {
+    #  var_pars = unique(c( ii, modelset$variable_parameters ))
+    #  model$setVariableParameters(var_pars)
+    #  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol=length(modelset$parameters), byrow=T )
+    #  samples = getSamples(modelset$nb_models, nb_samples, method, nb_cores)
+    #  new_pset[,seq(from=ii, to=model$nr_of_parameters(), by=nb_sub_params)] = samples
+    #  refit = parallel_initialisation(model, modelset$data, new_pset, NB_CORES=nb_cores)
+    #  psets$residuals = c(psets$residuals, refit$residuals)
+    #  psets$added_var = c( psets$added_var, rep(ii, length(refit$residuals)) )
+    #  psets$params = rbind(psets$params, refit$params)
+    #}
+    
+    bestres = min(unlist(psets["residuals",]))
+    deltares = modelset$bestfit - bestres
+    if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+      res_id = which.min(unlist(psets["residuals",]))
+      par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
+      new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
       
-      refit = parallel_initialisation(model, modelset$data, new_pset, NB_CORES=nb_cores)
-      
-      psets$residuals = c(psets$residuals, refit$residuals)
-      psets$added_var = c( psets$added_var, rep(ii, length(refit$residuals)) )
-      psets$params = rbind(psets$params, refit$params)
-    }
-    print("so far...")
-    ord_res = order(psets$residuals)
-    if (modelset$bestfit - psets$residuals[ord_res[1]] > qchisq(accuracy, modelset$nb_models) ) {
-      bid = ord_res[1]
-      var_pars = c( modelset$variable_parameters, modelset$variable_parameters[bid] )
-      print("so good")
+      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pchisq(deltares, df=modelset$nb_models),2) ))
+      writeLines(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
+      writeLines(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
+       
+      var_pars = c( modelset$variable_parameters, par_id )
       modelset = setVariableParameters(modelset, var_pars)
-      modelset$parameters = psets$params[bid,]
-      modelset = computeFitScore(modelset)
+      modelset$parameters = new_parameters
+      modelset$bestfit = bestres
+      # modelset=computeFitScore(modelset) FUNCTION NOT READY FOR MODEL SET YET!!!!
+      get_running_time(init_time, "elapsed");
     } else {
       break
     }
   }
-  
+  get_running_time(init_time, "in total");
   return(modelset)
 }
+
+#' Refit modelset by iterative relaxation of single parameters
+refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs"){
+  model=modelset$model
+  var_pars = unique(c( var_par, modelset$variable_parameters ))
+  model$setVariableParameters(var_pars)
+  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol=length(modelset$parameters), byrow=T )
+  
+  samples = getSamples(modelset$nb_models, nb_samples, method, nb_cores)
+  
+  new_pset[,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)] = samples
+  
+  refit = parallel_initialisation(model, modelset$data, new_pset, nb_cores)
+  
+  return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
+}
+
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
