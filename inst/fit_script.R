@@ -32,7 +32,7 @@ method = "geneticlhs"
 cores = 0
 
 if (!exists("cargs")) {
-    cargs = commandArgs()
+    cargs = commandArgs(trailingOnly=T)
 } else if (is.character(cargs)) {
     cargs = strsplit(cargs, " ")[[1]]
 }
