@@ -669,7 +669,7 @@ extractStructure = function(model_links, names="") {
 #' @param links_list A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present.
 # @export
-plotNetworkGraph <- function(links_list, expdes="", local_values="") {
+plotNetworkGraph <- function(links_list, expdes="", local_values="", edge_lim = c(1, 10, 1)) {
     if (class(links_list) == "matrix") {
         names = unique(as.vector(links_list))
         adm=matrix(0,length(names),length(names),dimnames = list(names,names))
@@ -705,7 +705,8 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
         ii = 1
         for (vv in local_values$local_response) {
             if (vv != 0) {
-                edgeRenderInfo(g1)$lwd[ii] = vv
+                edgeRenderInfo(g1)$lwd[ii] = min(edge_lim[2], max(edge_lim[3] * abs(vv), edge_lim[1])) # Width between limits
+                if (vv < 0) { edgeRenderInfo(g1)$col[ii] = "red" }
                 edgeRenderInfo(g1)$label[ii] = signif(vv, 2)
                 edgeRenderInfo(g1)$labelX[ii] = (nodeX[from[ii]] + nodeX[to[ii]]) / 2
                 edgeRenderInfo(g1)$labelY[ii] = (nodeY[from[ii]] + nodeY[to[ii]]) / 2
@@ -929,7 +930,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples
 #' rebuildModel("model.mra", "data.csv", "data.var")
 rebuildModel <- function(model_file, data_file, var_file="") {
-  if (!grep(".mra$", model_file)) {
+  if (!grepl(".mra$", model_file)) {
     stop("The model file does not have the mra extension")
   }
   model = importModel(model_file)

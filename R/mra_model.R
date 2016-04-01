@@ -102,7 +102,7 @@ getMeasuredNodesNames <- function(mra_model) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelGraph <- function(mra_model) {
-    plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters))
+    plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters), edge_lim=c(1, 5, 1))
 }
 
 #' Return the paths corresponding to each parameter

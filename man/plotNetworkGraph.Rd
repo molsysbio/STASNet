@@ -4,7 +4,8 @@
 \alias{plotNetworkGraph}
 \title{Plot a graph from an adjacency list}
 \usage{
-plotNetworkGraph(links_list, expdes = "", local_values = "")
+plotNetworkGraph(links_list, expdes = "", local_values = "",
+  edge_lim = c(1, 10, 1))
 }
 \arguments{
 \item{links_list}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.}

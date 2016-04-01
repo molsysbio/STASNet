@@ -28,6 +28,10 @@ test_that("The data are loaded correctly", {
     expect_equal_to_reference(model$data$error, "data_error.rds")
 })
 
+test_that("The computation is consistent", {
+    expect_equal( sum( ((model$model$simulate(model$data, model$parameters)$prediction - model$data$stim_data) / model$data$error)^2, na.rm=T ), model$bestfit )
+})
+
 test_that("Import-export works correctly", {
     expect_output(exportModel(model, "model.mra"), NA)
     expect_output(importModel("model.mra"), NA)
@@ -38,5 +42,5 @@ test_that("Simulations works properly", {
     expect_equal(getCombinationMatrix(c("N1", "N2i", "N3i"), 1, 1), matrix(c(0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1), ncol=3, dimnames=list(NULL, c("N1", "N2i", "N3i"))))
     res = createSimulation(as.matrix(read.csv("header.csv")), getCombinationMatrix(c("N1", "N2i", "N3i"), 1, 1), paste0("N", 2:4), noise=0.2, replicates=3 )
     expect_equal( res$noise_free_simulation, matrix(c(0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 10, 10, 10, 27.18281828, 27.18281828, 27.18281828, 10, 1.353352832, 10, 73.89056098, 2.82453563, 73.89056098, 10, 0.1831563888, 1.353352832, 545.9815003, 0.7978001573, 5.89499011816367), ncol=6, dimnames=list(NULL, c("TR:N1", "TR:N2i", "TR:N3i", "DV:N2", "DV:N3", "DV:N4"))), tolerance=1e-5)
-    expect_output(createSimulation("header.csv", "", ""))
+    #expect_output(createSimulation("header.csv", "", ""))
 })
