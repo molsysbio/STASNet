@@ -71,7 +71,7 @@ void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
 		    exp, linear_approximation);
 } 
 
-SEXP ModelWrapper::simulate(Data data, std::vector<double> parameters) {
+SEXP ModelWrapper::simulate(Data *data, std::vector<double> parameters) {
 
   if ( model == NULL ) 
     throw std::logic_error("Model not initialized yet. use setModel() before");
@@ -80,7 +80,7 @@ SEXP ModelWrapper::simulate(Data data, std::vector<double> parameters) {
     throw std::invalid_argument("length of parameter vector invalid");
 
   double_matrix datax;
-  model->predict(parameters, datax, &data);
+  model->predict(parameters, datax, data);
   Rcpp::List ret;
   ret["prediction"]=datax;
 

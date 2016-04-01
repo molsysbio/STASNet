@@ -84,6 +84,13 @@ void copy_matrix(const T &from, T &to ) {
   to=from;
 }
 
+template<typename T, typename V>
+void copy_to_view(const T &from, V &to) {
+    assert(from.shape()[0] == to.shape()[0]);
+    assert(from.shape()[1] == to.shape()[1]);
+    to = from;
+}
+
 template<typename T, typename S>
 void rbind_matrix(const T &from, S &dest) {
     std::cout << "Another round" << std::endl;
