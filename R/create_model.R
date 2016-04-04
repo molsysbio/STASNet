@@ -687,54 +687,99 @@ extractStructure = function(model_links, names="") {
 #' Plot a graph from an adjacency list
 #'
 #' @param links_list A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
-#' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present.
+#' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.
 # @export
 plotNetworkGraph <- function(links_list, expdes="", local_values="") {
-    if (class(links_list) == "matrix") {
-        names = unique(as.vector(links_list))
-        adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-        for (ii in 1:nrow(links_list)) {
-            adm[match(links_list[ii,2],rownames(adm)), links_list[ii,1]] = 1
-        }
-    } else if (class(links_list) == "Rcpp_ModelStructure") {
-        adm = links_list$adjacencyMatrix
-        colnames(adm) = rownames(adm) = links_list$names
-    } else {
-        stop("Invalid 'links_list' in plotNetworkGraph, must be an edge list or a ModelStructure")
+  if (class(links_list) == "matrix") {
+    names = unique(c(links_list))
+    adm=matrix(0,length(names),length(names),dimnames = list(names,names))
+    for (ii in 1:nrow(links_list)) {
+      adm[match(links_list[ii,2],rownames(adm)), links_list[ii,1]] = 1
     }
-    g1 <- graphAM(adjMat=t(adm),edgemode="directed")
-    nodeRenderInfo(g1) <- list(shape="ellipse")
-    g1 <- layoutGraph(g1)
-    edgeRenderInfo(g1) <- list(fontsize=10)
-    # Add the experimental setup if provided
-    if (class(expdes) == "Rcpp_ExperimentalDesign") {
-      nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
-      nodeRenderInfo(g1)$lwd = 1 # Create the field
-      nodeRenderInfo(g1)$lwd[1+c(expdes$inhib_nodes, expdes$stim_nodes)] = 4 # Populate for perturbations
+  } else if (class(links_list) == "Rcpp_ModelStructure") {
+    adm = links_list$adjacencyMatrix
+    colnames(adm) = rownames(adm) = links_list$names
+  } else {
+    stop("Invalid 'links_list' in plotNetworkGraph, must be an edge list or a ModelStructure")
+  }
+  
+  names=rownames(adm)
+  len=length(names)
+  g1 <- graphAM(adjMat=t(adm),edgemode="directed")
+  
+# add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
+  if (class(expdes) == "Rcpp_ExperimentalDesign"){
+    if (length(expdes$inhib_nodes)>0){
+      for (nn in rownames(adm)[1+expdes$inhib_nodes]){
+        g1 <- addNode(paste0(nn,"i"),g1)
+        g1 <- addEdge(nn,paste0(nn,"i"),g1)
+      }
+    }
+  }
+  
+  # setting of generaĺ  and creation of changed properties
+  nodeRenderInfo(g1) <- list(shape="ellipse")
+  nodeRenderInfo(g1) <- list(textCol="black")
+  nodeRenderInfo(g1) <- list(lwd=1)
+  edgeRenderInfo(g1) <- list(fontsize=10)
+  edgeRenderInfo(g1) <- list(textCol="black")
+  
+  g1 <- layoutGraph(g1)
+
+  # Add the experimental setup if provided
+  if (class(expdes) == "Rcpp_ExperimentalDesign") {
+    nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
+    
+    if (length(expdes$inhib_nodes)>0){
+      nodeRenderInfo(g1)$lwd[1+expdes$inhib_nodes]=4 # Populate for perturbations
       nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
+      nodeRenderInfo(g1)$col[(len+1):(len+length(expdes$inhib_nodes))]="white" # mask inhibitor pseudo nodes
+      nodeRenderInfo(g1)$textCol[(len+1):(len+length(expdes$inhib_nodes))]="white" 
+    }
+    
+    if (length(expdes$stim_nodes)>0){
+      nodeRenderInfo(g1)$lwd[1+expdes$stim_nodes] = 4
       nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
     }
-    if (suppressWarnings(local_values != "")) {
-        edgeRenderInfo(g1)$lwd = 1
-        edgeRenderInfo(g1)$label = ""
-        edgeRenderInfo(g1)$labelJust = 3
-        from = edgeRenderInfo(g1)$enamesFrom
-        to = edgeRenderInfo(g1)$enamesTo
-        nodeX = nodeRenderInfo(g1)$nodeX
-        nodeY = nodeRenderInfo(g1)$nodeY
-        ii = 1
-        for (vv in local_values$local_response) {
-            if (vv != 0) {
-                edgeRenderInfo(g1)$lwd[ii] = vv
-                edgeRenderInfo(g1)$label[ii] = signif(vv, 2)
-                edgeRenderInfo(g1)$labelX[ii] = (nodeX[from[ii]] + nodeX[to[ii]]) / 2
-                edgeRenderInfo(g1)$labelY[ii] = (nodeY[from[ii]] + nodeY[to[ii]]) / 2
-                ii = ii + 1
-            }
-        }
+  }
+  if (any(local_values != "")) {
+    # Add Edge Weights left justified
+    efrom = edgeRenderInfo(g1)$enamesFrom
+    eto = edgeRenderInfo(g1)$enamesTo
+    edge_spline=edgeRenderInfo(g1)$splines
+    
+    for (idx in which(adm!=0)) {
+      vv = local_values$local_response[idx]
+      afrom = rownames(adm)[ceiling(idx/len)] 
+      ato = colnames(adm)[ifelse(idx %% len==0,len,idx %% len)]
+      cc = which(grepl(afrom,efrom) & grepl(ato,eto))
+      edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
+      edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
+      
+      coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
+      edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(edgeRenderInfo(g1)$label[cc])*10/2)
+      edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
     }
-    renderGraph(g1)
-    invisible(g1)
+    
+    # Add Inhibitor estimates
+    if (length(expdes$inhib_nodes)>0){
+      for (idx in 1:length(expdes$inhib_nodes)) {
+        vv = local_values$inhibitors[idx]
+        iname = colnames(adm)[expdes$inhib_nodes[idx]+1]
+        cc = which(grepl(iname,efrom) & grepl(iname,eto))
+        edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
+        edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
+        edgeRenderInfo(g1)$textCol[cc]="red"
+        
+        coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
+        edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
+        edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
+      }
+    }
+  }
+  renderGraph(g1)
+  invisible(g1)
+  # TODO MARK REMOVED LINKS
 }
 
 #' Extracts the data, the experimental design and the structure from the input files
