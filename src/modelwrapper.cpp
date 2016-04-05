@@ -300,7 +300,6 @@ ModelSetWrapper::~ModelSetWrapper() {
 
 SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
     if (debug) {std::cout << "Using ModelSetWrapper fitmodel" << std::endl;}
-    data.computeDataVector();
     model->setNbModels(data.datas_.size());
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");

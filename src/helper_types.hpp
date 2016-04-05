@@ -160,7 +160,7 @@ public:
   bool read_from_stream(std::istream &is);
   virtual bool data_consistent(const ExperimentalDesign &expdesign) const;
 
-  void computeDataVector();
+  virtual void computeDataVector();
 };
 
 // Stores several dataset, used with ModelSet
@@ -174,6 +174,7 @@ public:
     void addData(Data &data, bool doDataVectorComputation=false);
     void addDataFromMatrices(double_matrix unstim_data, double_matrix stim_data, double_matrix error, double_matrix scale, bool doDataVectorComputation=false);
     virtual bool data_consistent(const ExperimentalDesign &expdesign) const;
+    virtual void computeDataVector();
 };
 
 

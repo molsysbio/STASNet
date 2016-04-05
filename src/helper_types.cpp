@@ -378,3 +378,19 @@ bool DataSet::data_consistent(const ExperimentalDesign &expdesign) const {
     return(false);
 }
 
+void DataSet::computeDataVector() {
+    if (datas_.size() > 0) {
+        size_t rows=stim_data.shape()[0], cols=stim_data.shape()[1];
+        nb_measurements = rows * cols;
+        dataVector = new double[nb_measurements];
+        size_t subdata_measurements = datas_[0].nb_measurements;
+        for (size_t sub=0; sub < datas_.size(); sub++) {
+            datas_[sub].computeDataVector();
+            if (datas_[sub].nb_measurements != subdata_measurements) {
+                throw std::logic_error("Data objects in the DataSet have inconsistent number of measurements (identical number of measurements expected)");
+            }
+            std::copy(datas_[sub].dataVector, datas_[sub].dataVector + subdata_measurements, dataVector + sub*subdata_measurements);
+        }
+    }
+}
+

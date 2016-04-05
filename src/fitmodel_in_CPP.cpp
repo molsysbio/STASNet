@@ -250,18 +250,8 @@ void fitmodel( std::vector <double> &bestfit,
   model->setNegativeInhibitions(p);
   std::copy(p,p+number_of_parameters,bestfit.begin());
 
-   //   model.print_parameter_report(std::cerr, bestfitvectorfuerausgabe);
-  
-  //  std::cerr << "bestresid "<< *bestresid << std::endl;
-
-   prediction.resize(boost::extents[data->error.shape()[0]][data->error.shape()[1]]);
-   double datay[number_of_measurements];
-   model->eval(p,datay,data);
-   for (size_t i=0;i<data->error.shape()[1];i++){
-     for (size_t j=0;j<data->error.shape()[0];j++){
-       prediction[j][i]=datay[i*(data->error.shape()[0])+j]*data->error[j][i];
-     }
-   }
+  // Also return the predicted values
+  model->predict(bestfit, prediction, data);
 
 }
 

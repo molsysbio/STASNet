@@ -45,8 +45,7 @@ void ModelSet::predict(const std::vector<double> &p, double_matrix &datax, const
     for (size_t mod=0 ; mod < nb_submodels_ ; mod++) {
         size_t shift = mod * nr_of_parameters_per_submodel();
         for (size_t ii=0; ii< nr_of_parameters_per_submodel(); ii++ ) {
-            parameters_[independent_parameters_[ii]]->set_parameter(p[shift + ii]);
-            ptmp[ii] = parameters_[independent_parameters_[ii]]->eval();
+            ptmp[ii] = p[shift + ii];
         }
         Model::predict(ptmp, sub_datax, &(dataset->datas_[mod]));
         boost::detail::multi_array::multi_array_view<double, 2> datax_view = datax[ boost::indices[range(mod*rows, (mod+1)*rows, 1)][range(0, cols, 1)] ];
