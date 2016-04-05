@@ -4,15 +4,15 @@
 \alias{addVariableParameters}
 \title{See if a MRAmodelSet requires some parameters to be variable among models to explain the variations}
 \usage{
-addVariableParameters(modelset, nb_cores = 0, max_iterations = 1,
-  accuracy = 0.95, method = "randomlhs")
+addVariableParameters(modelset, nb_cores = 0, max_iterations = 0,
+  nb_samples = 100, accuracy = 0.95, method = "geneticlhs")
 }
 \arguments{
 \item{modelset}{An MRAmodelSet object}
 
 \item{nb_cores}{Number of cores to use for the refitting with the new variable parameters}
 
-\item{max_iterations}{Maximum number of variable parameters to add}
+\item{max_iterations}{Maximum number of variable parameters to add (if 0 takes as many as possible)}
 
 \item{accuracy}{Cutoff probability for the chi^2 test}
 

@@ -690,21 +690,20 @@ extractStructure = function(model_links, names="") {
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.
 # @export
 plotNetworkGraph <- function(links_list, expdes="", local_values="") {
-  if (class(links_list) == "matrix") {
-    names = unique(c(links_list))
-    adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-    for (ii in 1:nrow(links_list)) {
-      adm[match(links_list[ii,2],rownames(adm)), links_list[ii,1]] = 1
+    if (class(links_list) == "matrix") {
+        names = unique(as.vector(links_list))
+        adm=matrix(0,length(names),length(names),dimnames = list(names,names))
+        for (ii in 1:nrow(links_list)) {
+            adm[match(links_list[ii,2],rownames(adm)), links_list[ii,1]] = 1
+        }
+    } else if (class(links_list) == "Rcpp_ModelStructure") {
+        adm = links_list$adjacencyMatrix
+        colnames(adm) = rownames(adm) = links_list$names
+    } else {
+        stop("Invalid 'links_list' in plotNetworkGraph, must be an edge list or a ModelStructure")
     }
-  } else if (class(links_list) == "Rcpp_ModelStructure") {
-    adm = links_list$adjacencyMatrix
-    colnames(adm) = rownames(adm) = links_list$names
-  } else {
-    stop("Invalid 'links_list' in plotNetworkGraph, must be an edge list or a ModelStructure")
-  }
   
-  names=rownames(adm)
-  len=length(names)
+  len=length(rownames(adm))
   g1 <- graphAM(adjMat=t(adm),edgemode="directed")
   
 # add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
@@ -723,6 +722,7 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
   nodeRenderInfo(g1) <- list(lwd=1)
   edgeRenderInfo(g1) <- list(fontsize=10)
   edgeRenderInfo(g1) <- list(textCol="black")
+  edgeRenderInfo(g1) <- list(col="black")
   
   g1 <- layoutGraph(g1)
 
@@ -752,21 +752,23 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
       vv = local_values$local_response[idx]
       afrom = rownames(adm)[ceiling(idx/len)] 
       ato = colnames(adm)[ifelse(idx %% len==0,len,idx %% len)]
-      cc = which(grepl(afrom,efrom) & grepl(ato,eto))
+      cc = which(afrom==efrom & ato==eto)
       edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
       edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
       
       coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
       edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(edgeRenderInfo(g1)$label[cc])*10/2)
       edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
+      if (vv < 0) { edgeRenderInfo(g1)$col[cc] = "orange" }
     }
     
     # Add Inhibitor estimates
     if (length(expdes$inhib_nodes)>0){
       for (idx in 1:length(expdes$inhib_nodes)) {
         vv = local_values$inhibitors[idx]
-        iname = colnames(adm)[expdes$inhib_nodes[idx]+1]
-        cc = which(grepl(iname,efrom) & grepl(iname,eto))
+        iname = paste0(colnames(adm)[expdes$inhib_nodes[idx]+1], "i")
+        nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
+        cc = which(nname==efrom & iname==eto)
         edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
         edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
         edgeRenderInfo(g1)$textCol[cc]="red"
@@ -994,7 +996,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples
 #' rebuildModel("model.mra", "data.csv", "data.var")
 rebuildModel <- function(model_file, data_file, var_file="") {
-  if (!grep(".mra$", model_file)) {
+  if (!grepl(".mra$", model_file)) {
     stop("The model file does not have the mra extension")
   }
   model = importModel(model_file)
