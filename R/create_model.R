@@ -115,8 +115,10 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
       setii = params[best_sets,ii] 
       setjj = params[best_sets,jj]
       cij = suppressWarnings(cor(setii, setjj, use="na.or.complete")) # NA if one vector has a standard deviation of 0
-      if ((!is.na(cij) && cij > 0.999) || (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
-        plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\ncor=", cij), col=residuals[best_sets])
+      if (perform_plots) {
+          if ((!is.na(cij) && cij > 0.999) || (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
+            plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\ncor=", cij), col=residuals[best_sets])
+          }
       }
     }
   }
@@ -707,7 +709,7 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
   g1 <- graphAM(adjMat=t(adm),edgemode="directed")
   
 # add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
-  if (class(expdes) == "Rcpp_ExperimentalDesign"){
+  if (class(expdes) == "Rcpp_ExperimentalDesign" && any(local_values != "")){
     if (length(expdes$inhib_nodes)>0){
       for (nn in rownames(adm)[1+expdes$inhib_nodes]){
         g1 <- addNode(paste0(nn,"i"),g1)
