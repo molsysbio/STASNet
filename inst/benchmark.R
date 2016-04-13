@@ -22,7 +22,7 @@ for (arg in cargs) {
 if (!exists("network")) { network = stop("A network file must be provided") }
 if (!exists("repetitions") || repetitions < 1) { repetitions = 10 }
 
-sim_title = paste0("benchmark_", dname)
+sim_title = paste0("benchmark_", repetitions, "_", dname)
 
 true_adm = fitmodel:::readNetworkAdj(network)
 true_inhibitions = -1
@@ -38,10 +38,11 @@ for (ii in c(0.01, 0.05, 0.1, 0.2, 0.3)) {
         adm = local_response$local_response
         values = rbind( values, c((adm[mra$structure$adjacencyMatrix != 0]-true_adm[mra$structure$adjacencyMatrix != 0])/abs(true_adm[mra$structure$adjacencyMatrix != 0]), local_response$inhibitors - true_inhibitions) )
     }
-    plot(apply( cbind(1:ncol(values)), 1, rep, nrow(values) ), values, xlab="Parameters", ylab="Relative difference to truth", xaxt="n", main=paste0("sd = ", ii, ", ", nrep, " replicates"), ylim=c(-1, 1), pch=16)
+    plot(apply( cbind(1:ncol(values)), 1, rep, nrow(values) ), values, xlab="Parameters", ylab="Relative difference to truth", xaxt="n", main=paste0("CV = ", ii, ", ", nrep, " replicates"), ylim=c(-1, 1), pch=16)
     axis(1, at=1:ncol(values), label=getParametersNames(mra), las=3)
     lines(0:(ncol(values)+1), rep(0, ncol(values)+2), col="red")
 }
+plotNetworkGraph(mra$structure, mra$design)
 dev.off()
 
 
