@@ -1,6 +1,7 @@
 #!/usr/bin/Rscript
 #-*- coding: utf8 -*-
 suppressPackageStartupMessages(library(fitmodel))
+suppressPackageStartupMessages(library(parallel))
 # Benchmarking of the fitmodel package on a network structure
 
 if (!exists("cargs")) {
@@ -24,6 +25,14 @@ if (!exists("repetitions") || repetitions < 1) { repetitions = 10 }
 
 sim_title = paste0("benchmark_", repetitions, "_", dname)
 
+simulate_and_fit <- function(jj, network) {
+    source("~/bin/toy_data_generation")
+    mra = createModel(network, basal_file, simulation_file, nb_cores=1)
+    local_response = mra$model$getLocalResponseFromParameter(mra$parameters)
+    adm = local_response$local_response
+    return (c((adm[mra$structure$adjacencyMatrix != 0]-true_adm[mra$structure$adjacencyMatrix != 0])/abs(true_adm[mra$structure$adjacencyMatrix != 0]), local_response$inhibitors - true_inhibitions) )
+}
+
 true_adm = fitmodel:::readNetworkAdj(network)
 true_inhibitions = -1
 pdf(paste0(sim_title, ".pdf"))
@@ -38,11 +47,15 @@ for (ii in c(0.01, 0.05, 0.1, 0.2, 0.3)) {
         adm = local_response$local_response
         values = rbind( values, c((adm[mra$structure$adjacencyMatrix != 0]-true_adm[mra$structure$adjacencyMatrix != 0])/abs(true_adm[mra$structure$adjacencyMatrix != 0]), local_response$inhibitors - true_inhibitions) )
     }
-    plot(apply( cbind(1:ncol(values)), 1, rep, nrow(values) ), values, xlab="Parameters", ylab="Relative difference to truth", xaxt="n", main=paste0("CV = ", ii, ", ", nrep, " replicates"), ylim=c(-1, 1), pch=16)
+    #values = t(mcmapply(simulate_and_fit, 1:repetitions, network, mc.cores=detectCores()-1)) # Problem because of the same seed
+    print(values)
+    source("~/bin/toy_data_generation")
+    mra = createModel(network, basal_file, simulation_file, nb_cores=1)
+    plot(apply( cbind(1:ncol(values)), 1, rep, nrow(values) ), values, xlab="Parameters", ylab="Relative difference to truth", xaxt="n", main=paste0("CV = ", ii, ", ", repetitions, " replicates"), ylim=c(-1, 1), pch=16, col="#00000077")
     axis(1, at=1:ncol(values), label=getParametersNames(mra), las=3)
     lines(0:(ncol(values)+1), rep(0, ncol(values)+2), col="red")
 }
-plotNetworkGraph(mra$structure, mra$design)
+fitmodel:::plotNetworkGraph(mra$structure, mra$design)
 dev.off()
 
 
