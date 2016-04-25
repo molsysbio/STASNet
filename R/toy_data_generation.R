@@ -122,6 +122,7 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
 #'
 #' Get the adjacency matrix from a various formats of network files
 #' @param network_file The name of the file containing a network structure as an adjacency matrix, or an adjacency list.
+#' @return The weighted adjacency matrix corresponding to the network
 readNetworkAdj <- function(network_file) {
     if (!is.matrix(network_file)) {
         #network_file = as.matrix(read.csv(network_file, header=F))
@@ -157,6 +158,7 @@ readNetworkAdj <- function(network_file) {
     } else {
         adm = network_file
     }
+    invisible(adm)
 }
 
 #' Create simulated data
@@ -184,7 +186,7 @@ createSimulation <- function(input_network, perturbations="", measured="", inhib
             pfile = perturbations
             perturbations = as.matrix(read.csv(perturbations))
             if (nrow(perturbations) == 1 || ncol(perturbations) == 1) {
-                perturbations = getCombinationMatrix(c(as.matrix(read.csv(pfile, header=F))), 1, 1)
+                perturbations = getCombinationMatrix(unlist(strsplit(readLines(pfile), "\t| |,|;")), 1, 1)
             }
         } else {
             perturbations = getCombinationMatrix(perturbations, 1, 1)

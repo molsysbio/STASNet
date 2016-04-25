@@ -51,7 +51,7 @@ for (ii in c(0.01, 0.05, 0.1, 0.2, 0.3)) {
     print(values)
     source("~/bin/toy_data_generation")
     mra = createModel(network, basal_file, simulation_file, nb_cores=1)
-    plot(apply( cbind(1:ncol(values)), 1, rep, nrow(values) ), values, xlab="Parameters", ylab="Relative difference to truth", xaxt="n", main=paste0("CV = ", ii, ", ", repetitions, " replicates"), ylim=c(-1, 1), pch=16, col="#00000077")
+    plot(apply( cbind(1:ncol(values)), 1, rep, nrow(values) ), values, xlab="Parameters", ylab="Relative difference to truth", xaxt="n", main=paste0("CV = ", ii, ", ", repetitions, " replicates"), ylim=c(-1, 1), pch=16, col="#00000099")
     axis(1, at=1:ncol(values), label=getParametersNames(mra), las=3)
     lines(0:(ncol(values)+1), rep(0, ncol(values)+2), col="red")
 }
