@@ -7,7 +7,7 @@ suppressPackageStartupMessages(library(parallel))
 if (!exists("cargs")) {
     cargs = commandArgs()
 } else if (is.character(cargs)) {
-    cargs = strsplit(cargs, " ")[[1]]
+    cargs = unlist(strsplit(cargs, " "))
 }
 
 for (arg in cargs) {
