@@ -752,9 +752,10 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
     
     for (idx in which(adm!=0)) {
       vv = local_values$local_response[idx]
-      afrom = rownames(adm)[ceiling(idx/len)] 
-      ato = colnames(adm)[ifelse(idx %% len==0,len,idx %% len)]
+      afrom = colnames(adm)[ceiling(idx/len)]
+      ato = rownames(adm)[ifelse(idx %% len==0,len,idx %% len)]
       cc = which(afrom==efrom & ato==eto)
+      cc = ifelse(length(cc)!=0, cc, which(afrom==eto & ato==efrom)) # Link in both directions
       edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
       edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
       

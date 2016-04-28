@@ -52,7 +52,7 @@ void generate_response( GiNaC::matrix &response,
     x.push_back(GiNaC::symbol(tmpstr));     // Put the inhibitor symbol in the vector
     inh_idx[i]=c++;                         // Remember the position of the inhibitor symbol
   }
-  if (debug) { for(size_t ii=0; ii<x.size();ii++) { std::cout << x[ii]; } std::cout << std::endl; }
+  if (debug) { for(size_t ii=0; ii<x.size();ii++) { std::cout << " " << x[ii]; } std::cout << std::endl; }
 
   //  (III) -Create the global response matrix "R": R = -1 * inv(r)
   //std::cout << r << std::endl;
