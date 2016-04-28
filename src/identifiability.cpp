@@ -13,6 +13,7 @@
 #include "rref.hpp"
 
 extern bool debug;
+extern int verbosity;
 
 boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(GiNaC::ex e) {
   // If expression e has already been assigned to a parameter, return that.
@@ -25,7 +26,7 @@ boost::shared_ptr<MathTree::parameter> parameterlist::getParameterForExpression(
   MathTree::parameter::Ptr par(new MathTree::parameter());
   par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
   push_back(std::make_pair(par,e));
-  if (debug) { std::cout << e << " added" << std::endl;}
+  if (verbosity > 7) { std::cerr << e << " added" << std::endl;}
   return par;
 }
 
@@ -163,13 +164,14 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
   parameterlist param; // List of correspondance (mathtree, GiNaC expression)
+  if (debug) { std::cerr << "Convering from GiNaC to matree format..." << std::endl; }
   for (size_t i=0; i<input_matrix.rows(); i++) {
     for (size_t j=0; j<input_matrix.cols(); j++) {
-      if(debug) {std::cout << i << "," << j << " : " << input_matrix(i, j) << "\t" << std::endl;}
+      if(verbosity > 9) {std::cerr << i << "," << j << " : " << input_matrix(i, j) << "\t" << std::endl;}
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
     }
   }
-  if(debug) {std::cout << std::endl;}
+  if(verbosity > 9) {std::cerr << std::endl;}
   // Write parameter dependencies into matrix (this is the matrix which will 
   // be put into Row Echelon form).
   // Each row represents one new parameter, the first colums are the old parameters, then the 
@@ -178,10 +180,11 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
   // Fills the matrix A|B with the coefficients of the paths
   parameter_dependency_matrix_unreduced.resize(boost::extents[param.size()][param.size()+vars.size()]);
+  if (debug) { std::cerr << "Filling the PDM..." << std::endl; }
   size_t x=0, y=0;
   for (parameterlist::iterator iter=param.begin(); iter!=param.end(); ++iter) {
         y=0;
-        if(debug) {std::cout << "Path " << x << " : " << iter->second << std::endl;} // DEBUGGING
+        if(verbosity > 9) {std::cerr << "Path " << x << " : " << iter->second << std::endl;} // DEBUGGING
         assert(GiNaC::is_a<GiNaC::mul>(iter->second) || GiNaC::is_a<GiNaC::symbol>(iter->second) );
         if (GiNaC::is_a<GiNaC::mul>(iter->second)) {
           GiNaC::mul m=GiNaC::ex_to<GiNaC::mul>(iter->second); // Isn't is already a mul ?
@@ -201,24 +204,21 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   }
 
     // DEBUGGING prints the matrix before reduction
-    if (debug) {
-        std::cout << "Before sorting or reduction" << std::endl;
+    if (debug) { std::cerr << "Before sorting or reduction..." << std::endl; }
+    if (verbosity > 9) {
         for (size_t i=0 ; i < vars.size() ; i++) {
-            std::cout << vars[i].get_name() << "\t";
+            std::cerr << vars[i].get_name() << "\t";
         }
-        std::cout << "\n";
+        std::cerr << "\n";
         for (size_t i=0 ; i < parameter_dependency_matrix_unreduced.shape()[0] ; i++) {
             for (size_t j=0 ; j < parameter_dependency_matrix_unreduced.shape()[1] ; j++) {
-                std::cout << parameter_dependency_matrix_unreduced[i][j] << "\t";
+                std::cerr << parameter_dependency_matrix_unreduced[i][j] << "\t";
             }
-            std::cout << "\n";
+            std::cerr << "\n";
         }
-        std::cout << std::endl;
-    }
-    //
-    if (debug) {
+        std::cerr << std::endl;
         for (int i=0 ; i < param.size() ; i++) {
-            std::cout << "Path " << i << " : " << param[i].second << std::endl;
+            std::cerr << "Path " << i << " : " << param[i].second << std::endl;
         }
     }
 
@@ -236,19 +236,19 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   convert_rational_to_double_matrix(rational_matrix_for_rref, 
                     parameter_dependency_matrix);
   
-    if (debug) {
-        std::cout << "After reduction" << std::endl;
+    if (debug) { std::cerr << "After reduction" << std::endl; }
+    if (verbosity > 9) {
         for (size_t i=0 ; i < vars.size() ; i++) {
-            std::cout << vars[i].get_name() << "\t";
+            std::cerr << vars[i].get_name() << "\t";
         }
-        std::cout << "\n";
+        std::cerr << "\n";
         for (size_t i=0 ; i < parameter_dependency_matrix.shape()[0] ; i++) {
             for (size_t j=0 ; j < parameter_dependency_matrix.shape()[1] ; j++) {
-                std::cout << parameter_dependency_matrix[i][j] << "\t";
+                std::cerr << parameter_dependency_matrix[i][j] << "\t";
             }
-            std::cout << "\n";
+            std::cerr << "\n";
         }
-        std::cout << std::endl;
+        std::cerr << std::endl;
     }
     
 

@@ -74,6 +74,8 @@ for (argument in cargs) {
         perform_pl = FALSE
     } else if (argument == "--noplots" || argument == "--noplot") {
         perf_plots = FALSE
+    } else if (grepl("^-v", argument)) {
+        fitmodel:::setDebug(T)
     } else if (grepl("^-", argument)) {
         print(paste0("Unknown argument: '", argument, "'"))
     }

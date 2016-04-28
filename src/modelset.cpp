@@ -67,7 +67,7 @@ void ModelSet::eval(const double *p, double *datax, const Data *data) const {
         // Change the parameters that vary accross models
         for (std::vector<size_t>::const_iterator id = subparameters_ids_.begin(); id != subparameters_ids_.end(); ++id) {
             ptmp[*id] = p[mod * independent_parameters_.size() + (*id)];
-            if (debug) { std::cout << "Setting parameter " << *id << " to " << ptmp[*id] << " for model " << mod << std::endl; }
+            if (verbosity > 11) { std::cout << "Setting parameter " << *id << " to " << ptmp[*id] << " for model " << mod << std::endl; }
         }
         Model::eval(ptmp, dataxm, &(dataset->datas_[mod]));
         std::copy(dataxm, dataxm + rows * cols, datax + mod * rows * cols);
@@ -120,7 +120,7 @@ void ModelSet::setNegativeInhibitions(double *p) const {
 
   for (std::vector<size_t>::iterator it=inhibs_ids.begin(); it!=inhibs_ids.end(); it++) {
     for (size_t jj=0; jj<nb_submodels_; jj++) {
-        if (debug) { std::cout << "submodel " << jj << ", inhibitor " << *it << std::endl; }
+        if (verbosity > 4) { std::cout << "submodel " << jj << ", inhibitor " << *it << std::endl; }
         p[ jj*nr_of_parameters_per_submodel() + *it ] = -std::abs(p[ jj*nr_of_parameters_per_submodel() + *it ]);
     }
   }

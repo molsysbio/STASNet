@@ -329,7 +329,7 @@ void simulated_annealing(const Model *model, const Data *data, std::vector<doubl
             min_new = std::min(new_residual, min_new);
             no_change++;
         } while (no_change < max_it && uniform_sampling() > std::exp((bestresid - new_residual)/temperature));
-        if (debug) {
+        if (verbosity > 8) {
             std::cout << "best = " << bestresid << " old = " << residual << " min_new = " << min_new << ", probablility = " << std::exp((bestresid - min_new)/temperature)  << std::endl;
             std::cout << "Temperature " << temperature << ", Unity probability " << std::exp(-1/temperature) << std::endl;
         }

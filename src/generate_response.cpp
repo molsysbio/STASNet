@@ -3,7 +3,8 @@
 #include <boost/lexical_cast.hpp>
 #include <iostream>                      // cin, cout, iostrstream...
 
-static bool debug;
+extern bool debug;
+extern bool verbosity;
 
 void generate_response( GiNaC::matrix &response,
 			std::vector <GiNaC::symbol> &x,
@@ -13,6 +14,7 @@ void generate_response( GiNaC::matrix &response,
 			) {
   x.clear();
  //  (I) -Build symbolic "r" matrix from adjacency matrix "adm"-
+ if (debug) { std::cerr << "Building the response matrix..." << std::endl; }
   size_t size=adm.shape()[0];               // because we need it all the time
   int r_idx[size][size];                    // give a number to each link
   GiNaC::matrix r(size,size);               // local response matrix r
@@ -38,6 +40,7 @@ void generate_response( GiNaC::matrix &response,
   
 
   //  (II) -Include inhibitors as symbols-
+  if (debug) { std::cerr << "Including the inhibitors..." << std::endl; }
   int inh_idx[exp_design.inhib_nodes.size()];
   for (size_t i=0; i<exp_design.inhib_nodes.size() ;i++ ) {
     std::string tmpstr;
@@ -49,15 +52,21 @@ void generate_response( GiNaC::matrix &response,
     x.push_back(GiNaC::symbol(tmpstr));     // Put the inhibitor symbol in the vector
     inh_idx[i]=c++;                         // Remember the position of the inhibitor symbol
   }
+  if (debug) { for(size_t ii=0; ii<x.size();ii++) { std::cout << x[ii]; } std::cout << std::endl; }
 
   //  (III) -Create the global response matrix "R": R = -1 * inv(r)
   //std::cout << r << std::endl;
-  GiNaC::matrix R=GiNaC::ex_to<GiNaC::matrix>(r.inverse()).mul_scalar(-1);
+  
+  if (debug) {
+    std::cerr << "Inverting the response matrix..." << std::endl;
+    std::cerr << "dim = " << size << "x" << size << std::endl;
+  }
+  GiNaC::matrix R=GiNaC::matrix(r.inverse()).mul_scalar(-1);
   //std::cout << R.expand() << std::endl; // Variation here due to different simplification by GiNaC
 
 
   //  (IV) -Create the actual response vector (of what was measured and perturbed including inhibitor effects)-
-
+  if (debug) { std::cerr << "Creating of the actual response vector..." << std::endl; }
   response = GiNaC::matrix(exp_design.stimuli.shape()[0]*exp_design.measured_nodes.size(),1);  
   c=0;
   for (size_t i=0;i<exp_design.measured_nodes.size();i++){
@@ -73,8 +82,8 @@ void generate_response( GiNaC::matrix &response,
 		            if (r_idx[m][i_temp] > -1) { 
 		                inhibited_links.push_back(std::make_pair( x[r_idx[m][i_temp]], x[r_idx[m][i_temp]] *
 			            (exp(-pow(pow(x[inh_idx[l]],2),0.5))) )); // Force the inhibitor action to be between 0 and 1
-                        if (debug) {
-                            std::cout << "Substitute " << x[r_idx[m][i_temp]] << " by " << x[r_idx[m][i_temp]] *
+                        if (verbosity) {
+                            std::cerr << "Substitute " << x[r_idx[m][i_temp]] << " by " << x[r_idx[m][i_temp]] *
 			                (exp(-pow(pow(x[inh_idx[l]],2),0.5))) << std::endl << std::endl;
                         }
 		            }

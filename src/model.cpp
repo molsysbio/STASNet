@@ -117,7 +117,7 @@ void Model::do_init () {
 
     // Removes singletons from the other parameters
     size_t k=0;
-    if (debug) {
+    if (verbosity > 7) {
         std::cout << "Substitution before simplification ";
         for (k=0; k<replace_vector.size(); k++) {
             replace_vector[k].first->print(std::cout);
@@ -127,7 +127,7 @@ void Model::do_init () {
         }
     }
     simplify_independent_parameters_using_k(replace_vector);
-    if (debug) {
+    if (verbosity > 7) {
         std::cout << "Substitution after simplification ";
         for (size_t l=k; l<replace_vector.size(); l++) {
             replace_vector[l].first->print(std::cout);
@@ -688,9 +688,10 @@ void Model::print_parameter_report(std::ostream &os, const std::vector<double> &
 // Returns the strings corresponding to the expression of the parameters
 void Model::getParametersLinks(std::vector<std::string> &description) const {
     description = std::vector<std::string>();
+    if (debug && verbosity > 4) { std::cerr << "Retrieving parameters links" << std::endl; }
     for (size_t j=0; j<independent_parameters_.size(); ++j) {
         description.push_back(to_string(paths_[independent_parameters_[j]]));
-        //if (debug) { std::cout << paths_[independent_parameters_[j]] << std::endl; }
+        if (verbosity > 6) { std::cout << paths_[independent_parameters_[j]] << std::endl; }
     }
 }
 
@@ -858,7 +859,7 @@ void Model::convert_parameter_map_into_identifiable(std::vector<double> &p1 ,
     for (size_t i=0; i<symbols_.size(); i++) {
         if (pm.find(symbols_[i].get_name())==pm.end()) {
             p2[i]=0;
-            std::cerr << "No value for " << symbols_[i].get_name() << ". assuming 0" << std::cout;
+            std::cerr << "No value for " << symbols_[i].get_name() << ". assuming 0" << std::endl;
         } else {
             p2[i]=pm.find(symbols_[i].get_name())->second;
         }

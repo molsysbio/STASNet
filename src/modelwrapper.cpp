@@ -5,10 +5,14 @@
 #include "generate_response.hpp"
 #include "fitmodel_in_CPP.hpp"
 #include <Rcpp.h>
-//#include <boost/thread.hpp>
 
 int verbosity=0;
 bool debug=false;
+
+//[[Rcpp::export]]
+void setDebug(bool debug_lvl) {
+    debug = debug_lvl;
+}
 
 ModelWrapper::ModelWrapper() : linear_approximation(FALSE), model(NULL)  { }
 
@@ -52,10 +56,9 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
 }
 
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
-  if (debug) { std::cout << "Using original ModelWrapper setModel" << std::endl; }
+  if (debug) { std::cerr << "Using original ModelWrapper setModel" << std::endl; }
   model_design_consistent(exp,mod);
 
-  if(debug) {std::cout << mod;} // DEBUGGING  
   generate_response(response_full_model,  
 		      symbols_full_model,
 		      mod.getAdjacencyMatrix(),
@@ -299,7 +302,6 @@ ModelSetWrapper::~ModelSetWrapper() {
 }
 
 SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
-    if (debug) {std::cout << "Using ModelSetWrapper fitmodel" << std::endl;}
     model->setNbModels(data.datas_.size());
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -330,19 +332,19 @@ void ModelSetWrapper::setVariableParameters(std::vector<size_t> variable_paramet
 }
 
 void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
-    if (debug) { std::cout << "Using ModelSetWrapper setModel" << std::endl; }
+    if (debug) { std::cerr << "Using ModelSetWrapper setModel" << std::endl; }
     model_design_consistent(exp,mod);
 
-    if(debug) {std::cout << mod;} // DEBUGGING  
+    if(verbosity > 8) {std::cout << mod;} // DEBUGGING  
     generate_response(response_full_model,  
 		        symbols_full_model,
 		        mod.getAdjacencyMatrix(),
 		        exp,
 		        mod.getNames());
-    if (verbosity > 4) { std::cout << "Resizing adjacency matrix" << std::endl; }
+    if (debug) { std::cerr << "Resizing adjacency matrix" << std::endl; }
     adjacency_matrix.resize(boost::extents[mod.getAdjacencyMatrix().shape()[0]]
 			    [mod.getAdjacencyMatrix().shape()[1]]);
-    if (verbosity > 4) { std::cout << "Retrieving adjacency matrix" << std::endl; }
+    if (debug) { std::cerr << "Retrieving adjacency matrix" << std::endl; }
     adjacency_matrix=mod.getAdjacencyMatrix();
     
     if (model != NULL) delete model;

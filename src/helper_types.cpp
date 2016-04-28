@@ -371,7 +371,6 @@ void DataSet::addDataFromMatrices(double_matrix unstim_data, double_matrix stim_
 }
 
 bool DataSet::data_consistent(const ExperimentalDesign &expdesign) const {
-    if (verbosity > 7) { std::cout << "Calling DataSet data_consistent" << std::endl; }
     if (datas_.size() > 0) {
         return(datas_[0].data_consistent(expdesign));
     }
