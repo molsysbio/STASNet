@@ -340,10 +340,12 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs",nb_cores=1) {
     max_proc=ceiling(nb_samples/max_sample_stack_size)
     if (nb_cores>1){
       samples=qnorm(do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc))), sd=2)
-    }else {
+      #samples=do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc)))
+    } else {
+      #samples=do.call(rbind,lapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx]))))
       samples=qnorm(do.call(rbind,lapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])))), sd=2)  
     }
-  }else {
+  } else {
     stop(paste0("The selected initialisation method '", method, "' does not exist, valid methods are : ",paste(valid_methods$methods,collapse=", ")))
   }
 }
@@ -1006,9 +1008,7 @@ rebuildModel <- function(model_file, data_file, var_file="") {
   #links = matrix(rep(model$structure$names, 2), ncol=2)
   core = extractModelCore(model$structure, model$basal, data_file, var_file)
   
-  model$data = core$data
-  model$bestfit = model$model$fitmodel(model$data, model$parameters)$residuals
-  model$cv = core$cv
+  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values)
   
   return(model)
 }

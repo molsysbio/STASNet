@@ -62,8 +62,6 @@ computeFitScore <- function(mra_model, refit_model=F) {
     if (class(data) != "Rcpp_Data" || any(dim(data$stim_data)==0)) {# && class(data) != "Rcpp_DataSet") {
         mra_model$Rscores = NA
         mra_model$bestfitscore = NA
-        mra_model$meanScores = NA
-        mra_model$fitmeanScore = NA
         return(mra_model)
     }
     if (refit_model) {
@@ -76,17 +74,13 @@ computeFitScore <- function(mra_model, refit_model=F) {
     meanScores = c()
     for ( abc in 1:ncol(prediction) ) {
         mdata = mean(data$stim_data[,abc])
-        Smean = sum((data$stim_data[,abc]-mdata)^2)
         Sbase = sum((data$stim_data[,abc]-mdata)^2)
         Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2)
         Rscores[colnames(prediction)[abc]] = 1 - Sfit/Sbase
-        meanScores[colnames(prediction)[abc]] = 1 - Sfit/Smean
     }
 
     mra_model$Rscores = Rscores
     mra_model$bestfitscore = mean(Rscores)
-    mra_model$meanScores = meanScores
-    mra_model$fitmeanScore = mean(meanScores)
 
     return(mra_model)
 }
