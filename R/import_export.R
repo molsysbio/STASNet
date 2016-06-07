@@ -323,4 +323,23 @@ importModel <- function(file_name) {
     return(model_description)
 }
 
+#' Read a MIDAS file
+#' 
+#' Read a MIDAS file and returns its as a matrix containing the experiments as rows and the readouts as colums
+#' @param fname Name of the MIDAS file
+#' @export
+readMIDAS <- function(fname) {
+    data_file = read.delim(fname, sep=",")
+    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS file, the mandatory 'DV' field is missing") }
+    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS file or the field 'ID:type' is missing") }
+    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS file, the mandatory 'TR' field is missing") }
+
+    measures = data.matrix(data_file[grepl("^DV", colnames(data_file))])
+    rownames(measures) = sapply(1:nrow(measures), function(rr) { paste0(paste0("", colnames(treatments)[as.logical(treatments[rr,])]), collapse="+") })
+    rownames(measures) = gsub("TR.", "", rownames(measures))
+    rownames(measures)[rownames(measures)==""] = as.character(data_file[,"ID.type"])[rownames(measures)==""]
+    colnames(measures) = gsub("DV.", "", colnames(measures))
+
+    return(measures)
+}
 

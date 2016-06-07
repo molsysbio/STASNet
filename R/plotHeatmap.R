@@ -4,7 +4,7 @@
 #' Plot a customized heatmap with a symmetrical scale that is not stretched by extreme values
 #' @param mat a numeric matrix that should be plotted
 #' @param lim a single number indicating the maximal range [-lim lim] for the color map
-#' @param fixedRange logical inidicating whether the range of lim should at all means be kept (ensures comparability with other heatmaps)
+#' @param fixedRange logical indicating whether the range of lim should at all means be kept (ensures comparability with other heatmaps)
 #' @param stripOut numeric between [0 1] to determine the range of colors (excluding outliers from distorting the colormap) 
 #' @param main a character string representing the title to be passed
 #' @param col colorRampPalette object indicating the colormap
