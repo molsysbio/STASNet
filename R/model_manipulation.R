@@ -72,21 +72,23 @@ plotModelAccuracy <- function(model_description) {
     treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
   }
 
-print("Treatments : ")
-print(treatments)
-colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
-rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
+  print("Treatments : ")
+  print(treatments)
+  colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
+  rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
-plotHeatmap(mismatch,"(data - simulation) / error")
-plotHeatmap(stim_data-simulation,"log2(data/simulation)")
+  plotHeatmap(mismatch,"(data - simulation) / error")
+  plotHeatmap(stim_data-simulation,"log2(data/simulation)")
 # Log fold changes for the data and the stimulation with comparable color code
-lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=T),
-                     quantile(simulation,0.05, na.rm=T),
-                     quantile(stim_data,0.95, na.rm=T),
-                     quantile(simulation,0.95, na.rm=T)) )))
-plotHeatmap(stim_data, "Log-fold change Experimental data",lim,T)
-plotHeatmap(simulation, "Log-fold change Simulated data",lim,T)
+  lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=T),
+                       quantile(simulation,0.05, na.rm=T),
+                       quantile(stim_data,0.95, na.rm=T),
+                       quantile(simulation,0.95, na.rm=T)) )))
+  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,T)
+  plotHeatmap(simulation, "Log-fold change Simulated data",lim,T)
+
+  invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
 
 #' Plot the scores of each antibody

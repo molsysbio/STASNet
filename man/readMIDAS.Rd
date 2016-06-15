@@ -10,6 +10,6 @@ readMIDAS(fname)
 \item{fname}{Name of the MIDAS file}
 }
 \description{
-Read a MIDAS file and returns its as a matrix containing the experiments as rows and the readouts as colums
+Read a MIDAS file and returns it as a matrix containing the experiments as rows and the readouts as colums
 }
 

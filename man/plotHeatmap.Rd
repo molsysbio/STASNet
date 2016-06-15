@@ -15,7 +15,7 @@ plotHeatmap(mat, main = "", lim = Inf, fixedRange = F, stripOut = 0.05,
 
 \item{lim}{a single number indicating the maximal range [-lim lim] for the color map}
 
-\item{fixedRange}{logical inidicating whether the range of lim should at all means be kept (ensures comparability with other heatmaps)}
+\item{fixedRange}{logical indicating whether the range of lim should at all means be kept (ensures comparability with other heatmaps)}
 
 \item{stripOut}{numeric between [0 1] to determine the range of colors (excluding outliers from distorting the colormap)}
 
