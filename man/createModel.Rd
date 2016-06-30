@@ -36,7 +36,7 @@ An MRAmodel object describing the model and its best fit, containing the data
 Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 }
 \examples{
-model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDES.csv
+model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDAS.csv
 model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
 model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
