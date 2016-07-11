@@ -25,15 +25,18 @@ void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string
       throw( std::invalid_argument("outgoing and incoming node names need to have the same size!") );
     names=names1;
     names.insert(names.end(), names2.begin(), names2.end());
-    std::sort (names.begin(), names.end());           
+    std::sort (names.begin(), names.end());
     std::vector<std::string>::iterator it = std::unique(names.begin(),names.end());
     names.resize( std::distance(names.begin(),it) );
     adjacencymatrix.resize(boost::extents[names.size()][names.size()]);
+    //std::random_shuffle(names.begin(), names.end());//Test
     for (size_t i=0; i<names.size(); i++) {
+      std::cout << names[i] << " "; //Test
       for (size_t j=0; j<names.size(); j++) {
 	    adjacencymatrix[i][j]=0;
       }
     }
+    std::cout << std::endl; //Test
       
     for (size_t i=0; i<names1.size(); i++) {
       std::vector<std::string>::iterator iter1 = std::find(names.begin(), names.end(), names1[i]);

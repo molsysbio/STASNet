@@ -17,8 +17,7 @@ public:
 };
 
 void identifiability_analysis(
-  // Output: Entries of the matrix after having removed non-identifiable parameters
-  //    flattend (row by row).
+  // Output: Entries of the matrix after having removed non-identifiable parameters flattened (row by row).
   equation_matrix &output_matrix, 
   // Output: Vector containing all new parameters
   std::vector<GiNaC::ex> &paths,
@@ -26,13 +25,14 @@ void identifiability_analysis(
   // Output: Dependency of new parameters on old parameters (and vice versa...)
   double_matrix &parameter_dependency_matrix,
   // Output: Dependency of new parameters on old parameters (not in rref)
-
   int_matrix &parameter_dependency_matrix_unreduced,
+
   // Input: Matrix of expression
   const symbolic_matrix &input_matrix, 
   // Input: vector of symbols which are the parameters in the input-matrix
   const std::vector<GiNaC::symbol> & vars);
 
 MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &param, bool reduce_products=true);
+template<typename MatrixType> void remove_minus_one(MatrixType &A, std::vector<GiNaC::symbol> & vars, size_t size);
 
 #endif // IDENTIFIABILITY_HPP

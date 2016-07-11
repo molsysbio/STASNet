@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cassert>
 #include <cmath>
+#include "helper_types.hpp"
  
 // Matrix traits: This describes how a matrix is accessed. By
 // externalizing this information into a traits class, the same code
@@ -95,6 +96,24 @@ template<typename MatrixType>
   for (index_type col = mt.min_column(A); col <= mt.max_column(A); ++col)
     std::swap(mt.element(A, i, col), mt.element(A, k, col));
 }
+// Swap columns i and j of a matrix A
+template<typename MatrixType>
+ void swap_cols(MatrixType &A,
+               typename matrix_traits<MatrixType>::index_type i,
+               typename matrix_traits<MatrixType>::index_type j)
+{
+  matrix_traits<MatrixType> mt;
+  typedef typename matrix_traits<MatrixType>::index_type index_type;
+
+  // check indices
+  assert(mt.min_column(A) <= i);
+  assert(i <= mt.max_column(A));
+  assert(mt.min_column(A) <= j);
+  assert(j <= mt.max_column(A));
+
+  for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+    std::swap(mt.element(A, row, i), mt.element(A, row, j));
+}
  
 // divide row i of matrix A by v
 template<typename MatrixType>
@@ -171,37 +190,6 @@ template<typename MatrixType>
     // lead++; ?
   }
 }
- 
-// Partially finish the gaussian elimination of a row echelon matrix, keeping only positive coefficients in the initial matrix
-template<typename MatrixType>
-void positive_reduction(MatrixType &A, size_t size) {
 
-    matrix_traits<MatrixType> mt;
-    typedef typename matrix_traits<MatrixType>::index_type index_type;
-
-    // Reduce top vectors with lower one
-    for (index_type row = mt.max_row(A); row > mt.min_row(A) ; row--) {
-        // Find where the row starts
-        index_type lead = 0;
-        while (mt.element(A, row, lead) == 0) { lead++; }
-
-        // Substract the current line from those where it is fully included
-        for (index_type i = mt.max_row(A) ; i >= mt.min_row(A) && i <= mt.max_row(A) ; i--) {
-            bool contained = true;
-            if (i != row) {
-                for (index_type col = lead ; col < size ; col++) {
-                    if (i >= 0 && mt.element(A, row, col) == 1 && mt.element(A, i, col) != 1) {
-                        contained = false;
-                    }
-                }
-                
-                if (contained) {
-                    add_multiple_row(A, i, row, -1);
-                }
-            }
-        }
-    }
-    
-}
 
 #endif //RREF_CPP

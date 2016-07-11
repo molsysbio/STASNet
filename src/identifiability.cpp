@@ -61,8 +61,6 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
             if (reduce_products) {
                 if (!GiNaC::is_a<GiNaC::symbol>(e.op(i))) {
                     boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-                    // Wouldn't it be faster to directly call getParameterForExpression ?
-                    // Wouldn't mul be more accurate than container ?
                 } else {
                     multiplier*=e.op(i);
                 }
@@ -70,7 +68,7 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
                 boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
             }
         }
-        
+        // Reduce the multiplication of symbols to one parameter 
         if (multiplier!=1) {
             MathTree::parameter::Ptr item2=param.getParameterForExpression(multiplier);
             boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(item2);
@@ -164,10 +162,11 @@ void identifiability_analysis(   equation_matrix &output_matrix,
   // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
   parameterlist param; // List of correspondance (mathtree, GiNaC expression)
-  if (debug) { std::cerr << "Convering from GiNaC to matree format..." << std::endl; }
+  if (debug) { std::cerr << "Converting from GiNaC to mathtree format..." << std::endl; }
   for (size_t i=0; i<input_matrix.rows(); i++) {
     for (size_t j=0; j<input_matrix.cols(); j++) {
       if(verbosity > 9) {std::cerr << i << "," << j << " : " << input_matrix(i, j) << "\t" << std::endl;}
+      // Populate the param vector with (Mathtree, symbol product) pairs
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
     }
   }
@@ -232,6 +231,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
                  rational_matrix_for_rref);
 
   to_reduced_row_echelon_form(rational_matrix_for_rref);
+  // TODO apply -1 minimizing algorithm
 
   convert_rational_to_double_matrix(rational_matrix_for_rref, 
                     parameter_dependency_matrix);
@@ -263,3 +263,72 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
 }
  
+// Remove as many -1 as possible from a row echelon matrix by swapping columns
+template<typename MatrixType>
+ void remove_minus_one(MatrixType &A, std::vector<GiNaC::symbol> & vars, size_t size) {
+  matrix_traits<MatrixType> mt;
+  typedef typename matrix_traits<MatrixType>::index_type index_type;
+
+  std::vector<index_type> swaped;
+  bool go_on = true;
+  while (go_on) {
+    std::vector<index_type> swapable;
+    std::vector<index_type> leading_row;
+    std::vector<int> num_minus;
+    for (index_type column = mt.min_column(A); column <= size; ++column)
+    {
+      int one = 0;
+      int minus_one = 0;
+      index_type lrow = 0;
+      bool invalid = false;
+      for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+      {
+        switch (mt.element(A, row, column)) {
+          case 1:
+              one++;
+              lrow = row;
+              break;
+          case -1:
+              minus_one++;
+              break;
+          case 0:
+              break;
+          default:
+              invalid = true;
+              break;
+        }
+      }
+      if (one == 1 && minus_one > 0 && !invalid && std::find(swaped.begin(), swaped.end(), column) == swaped.end()) {
+        swapable.push_back(column);
+        leading_row.push_back(lrow);
+        num_minus.push_back(minus_one);
+      }
+    }
+
+    if (!swapable.empty()) {
+      // Select the column with the most -1
+      std::vector<index_type> indices;
+      for (size_t ii=0; ii < swapable.size(); ii++) { indices.push_back(ii); }
+      sort(indices.begin(), indices.end(), rev_index_cmp<std::vector<int> >(num_minus));
+      index_type swap_col = swapable[indices[0]];
+      index_type lrow = leading_row[indices[0]];
+
+      // Get the leading column of this row
+      index_type lcol = mt.min_column(A);
+      while (mt.element(A, lrow, lcol) != 1) { lcol++; }
+      swap_cols(A, swap_col, lcol);
+      vars[swap_col].swap[vars[lrow]];
+      for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+      {
+          if (mt.element(A, row, lcol) == -1)
+          {
+            add_multiple_row(row, lrow, 1);
+          }
+      }
+      swaped.push_back(swap_col);
+      swaped.push_back(lcol);
+    } else {
+      go_on = false;
+    }
+  }
+}

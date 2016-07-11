@@ -88,6 +88,7 @@ public:
   void printEquationMatrix();
   virtual void setNegativeInhibitions(double *p) const;
   std::vector<size_t> getInhibitorsIds() const;
+  void printSymbols();
 
   virtual size_t modelRank() const { return rank_; }
   

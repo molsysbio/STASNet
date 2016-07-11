@@ -44,7 +44,6 @@ printParameters <- function(model_description, precision=2) {
 #' @export
 #' @seealso plotModelSimulation, createModel, importModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-
 plotModelAccuracy <- function(model_description) {
   # Calculate the mismatch
   model = model_description$model

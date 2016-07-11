@@ -296,6 +296,11 @@ void ModelWrapper::printEquationMatrix() {
     model->printEquationMatrix();
 }
 
+void ModelWrapper::printSymbols() {
+    model->printSymbols();
+}
+
+
 ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 
 ModelSetWrapper::~ModelSetWrapper() {
@@ -381,6 +386,7 @@ RCPP_MODULE(ModelEx) {
     .method( "getPDM", &ModelWrapper::getPDM )
     .method( "printEquation", &ModelWrapper::printEquation )
     .method( "printEquationMatrix", &ModelWrapper::printEquationMatrix )
+    .method( "printSymbols", &ModelWrapper::printSymbols )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
     

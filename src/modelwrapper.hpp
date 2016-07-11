@@ -45,6 +45,7 @@ public:
 
   void printEquation(const size_t r, const size_t c);
   void printEquationMatrix();
+  void printSymbols();
 
 protected:
   GiNaC::matrix response_full_model; 
