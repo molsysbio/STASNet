@@ -156,7 +156,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
                  double_matrix &parameter_dependency_matrix,
                  int_matrix &parameter_dependency_matrix_unreduced,
                  const symbolic_matrix &input_matrix, 
-                 const std::vector<GiNaC::symbol> & vars) {
+                 std::vector<GiNaC::symbol> & vars) {
 
 
   // Generate new parameterisation
@@ -231,7 +231,20 @@ void identifiability_analysis(   equation_matrix &output_matrix,
                  rational_matrix_for_rref);
 
   to_reduced_row_echelon_form(rational_matrix_for_rref);
-  // TODO apply -1 minimizing algorithm
+
+  if (verbosity > -1) {
+    for (size_t ii=0; ii < vars.size(); ii++) { std::cout << vars[ii] << "\t"; }
+    std::cout << std::endl;
+    printMatrix(rational_matrix_for_rref);
+  }
+  remove_minus_one(rational_matrix_for_rref, vars, vars.size());
+  if (verbosity > 5) { printMatrix(rational_matrix_for_rref); }
+  to_reduced_row_echelon_form(rational_matrix_for_rref); // To be sure
+  if (verbosity > -1) {
+    for (size_t ii=0; ii < vars.size(); ii++) { std::cout << vars[ii] << "\t"; }
+    std::cout << std::endl;
+    printMatrix(rational_matrix_for_rref);
+  }
 
   convert_rational_to_double_matrix(rational_matrix_for_rref, 
                     parameter_dependency_matrix);
@@ -283,19 +296,14 @@ template<typename MatrixType>
       bool invalid = false;
       for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
       {
-        switch (mt.element(A, row, column)) {
-          case 1:
-              one++;
-              lrow = row;
-              break;
-          case -1:
-              minus_one++;
-              break;
-          case 0:
-              break;
-          default:
-              invalid = true;
-              break;
+        if (mt.element(A, row, column) == 1) {
+          one++;
+          lrow = row;
+        } else if (mt.element(A, row, column) == -1) {
+          minus_one++;
+        } else if (mt.element(A, row, column) == 0) {
+        } else {
+          invalid = true;
         }
       }
       if (one == 1 && minus_one > 0 && !invalid && std::find(swaped.begin(), swaped.end(), column) == swaped.end()) {
@@ -317,12 +325,12 @@ template<typename MatrixType>
       index_type lcol = mt.min_column(A);
       while (mt.element(A, lrow, lcol) != 1) { lcol++; }
       swap_cols(A, swap_col, lcol);
-      vars[swap_col].swap[vars[lrow]];
+      std::swap(vars[swap_col], vars[lrow]);
       for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
       {
           if (mt.element(A, row, lcol) == -1)
           {
-            add_multiple_row(row, lrow, 1);
+            add_multiple_row(A, row, lrow, 1);
           }
       }
       swaped.push_back(swap_col);

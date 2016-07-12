@@ -30,7 +30,7 @@ void identifiability_analysis(
   // Input: Matrix of expression
   const symbolic_matrix &input_matrix, 
   // Input: vector of symbols which are the parameters in the input-matrix
-  const std::vector<GiNaC::symbol> & vars);
+  std::vector<GiNaC::symbol> & vars);
 
 MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &param, bool reduce_products=true);
 template<typename MatrixType> void remove_minus_one(MatrixType &A, std::vector<GiNaC::symbol> & vars, size_t size);

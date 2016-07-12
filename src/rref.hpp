@@ -191,5 +191,21 @@ template<typename MatrixType>
   }
 }
 
+template<typename MatrixType>
+ void printMatrix(const MatrixType& A)
+{
+  matrix_traits<MatrixType> mt;
+  typedef typename matrix_traits<MatrixType>::index_type index_type;
+  for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+  {
+    for (index_type col = mt.min_column(A); col <= mt.max_column(A); ++col)
+    {
+        std::cout << mt.element(A, row, col) << "\t";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+}
+
 
 #endif //RREF_CPP
