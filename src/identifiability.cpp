@@ -156,7 +156,8 @@ void identifiability_analysis(   equation_matrix &output_matrix,
                  double_matrix &parameter_dependency_matrix,
                  int_matrix &parameter_dependency_matrix_unreduced,
                  const symbolic_matrix &input_matrix, 
-                 std::vector<GiNaC::symbol> & vars) {
+                 std::vector<GiNaC::symbol> & vars,
+                 ModelStructure &structure) {
 
 
   // Generate new parameterisation
@@ -232,15 +233,15 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
   to_reduced_row_echelon_form(rational_matrix_for_rref);
 
-  if (verbosity > -1) {
+  if (verbosity > 9) {
     for (size_t ii=0; ii < vars.size(); ii++) { std::cout << vars[ii] << "\t"; }
     std::cout << std::endl;
     printMatrix(rational_matrix_for_rref);
   }
-  remove_minus_one(rational_matrix_for_rref, vars, vars.size());
+  remove_minus_one(rational_matrix_for_rref, structure, vars, vars.size());
   if (verbosity > 5) { printMatrix(rational_matrix_for_rref); }
   to_reduced_row_echelon_form(rational_matrix_for_rref); // To be sure
-  if (verbosity > -1) {
+  if (verbosity > 9) {
     for (size_t ii=0; ii < vars.size(); ii++) { std::cout << vars[ii] << "\t"; }
     std::cout << std::endl;
     printMatrix(rational_matrix_for_rref);
@@ -278,7 +279,7 @@ void identifiability_analysis(   equation_matrix &output_matrix,
  
 // Remove as many -1 as possible from a row echelon matrix by swapping columns
 template<typename MatrixType>
- void remove_minus_one(MatrixType &A, std::vector<GiNaC::symbol> & vars, size_t size) {
+ void remove_minus_one(MatrixType &A, ModelStructure& structure, std::vector<GiNaC::symbol> & vars, size_t size) {
   matrix_traits<MatrixType> mt;
   typedef typename matrix_traits<MatrixType>::index_type index_type;
 
@@ -325,7 +326,8 @@ template<typename MatrixType>
       index_type lcol = mt.min_column(A);
       while (mt.element(A, lrow, lcol) != 1) { lcol++; }
       swap_cols(A, swap_col, lcol);
-      std::swap(vars[swap_col], vars[lrow]);
+      std::swap(vars[swap_col], vars[lcol]); // Keep vars (symbols_ in Model) to avoid having to rewrite everything
+      structure.swap_symbols(swap_col, lcol);
       for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
       {
           if (mt.element(A, row, lcol) == -1)

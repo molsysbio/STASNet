@@ -2,10 +2,10 @@
 #include <ginac/matrix.h>                // to obtain matrices which can contain
 #include <vector>
 #include "helper_types.hpp"
+#include "modelstructure.hpp"
 
 void generate_response( GiNaC::matrix &response,
-			std::vector <GiNaC::symbol> &x,
-			const int_matrix &adm, 
-			const ExperimentalDesign &,
-			const std::vector<std::string> &names
-			) ;
+            std::vector <GiNaC::symbol> &x,
+            const ModelStructure &structure,
+            const ExperimentalDesign &exp_design
+            ) ;

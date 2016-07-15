@@ -14,8 +14,9 @@ Model::Model() : rank_(0) {
 Model::Model(const GiNaC::matrix &response, 
              const std::vector<GiNaC::symbol> &symbols, 
              const ExperimentalDesign &expdesign,
+             const ModelStructure &structure,
              bool linear_approximation) : 
-    response_(response), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
+    response_(response), structure_(structure), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
 {
     do_init();
 } 
@@ -61,7 +62,8 @@ void Model::do_init () {
                     parameter_dependency_matrix_,
                     parameter_dependency_matrix_unreduced_,
                     response_,
-                    symbols_ );
+                    symbols_ ,
+                    structure_);
     // What is a small number? 
     double eps=0.00001;
 
@@ -454,9 +456,9 @@ double Model::score(const double *p, const Data *data) const {
     for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
         for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
-	            datax[i*data->stim_data.shape()[0]+j]=0;
+                datax[i*data->stim_data.shape()[0]+j]=0;
             } else {
-	            datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
+                datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
             }
         }
     }
@@ -792,22 +794,22 @@ void Model::printSymbols() {
 void Model::convert_original_parameter_to_response_matrix( 
     double_matrix &d, 
     std::vector<double> &inh, 
-    const std::vector<double> &p, 
-    const int_matrix &adj) 
+    const std::vector<double> &p) 
 {
     size_t counter=0;
+    const int_matrix adj = structure_.getAdjacencyMatrix();
+    size_t size=adj.shape()[0];
     double_matrix::extent_gen extents;
     d.resize(extents[adj.shape()[0]][adj.shape()[1]]);
-    size_t size=adj.shape()[0];
     for (size_t i=0; i<size; i++){
         for (size_t j=0; j<size; j++){
-            if ((i!=j)&&(adj[j][i]!=0)) {
-                assert(counter<p.size());
-                d[j][i]=p[counter++];
-            } else {
-                d[j][i]=0;
-            }
+            d[j][i]=0;
         }
+    }
+    const std::vector<std::pair<size_t, size_t> > s_pos = structure_.getSpos();
+    for (size_t ii=0; ii < s_pos.size(); ii++) {
+        assert(counter<p.size());
+        d[s_pos[ii].first][s_pos[ii].second] = p[counter++];
     }
     inh.clear();
     for (; counter < p.size(); counter++) {
@@ -816,15 +818,11 @@ void Model::convert_original_parameter_to_response_matrix(
 }
 
 
-void Model::convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh, const int_matrix &adj) {
+void Model::convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh) {
     p.clear();
-    size_t size=adj.shape()[0];
-    for (size_t i=0; i<size; i++){
-        for (size_t j=0; j<size; j++){
-            if ((i!=j)&&(adj[j][i]!=0)) {
-                p.push_back(d[j][i]);
-            }
-        }
+    const std::vector<std::pair<size_t, size_t> > s_pos = structure_.getSpos();
+    for (size_t ii=0; ii < s_pos.size(); ii++) {
+        p.push_back(d[s_pos[ii].first][s_pos[ii].second]);
     }
     for (size_t i=0; i<inh.size(); ++i) {
         p.push_back(inh[i]);

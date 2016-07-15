@@ -60,18 +60,16 @@ void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
   model_design_consistent(exp,mod);
 
   generate_response(response_full_model,  
-		      symbols_full_model,
-		      mod.getAdjacencyMatrix(),
-		      exp,
-		      mod.getNames());
+              symbols_full_model,
+              mod, exp);
   adjacency_matrix.resize(boost::extents[mod.getAdjacencyMatrix().shape()[0]]
-			  [mod.getAdjacencyMatrix().shape()[1]]);
+              [mod.getAdjacencyMatrix().shape()[1]]);
   adjacency_matrix=mod.getAdjacencyMatrix();
   
   if (model != NULL) delete model;
   model = new Model(response_full_model,  
-		    symbols_full_model,
-		    exp, linear_approximation);
+            symbols_full_model,
+            exp, mod, linear_approximation);
 } 
 
 SEXP ModelWrapper::simulate(Data *data, std::vector<double> parameters) {
@@ -100,9 +98,9 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     try {
         ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {
-	    forward_exception_to_r(ex);
+        forward_exception_to_r(ex);
     } catch(...) {
-	    ::Rf_error("c++ exception (unknown reason)"); 
+        ::Rf_error("c++ exception (unknown reason)"); 
     }
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
@@ -134,10 +132,10 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
     double_matrix predictions;
     try {
       ::fitmodel(parameters, &residual, predictions, model, &data);
-    } catch(std::exception &ex) {	
-	forward_exception_to_r(ex);
+    } catch(std::exception &ex) {   
+    forward_exception_to_r(ex);
     } catch(...) { 
-	::Rf_error("c++ exception (unknown reason)"); 
+    ::Rf_error("c++ exception (unknown reason)"); 
     }
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
@@ -160,7 +158,7 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     
     try {
         ::profile_likelihood( data, parameters, keep_constant, residual_track, explored, param_value, model, thresholds, total_steps);
-    } catch(std::exception &ex) {	
+    } catch(std::exception &ex) {   
         forward_exception_to_r(ex);
     } catch(...) { 
         ::Rf_error("c++ exception (unknown reason)"); 
@@ -216,7 +214,7 @@ SEXP ModelWrapper::getLocalResponse( std::vector<double> p ) {
     std::vector<double> p_new;
     {
       model->convert_identifiables_to_original_parameter( p_new, p );
-      Model::convert_original_parameter_to_response_matrix( fit_response_matrix, fit_inh, p_new, adjacency_matrix );
+      model->convert_original_parameter_to_response_matrix( fit_response_matrix, fit_inh, p_new);
     }
     Rcpp::List ret;
     ret["local_response"]=fit_response_matrix;
@@ -233,8 +231,7 @@ std::vector<double> ModelWrapper::getParameterFromLocalResponse( const double_ma
   std::vector<double> parameter;
   std::vector<double> tmpp;
   
-  Model::convert_response_matrix_to_original_parameter( tmpp, response, 
-							inhib, adjacency_matrix );
+  model->convert_response_matrix_to_original_parameter( tmpp, response, inhib);
   model->convert_original_parameter_into_identifiable(parameter,tmpp);
 
   return parameter;
@@ -316,9 +313,9 @@ SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) 
     try {
         ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {
-	    forward_exception_to_r(ex);
+        forward_exception_to_r(ex);
     } catch(...) { 
-	    ::Rf_error("c++ exception (unknown reason)"); 
+        ::Rf_error("c++ exception (unknown reason)"); 
     }
     //for (size_t ii=0; ii<data.datas_.size();ii++) { std::cout << parameters[model->nr_of_parameters_per_submodel()*ii] << " "; } std::cout << std::endl;
     model->getSubmodelsParameters(parameters);
@@ -342,20 +339,18 @@ void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
 
     if(verbosity > 8) {std::cout << mod;} // DEBUGGING  
     generate_response(response_full_model,  
-		        symbols_full_model,
-		        mod.getAdjacencyMatrix(),
-		        exp,
-		        mod.getNames());
+                symbols_full_model,
+                mod, exp);
     if (debug) { std::cerr << "Resizing adjacency matrix" << std::endl; }
     adjacency_matrix.resize(boost::extents[mod.getAdjacencyMatrix().shape()[0]]
-			    [mod.getAdjacencyMatrix().shape()[1]]);
+                [mod.getAdjacencyMatrix().shape()[1]]);
     if (debug) { std::cerr << "Retrieving adjacency matrix" << std::endl; }
     adjacency_matrix=mod.getAdjacencyMatrix();
     
     if (model != NULL) delete model;
     model = new ModelSet(response_full_model, 
-		      symbols_full_model,
-		      exp, 1); // 1 model by default, value changed by ModelSetWrapper::fitmodel
+              symbols_full_model,
+              exp, mod, 1); // 1 model by default, value changed by ModelSetWrapper::fitmodel
 }
 
 void ModelSetWrapper::setNbModels(size_t nb_submodels) {

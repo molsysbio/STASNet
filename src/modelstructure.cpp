@@ -3,22 +3,74 @@
 
 #include <Rcpp.h>
 
+extern bool debug;
+
 ModelStructure::ModelStructure() : names(), adjacencymatrix() {} 
 
 ModelStructure::ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2) : names(), adjacencymatrix() {
   set(names1,names2);
 } 
 
-std::vector<std::string> ModelStructure::getNames() { return names ; }
+std::vector<std::string> ModelStructure::getNames() const { return names ; }
   
-int_matrix &ModelStructure::getAdjacencyMatrix(){ return adjacencymatrix ; }
+const int_matrix &ModelStructure::getAdjacencyMatrix() const { return adjacencymatrix ; }
+const int_matrix &ModelStructure::getRidx() const { return r_idx ; }
+const GiNaC::matrix &ModelStructure::getR() const { return r ; }
+std::vector<GiNaC::symbol> ModelStructure::getSymbols() const { return symbols_ ; }
+const std::vector<std::pair<size_t, size_t> >& ModelStructure::getSpos() const { return s_pos ; }
 
 void ModelStructure::setAdjacencyMatrix(const int_matrix &adj) { 
   if ( (adj.shape()[0] == adjacencymatrix.shape()[0]) || 
        (adj.shape()[1] == adjacencymatrix.shape()[1]) )
     adjacencymatrix = adj ; 
+    buildLinks();
 }
 
+void ModelStructure::buildLinks() {
+ // Build symbolic "r" matrix from adjacency matrix
+ symbols_.clear();
+ if (debug) { std::cerr << "Building the response matrix..." << std::endl; }
+  size_t size=adjacencymatrix.shape()[0];   // because we need it all the time
+  r_idx.resize(boost::extents[size][size]);
+  r = GiNaC::matrix(size, size);
+  s_pos.clear();
+
+  size_t c=0;  
+  for (size_t i=0; i<size; i++){
+    for (size_t j=0; j<size; j++){
+      std::string tmpstr;                
+      if (i==j) r(j,i)=-1;                         // -1 on the diagonal of the local response is required for MRA
+      if (adjacencymatrix[j][i]!=0){
+        if (names.size()==size) {
+          tmpstr= "r_" + names[j] + "_" + names[i];      // concatenates to "r_j_i" in tmpstr which can then be converted to str
+        } else {
+          tmpstr = "r_" + boost::lexical_cast<std::string>(j) + "_" + boost::lexical_cast<std::string>(i); 
+        }
+        symbols_.push_back(GiNaC::symbol(tmpstr));   // creates another symbol r and adds one more entry to x
+        s_pos.push_back(std::make_pair(j, i));
+        r(j,i)=symbols_[c];                          // puts the symbol in the matrix position
+        r_idx[j][i]=c++;                      // to remember the position of the symbols
+      }
+      else r_idx[j][i]=-1;
+    }
+  }
+}
+
+// Swap two symbols in the vector, and apply the changes to r_idx and s_pos to match this change
+void ModelStructure::swap_symbols(size_t ii, size_t jj) {
+    assert(ii >= 0 && ii < symbols_.size() && jj >= 0 && jj < symbols.size());
+    std::swap(symbols_[ii], symbols_[jj]);
+    std::swap(s_pos[ii], s_pos[jj]);
+    for (size_t rr=0; rr<r_idx.shape()[0]; rr++) {
+        for (size_t cc=0; cc<r_idx.shape()[1]; cc++) {
+            if (r_idx[rr][cc] == ii) {
+                r_idx[rr][cc] = jj;
+            } else if (r_idx[rr][cc] == jj) {
+                r_idx[rr][cc] = ii;
+            }
+        }
+    }
+}
 
 void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string> names2) {
     if (names1.size()!=names2.size()) 
@@ -33,7 +85,7 @@ void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string
     for (size_t i=0; i<names.size(); i++) {
       std::cout << names[i] << " "; //Test
       for (size_t j=0; j<names.size(); j++) {
-	    adjacencymatrix[i][j]=0;
+        adjacencymatrix[i][j]=0;
       }
     }
     std::cout << std::endl; //Test
@@ -45,6 +97,7 @@ void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string
       size_t index2 = std::distance(names.begin(), iter2);
       adjacencymatrix[index2][index1]=1;
     }
+    buildLinks();
 } 
 
 std::ostream& operator<<(std::ostream &os, const ModelStructure &mod) {
