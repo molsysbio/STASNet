@@ -44,6 +44,7 @@ get_running_time <- function(init_time, text="") {
 #'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
+#' @param unused_perturbations Perturbations in the dataset that should not be used
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -53,7 +54,7 @@ get_running_time <- function(init_time, text="") {
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
 #' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
-createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs") {
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c()) {
   # Creation of the model structure object
   model_structure = extractStructure(model_links)
   
@@ -69,7 +70,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   #           basal = c(basal, node)
   #       }
   #   }
-  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation)
+  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts)
   expdes = core$design
   data = core$data
 
@@ -136,7 +137,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   # Information required to run the model (including the model itself)
   infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
   model_name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(data.stimulation)))
-  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos)
+  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
   print(paste("Residual score =", model_description$bestfitscore))
   
   return(model_description)
@@ -147,7 +148,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs") {
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations="") {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -159,7 +160,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   basal_activity = as.character(read.delim(basal_nodes,header=FALSE)[,1])
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1])
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1], unused_perturbations, unused_readouts=c())
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
@@ -174,7 +175,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   data_ = new(fitmodel:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
-    core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii])
+    core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii], unused_perturbations, unused_readouts=c())
     if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
@@ -207,7 +208,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   
   infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
   names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
-  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos)
+  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
   # param_range, lower_values, upper_values)
   return(self)
 }
@@ -799,8 +800,9 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
 #'
 #' -------------------------------------------------------------------------------------------------------------------------------------------------------------
 #' stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
-#' @param extra_remove Perturbations to be removed for the fit, will not be used not simulated. (vector of names)
-extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="", extra_remove=c()) {
+#' @param dont_perturb Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)
+#' @param dont_perturb Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
+extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="", dont_perturb=c(), dont_read=c()) {
 
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
   if (grepl(".csv$", data_filename)) {
@@ -826,15 +828,21 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     print(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)" ))
     data_values = data_values[,-which(colnames(data_values)%in%not_included)]
   }
+  # Remove extra readouts thtat should not be used
+  for (ro in dont_read) {
+    if (ro %in% colnames(data_values)) {
+      data_values = data_values[,-which(colnames(data_values)==ro)]
+    }
+  }
 
   # Remove the perturbations that cannot be simulated to get a correct fit
-  for (erm in extra_remove) {
+  for (erm in dont_perturb) {
     if (!erm %in% vpert) {
       print(paste0(erm, " is not a valid perturbation name for this dataset"))
     }
   }
-  extra_remove = extra_remove[which(extra_remove%in%vpert)]
-  not_perturbable = c(not_perturbable, extra_remove)
+  dont_perturb = dont_perturb[which(dont_perturb%in%vpert)]
+  not_perturbable = c(not_perturbable, dont_perturb)
   rm_rows = c()
   if (length(not_perturbable) > 0) {
     print(paste(not_perturbable , " perturbation not compatible with the network structure, it will not be used" ))
@@ -960,9 +968,9 @@ rebuildModel <- function(model_file, data_file, var_file="") {
   }
   model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts)
   
-  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values)
+  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts)
   
   return(model)
 }

@@ -32,10 +32,17 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
     for (info in model_description$infos) {
         writeLines(paste0("H ", info), handle)
     }
+    
     # Bestfit and bestfitscore
     writeLines(paste0("BF ", model_description$bestfit), handle)
     writeLines(paste0("BFS ", model_description$bestfitscore), handle)
     writeLines(paste0("RS ", paste(model_description$Rscores, collapse=" ")), handle)
+    if (length(model_description$unused_perturbations) > 0) {
+        writeLines(paste0("UP ", paste(model_description$unused_perturbations, collapse=" ")), handle)
+    }
+    if (length(model_description$unused_readouts) > 0) {
+        writeLines(paste0("UR ", paste(model_description$unused_readouts, collapse=" ")), handle)
+    }
 
     # Names of the nodes, with info on basal activity
     for (name in model_description$structure$names) {
@@ -163,6 +170,19 @@ importModel <- function(file_name) {
     if (grepl("^RS", file[lnb])) {
         Rscores = gsub("^RS( |\t)", "", file[lnb])
         Rscores = as.numeric( unlist(strsplit(Rscores, " ")) )
+        lnb = lnb + 1
+    }
+    # Model fitting modification performed on the data matrix
+    unused_perturbations = c()
+    if (grepl("^UP", file[lnb])) {
+        unused_perturbations = gsub("^UP( |\t)", "", file[lnb])
+        unused_perturbations = unlist(strsplit(unused_perturbations, " |\t"))
+        lnb = lnb + 1
+    }
+    unused_readouts = c()
+    if (grepl("^UR", file[lnb])) {
+        unused_readouts = gsub("^UR( |\t)", "", file[lnb])
+        unused_readouts = unlist(strsplit(unused_perturbations, " |\t"))
         lnb = lnb + 1
     }
 
@@ -315,7 +335,7 @@ importModel <- function(file_name) {
     cv = cv_values
 # TODO import the data, and calculate the base fit
 
-    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values)
+    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts)
     model_description$bestfitscore = bestfitscore
     meas_nodes = getMeasuredNodesNames(model_description)
     if ( length(Rscores) == length(meas_nodes) ) { names(Rscores) = meas_nodes }

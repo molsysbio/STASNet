@@ -5,7 +5,7 @@
 \title{Extracts the data, the experimental design and the structure from the input files}
 \usage{
 extractModelCore(model_structure, basal_activity, data_filename,
-  var_file = "", extra_remove = c())
+  var_file = "", dont_perturb = c(), dont_read = c())
 }
 \arguments{
 \item{model_structure}{Matrix of links [node1, node2]}
@@ -17,7 +17,9 @@ extractModelCore(model_structure, basal_activity, data_filename,
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition}
 
-\item{extra_remove}{Perturbations to be removed for the fit, will not be used not simulated. (vector of names)}
+\item{dont_perturb}{Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)}
+
+\item{dont_perturb}{Readouts to be removed for the fit, will not be used nor simulated. (vector of names)}
 }
 \description{
 Extracts the data, the experimental design and the structure from the input files
