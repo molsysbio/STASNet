@@ -672,13 +672,13 @@ void Model::print_dot_file(std::ostream &os, const std::vector<double> &d, const
 
 // Print the equation for condition r and measurements c
 void Model::printEquation(const size_t r, const size_t c) {
-    assert(r >= 0 && r < exp_design_.inhib_nodes.size());
+    assert(r >= 0 && r < exp_design_.measured_nodes.size());
     assert(c >= 0 && c < exp_design_.stimuli.shape()[0]);
     std::cout << response_[r*exp_design_.stimuli.shape()[0] + c] << std::endl;
 }
 
 void Model::printEquationMatrix() {
-    for (size_t rr=0; rr < exp_design_.inhib_nodes.size(); rr++) {
+    for (size_t rr=0; rr < exp_design_.measured_nodes.size(); rr++) {
         for (size_t cc=0; cc < exp_design_.stimuli.shape()[0]; cc++) {
             std::cout << response_[rr*exp_design_.stimuli.shape()[0] + cc] << " ;"<< std::endl;
         }
