@@ -68,6 +68,6 @@ Evaluate how the simulation compares to the data
 ```{r}
 plotModelAccuracy(model)
 plotModelScores(model)
-simulation = plotModelSimulation(simulateModel(model, "all", "all"))
+simulation = plotModelSimulation(model, "all", "all")
 print(simulation)
 ```

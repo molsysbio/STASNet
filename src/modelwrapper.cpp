@@ -1,5 +1,25 @@
-#include "modelwrapper.hpp"
+///////////////////////////////////////////////////////////////////////////////
+//
+// Definition of functions for the Rcpp wrapper for the Model class and the
+// fitting function
+// Copyright (C) 2013- Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
 
+#include "modelwrapper.hpp"
 #include "model.hpp"
 #include "modelset.hpp"
 #include "generate_response.hpp"
