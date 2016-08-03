@@ -1,7 +1,7 @@
 Package: fitmodel
 Type: Package
 Title: Fit and simulate model from perturbation data
-Version: 4.1
+Version: 0.9
 Date: 2016-08-01
 Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
     email="bertram.klinger@charite.de"), person("Mathurin", "Dorel",
