@@ -1,4 +1,4 @@
-Package: fitmodel
+Package: STASNet
 Type: Package
 Title: Fit and simulate model from perturbation data
 Version: 0.9

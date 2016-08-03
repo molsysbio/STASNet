@@ -106,7 +106,7 @@ setVariableParameters <- function(modelset, parameters_ids) {
 extractSubmodels <- function(modelset) {
     model_list = list()
     model_list[[modelset$nb_models]] = NA
-    model = new(fitmodel:::Model)
+    model = new(STASNet:::Model)
     model$setModel(modelset$design, modelset$structure)
     for (ii in 1:modelset$nb_models) {
         nb_parameters = length(modelset$parameters)/modelset$nb_models # All submodels have the same set of parameters

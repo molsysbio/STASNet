@@ -8,7 +8,7 @@
 #' @import Rcpp
 #' @import lhs
 #' @import RhpcBLASctl
-#' @useDynLib fitmodel
+#' @useDynLib STASNet
 
 # Global variable to have more outputs
 verbose = FALSE
@@ -75,7 +75,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   data = core$data
 
   # MODEL SETUP
-  model = new(fitmodel:::Model)
+  model = new(STASNet:::Model)
   model$setModel(expdes, model_structure)
   
   # INITIAL FIT
@@ -172,7 +172,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
     print(dim(core0$data$error))
   }
   # Build an extended dataset that contains the data of each model
-  data_ = new(fitmodel:::DataSet)
+  data_ = new(STASNet:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
     core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii], unused_perturbations, unused_readouts=c())
@@ -196,7 +196,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   data_$set_error(error)
   data_$set_scale(error)
   
-  model = new(fitmodel:::ModelSet)
+  model = new(STASNet:::ModelSet)
   model$setModel(core0$design, model_structure)
   model$setNbModels(nb_submodels)
   
@@ -914,7 +914,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt
 
   # Create data object
-  data=new(fitmodel:::Data)
+  data=new(STASNet:::Data)
   data$set_unstim_data (unstim_values)
   data$set_scale( data$unstim_data )
   data$set_stim_data( as.matrix(mean_values) )

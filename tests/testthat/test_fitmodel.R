@@ -1,5 +1,5 @@
-library(fitmodel)
-context("General testing of fitmodel")
+library(STASNet)
+context("General testing of STASNet")
 DATA_FILE = "test_model_no_error_midas.csv"
 VAR_FILE = ""
 

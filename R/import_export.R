@@ -317,11 +317,11 @@ importModel <- function(file_name) {
     # Set up the experimental design and the model
     expDes = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
     design = expDes
-    model = new(fitmodel:::Model)
+    model = new(STASNet:::Model)
     model$setModel( expDes, structure )
 
     # Get the unstimulated data
-    data = new(fitmodel:::Data)
+    data = new(STASNet:::Data)
     data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
 
     # Get the cv values if they are present

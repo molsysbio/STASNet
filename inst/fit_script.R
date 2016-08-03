@@ -3,7 +3,7 @@
 
 # Hidden from the R installer but with the other scripts from the package
 
-library("fitmodel")
+library("STASNet")
 
 # Print the time it took in a readable format
 get_running_time <- function(init_time, text="") {
@@ -78,7 +78,7 @@ for (argument in cargs) {
     } else if (argument == "--noplots" || argument == "--noplot") {
         perf_plots = FALSE
     } else if (grepl("^-v", argument)) {
-        fitmodel:::setDebug(T)
+        STASNet:::setDebug(T)
     } else if (grepl("^--npc", argument)) {
         precorrelate = FALSE
     } else if (grepl("^-u", argument)) {
