@@ -2,7 +2,11 @@
 title: "Using the STASNet package"
 author: "Mathurin Dorel"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: 
+    html_vignette:
+        toc: yes
+        toc_depth: 2
+        theme: united
 vignette: >
   %\VignetteIndexEntry{Using the STASNet package}
   %\VignetteEngine{knitr::rmarkdown}

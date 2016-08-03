@@ -2,6 +2,6 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 setDebug <- function(debug_lvl) {
-    invisible(.Call('fitmodel_setDebug', PACKAGE = 'fitmodel', debug_lvl))
+    invisible(.Call('STASNet_setDebug', PACKAGE = 'STASNet', debug_lvl))
 }
 
