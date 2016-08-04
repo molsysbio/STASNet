@@ -13,17 +13,20 @@ This library can be used to model signalling perturbation data using models that
 Modular Response Analysis, in a way described in Klinger et al, 2013 using R. 
 
 Requires the following C++ libraries to be installed (installation method depends on the OS): 
-						ginac
-						cln
+
+ginac
+cln
+
 And the following R packages: 
-						Rcpp (>= 0.10.4)
-						RhpcBLASctl
-                        Rgraphviz
-                        pheatmap
-						lattice
-						lhs
-						parallel
-						
+
+Rcpp (>= 0.10.4)
+RhpcBLASctl
+Rgraphviz
+pheatmap
+lattice
+lhs
+parallel
+
 You can install those packages in R with:
 
 install.packages(“Rccp”,"RhpcBLASctl",”Rgraphviz”,”pheatmap”,"lattice","lhs","parallel",lib=<local library path>)
