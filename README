@@ -18,8 +18,8 @@ Requires the following C++ libraries to be installed (installation method depend
 And the following R packages: 
 						Rcpp (>= 0.10.4)
 						RhpcBLASctl
-                                    		Rgraphviz
-                                    		pheatmap
+                        Rgraphviz
+                        pheatmap
 						lattice
 						lhs
 						parallel
