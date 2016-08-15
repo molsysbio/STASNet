@@ -59,7 +59,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   
   # Set the new experimental design that will be used for the simulation
   ## Set the inhibition matrices
-  if (length(inhibitors) > 0 & length(match(inhibitors, inhibables))>0){
+  if (length(inhibitors) > 0 && length(match(inhibitors, inhibables))>0){
     present_inh = inhibitors %in% inhibables
     if (any(!present_inh)){
       print(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used"))
@@ -71,7 +71,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     inhibitions = c()  
   }
   ## Set the stimuli matrices
-  if (length(stimulators) > 0 & length(match(stimulators, stimulables))>0){
+  if (length(stimulators) > 0 && length(match(stimulators, stimulables))>0){
     present_stim = stimulators %in% stimulables
     if (any(!present_stim)){
       print(paste0(ifelse(sum(!present_stim)==1,"Node ","Nodes "), paste(stimulators[!present_stim], collapse=" , "), " not stimulated in the network and won't be used"))
@@ -83,7 +83,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     stimulations = c()
   }
   
-  if(length(stim_nodes)==0 & length(inhib_nodes)==0){
+  if(length(stim_nodes)==0 && length(inhib_nodes)==0){
     stop("None of the perturbations provided correspond to nodes inhibited or stimulated in this network. Aborting...")
   }
   ## Set the nodes to be measured

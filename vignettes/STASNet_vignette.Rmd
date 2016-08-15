@@ -1,10 +1,14 @@
 ---
-title: "Using the fitmodel package"
+title: "Using the STASNet package"
 author: "Mathurin Dorel"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: 
+    html_vignette:
+        toc: yes
+        toc_depth: 2
+        theme: united
 vignette: >
-  %\VignetteIndexEntry{Using the fitmodel package}
+  %\VignetteIndexEntry{Using the STASNet package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -45,9 +49,11 @@ system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
 ```
 ![Use diagram](use_diagram.png)
 
+3 August 2016
+
 Loading the library:
 ```{r}
-library(fitmodel)
+library(STASNet)
 ```
 
 ## Creation of the model
@@ -58,7 +64,7 @@ the global optimum is not reached. Results can thus vary between runs of createM
 insufficient number of initialisations.
 
 ```{r, eval=T}
-setwd(system.file("extdata", package="fitmodel"))
+setwd(system.file("extdata", package="STASNet"))
 model = createModel("network.tab", "basal.dat", "HCT116_MIDAS.csv", inits=10, perform_plots=T,
                     method="randomlhs");
 ```
@@ -68,6 +74,6 @@ Evaluate how the simulation compares to the data
 ```{r}
 plotModelAccuracy(model)
 plotModelScores(model)
-simulation = plotModelSimulation(simulateModel(model, "all", "all"))
+simulation = plotModelSimulation(model, "all", "all")
 print(simulation)
 ```

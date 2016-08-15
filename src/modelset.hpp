@@ -1,3 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// Prototype of the ModelSet class
+// Copyright (C) 2013- Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #ifndef MODELSET_HPP
 #define MODELSET_HPP 
 
@@ -7,7 +27,7 @@
 
 class ModelSet: public Model {
 public:
-    ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbol> &symbols, const ExperimentalDesign &expdes, const int nb_submodels, const std::vector<size_t> inter_variable_parameters=std::vector<size_t>(), bool linear_approximation=false );
+    ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbol> &symbols, const ExperimentalDesign &expdes, const ModelStructure &structure, const int nb_submodels, const std::vector<size_t> inter_variable_parameters=std::vector<size_t>(), bool linear_approximation=false );
     ModelSet();
 
     void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;

@@ -1,3 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// Definition of the functions of the Model class
+// Copyright (C) 2016 Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #include "model.hpp"
 #include "fstream"
 
@@ -14,8 +34,9 @@ Model::Model() : rank_(0) {
 Model::Model(const GiNaC::matrix &response, 
              const std::vector<GiNaC::symbol> &symbols, 
              const ExperimentalDesign &expdesign,
+             const ModelStructure &structure,
              bool linear_approximation) : 
-    response_(response), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
+    response_(response), structure_(structure), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
 {
     do_init();
 } 
@@ -61,7 +82,8 @@ void Model::do_init () {
                     parameter_dependency_matrix_,
                     parameter_dependency_matrix_unreduced_,
                     response_,
-                    symbols_ );
+                    symbols_ ,
+                    structure_);
     // What is a small number? 
     double eps=0.00001;
 
@@ -306,148 +328,6 @@ template<class T> struct pair_rev_index_cmp {
     const T arr;
 };
 
-// Simplify the parameters that contain other parameters so that they are totally independent
-// NOT USED, the validity of the approach must be confirmed
-void Model::simplify_independent_parameters_using_subtraction(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector) {
- 
-    double eps = 0.0000001;
-    size_t ipi;
-    int_matrix independent_matrix;
-    independent_matrix.resize(boost::extents[independent_parameters_.size()][symbols_.size() + independent_parameters_.size()]);
-
-    // Build the reduced parameters
-    std::pair< std::vector<size_t>, std::vector<size_t> > first_one;
-    int index[independent_parameters_.size()];
-    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
-        ipi = independent_parameters_[i];
-        index[i] = i;
-        bool first = true;
-        first_one.second.push_back(0);
-        // Copy the independent parameters composition
-        for (size_t j=0 ; j < symbols_.size() ; j++) {
-            independent_matrix[i][j] = parameter_dependency_matrix_unreduced_[ipi][j];
-            // Extract the number of links in the path, and the column of the first one in the matrix
-            // Will be used to sort the matrix, first by the first column, then by the complexity
-            if (independent_matrix[i][j] == 1) {
-                if (first) {
-                    first_one.first.push_back(j);
-                    first = false;
-                }
-                first_one.second[i]++;
-            }
-        }
-        // Put the identity matrix at the end of the matrix
-        for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
-            independent_matrix[i][symbols_.size() + j] = 0;
-        }
-        independent_matrix[i][symbols_.size() + i] = 1;
-    }
-    // Sort the reduced parameters so that the matrix is in row echelon form
-    std::sort(index, index + independent_parameters_.size(), pair_rev_index_cmp< std::pair< std::vector<size_t>, std::vector<size_t> > >(first_one));
-    int_matrix reduction_matrix;
-    reduction_matrix.resize(boost::extents[independent_parameters_.size()][symbols_.size() + independent_parameters_.size()]);
-    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
-        for (size_t col=0 ; col < (symbols_.size() + independent_parameters_.size()) ; col++) {
-            reduction_matrix[i][col] = independent_matrix[index[i]][col];
-        }
-    }
-
-    rational_matrix rational_for_rref;
-    convert_int_to_rational_matrix(reduction_matrix, rational_for_rref);
-    positive_reduction(rational_for_rref, symbols_.size());
-    double_matrix ordered_reduction_matrix;
-    convert_rational_to_double_matrix(rational_for_rref, ordered_reduction_matrix);
-
-    // Collect the reduced parameters
-    parameterlist singletons;
-    std::vector<size_t> single_id;
-    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
-        ipi = independent_parameters_[i];
-
-        single_id.push_back(parameters_.size());
-        // Build the literal expression for the parameter
-        GiNaC::ex path = 1;
-        for (size_t j=0 ; j < symbols_.size() ; j++) {
-            if (ordered_reduction_matrix[i][j] == 1) {
-                path *= symbols_[j];
-             }
-        }
-        paths_.push_back(path);
-        // Create the new parameter
-        MathTree::parameter::Ptr par(new MathTree::parameter());
-        par->set_parameter(boost::shared_ptr<double>(new double(1.0)));
-        parameters_.push_back(par);
-        singletons.push_back(std::make_pair(par, path));
-        if (verbosity > 5) {
-            std::cout << "Parameter " << paths_[ipi] << " reduced to " << path << std::endl;
-        }
- 
-        // Add the parameter to the dependency matrices
-        // Reduced matrix
-        parameter_dependency_matrix_.resize(boost::extents[parameter_dependency_matrix_.shape()[0]][parameter_dependency_matrix_.shape()[1]+1]);
-        for (size_t j=0 ; j < parameter_dependency_matrix_.shape()[0] ; j++) {
-            parameter_dependency_matrix_[j][parameter_dependency_matrix_.shape()[1]-1] = 0;
-        }
-
-        // Unreduced matrix
-        parameter_dependency_matrix_unreduced_.resize(boost::extents[parameter_dependency_matrix_unreduced_.shape()[0]+1][parameter_dependency_matrix_unreduced_.shape()[1]+1]);
-        for (size_t j=0 ; j < parameter_dependency_matrix_unreduced_.shape()[1] ; j++) {
-            parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][j] = 0;
-        }
-        // Add the reduced paths
-        for (size_t j=0 ; j < symbols_.size() ; j++) {
-            parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][j] = ordered_reduction_matrix[i][j];
-        }
-        // Last column of the unreduced matrix
-        for (size_t j=0 ; j < parameter_dependency_matrix_unreduced_.shape()[0] ; j++) {
-            parameter_dependency_matrix_unreduced_[j][parameter_dependency_matrix_unreduced_.shape()[1]-1] = 0;
-        }
-        parameter_dependency_matrix_unreduced_[parameter_dependency_matrix_unreduced_.shape()[0]-1][parameter_dependency_matrix_unreduced_.shape()[1]-1] = -1;
-
-    }
-
-    for (size_t i=0 ; i < parameters_.size() ; i++) {
-        parameters_[i]->print(std::cout); printf("\n");
-    }
-    // Replace the former independent parameters by the combination of reduced ones
-    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
-        ipi = independent_parameters_[index[i]];
-        std::vector<size_t> composition_list;
-        composition_list.push_back(single_id[i]);
-
-        MathTree::mul::Ptr tmp (new MathTree::mul);
-        tmp->add_item(singletons[i].first);
-
-        // Express the old parameter as a combination of new parameters and old parameters that have not yet been reduced
-        for (size_t j=0 ; j < independent_parameters_.size() ; j++) {
-            if (ordered_reduction_matrix[i][symbols_.size() + j] == -1) {
-                tmp->add_item(parameters_[independent_parameters_[j]]);
-                composition_list.push_back(independent_parameters_[j]);
-            }
-        }
-        replace_vector.push_back(std::make_pair(parameters_[ipi], tmp));
-        if (verbosity > 8) {
-            parameters_[ipi]->print(std::cout); printf(" replaced by "); tmp->print(std::cout); printf("\n");
-            std::cout << "ie parameters " << paths_[ipi] << " replaced by " << paths_[single_id[i]] << std::endl;
-        }
-
-        // Replace the old parameters in the dependency matrices
-        for (size_t k=0 ; k < parameter_dependency_matrix_.shape()[0] ; k++) {
-            if (std::abs(parameter_dependency_matrix_[k][symbols_.size() + ipi]) > eps) {
-                for (size_t j=0 ; j < composition_list.size() ; j++) {
-                    parameter_dependency_matrix_[k][symbols_.size() + composition_list[j]] += parameter_dependency_matrix_[k][symbols_.size() + ipi];
-                }
-            }
-            parameter_dependency_matrix_[k][symbols_.size() + ipi] = 0;
-        }
-    }
-    
-    for (size_t i=0 ; i < independent_parameters_.size() ; i++) {
-        independent_parameters_[i] = single_id[i];
-    }
- 
-}
-
 // Locate the sums to the power of -1 (denominators) from the GiNaC expression for the constraints analysis
 void recurse( GiNaC::ex e, std::vector<GiNaC::ex> &set) {
     MathTree::math_item::Ptr tmp;
@@ -596,9 +476,9 @@ double Model::score(const double *p, const Data *data) const {
     for (size_t i=0; i<data->stim_data.shape()[1]; i++ ) {
         for (size_t j=0; j<data->stim_data.shape()[0]; j++) {
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
-	            datax[i*data->stim_data.shape()[0]+j]=0;
+                datax[i*data->stim_data.shape()[0]+j]=0;
             } else {
-	            datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
+                datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
             }
         }
     }
@@ -812,13 +692,13 @@ void Model::print_dot_file(std::ostream &os, const std::vector<double> &d, const
 
 // Print the equation for condition r and measurements c
 void Model::printEquation(const size_t r, const size_t c) {
-    assert(r >= 0 && r < exp_design_.inhib_nodes.size());
+    assert(r >= 0 && r < exp_design_.measured_nodes.size());
     assert(c >= 0 && c < exp_design_.stimuli.shape()[0]);
     std::cout << response_[r*exp_design_.stimuli.shape()[0] + c] << std::endl;
 }
 
 void Model::printEquationMatrix() {
-    for (size_t rr=0; rr < exp_design_.inhib_nodes.size(); rr++) {
+    for (size_t rr=0; rr < exp_design_.measured_nodes.size(); rr++) {
         for (size_t cc=0; cc < exp_design_.stimuli.shape()[0]; cc++) {
             std::cout << response_[rr*exp_design_.stimuli.shape()[0] + cc] << " ;"<< std::endl;
         }
@@ -924,25 +804,32 @@ void Model::print_original_parameters(std::ostream &os, std::vector<double> &p) 
     }
 }
 
+void Model::printSymbols() {
+    for (size_t i=0; i<symbols_.size(); i++) {
+        std::cout << symbols_[i] << "\t";
+    }
+    std::cout << std::endl;
+}
+
 void Model::convert_original_parameter_to_response_matrix( 
     double_matrix &d, 
     std::vector<double> &inh, 
-    const std::vector<double> &p, 
-    const int_matrix &adj) 
+    const std::vector<double> &p) 
 {
     size_t counter=0;
+    const int_matrix adj = structure_.getAdjacencyMatrix();
+    size_t size=adj.shape()[0];
     double_matrix::extent_gen extents;
     d.resize(extents[adj.shape()[0]][adj.shape()[1]]);
-    size_t size=adj.shape()[0];
     for (size_t i=0; i<size; i++){
         for (size_t j=0; j<size; j++){
-            if ((i!=j)&&(adj[j][i]!=0)) {
-                assert(counter<p.size());
-                d[j][i]=p[counter++];
-            } else {
-                d[j][i]=0;
-            }
+            d[j][i]=0;
         }
+    }
+    const std::vector<std::pair<size_t, size_t> > s_pos = structure_.getSpos();
+    for (size_t ii=0; ii < s_pos.size(); ii++) {
+        assert(counter<p.size());
+        d[s_pos[ii].first][s_pos[ii].second] = p[counter++];
     }
     inh.clear();
     for (; counter < p.size(); counter++) {
@@ -951,15 +838,11 @@ void Model::convert_original_parameter_to_response_matrix(
 }
 
 
-void Model::convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh, const int_matrix &adj) {
+void Model::convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh) {
     p.clear();
-    size_t size=adj.shape()[0];
-    for (size_t i=0; i<size; i++){
-        for (size_t j=0; j<size; j++){
-            if ((i!=j)&&(adj[j][i]!=0)) {
-                p.push_back(d[j][i]);
-            }
-        }
+    const std::vector<std::pair<size_t, size_t> > s_pos = structure_.getSpos();
+    for (size_t ii=0; ii < s_pos.size(); ii++) {
+        p.push_back(d[s_pos[ii].first][s_pos[ii].second]);
     }
     for (size_t i=0; i<inh.size(); ++i) {
         p.push_back(inh[i]);

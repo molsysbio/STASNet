@@ -3,7 +3,7 @@
 
 # Hidden from the R installer but with the other scripts from the package
 
-library("fitmodel")
+library("STASNet")
 
 # Print the time it took in a readable format
 get_running_time <- function(init_time, text="") {
@@ -30,12 +30,15 @@ inits = 1000
 method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
+precorrelate=T
 
 if (!exists("cargs")) {
     cargs = commandArgs(trailingOnly=T)
 } else if (is.character(cargs)) {
     cargs = strsplit(cargs, " ")[[1]]
 }
+unused_perturbations = c()
+unused_readouts = c()
 
 # Collect the filenames based on their extension
 for (argument in cargs) {
@@ -75,7 +78,17 @@ for (argument in cargs) {
     } else if (argument == "--noplots" || argument == "--noplot") {
         perf_plots = FALSE
     } else if (grepl("^-v", argument)) {
-        fitmodel:::setDebug(T)
+        STASNet:::setDebug(T)
+    } else if (grepl("^--npc", argument)) {
+        precorrelate = FALSE
+    } else if (grepl("^-u", argument)) {
+        argument = gsub("^-u", "", argument)
+        argument = gsub("\"", "", argument)
+        unused_perturbations = c( unused_perturbations, unlist(strsplit(argument, " |\t")) )
+    } else if (grepl("^-d", argument)) {
+        argument = gsub("^-d", "", argument)
+        argument = gsub("\"", "", argument)
+        unused_readouts = c( unused_readouts, unlist(strsplit(argument, " |\t")) )
     } else if (grepl("^-", argument)) {
         print(paste0("Unknown argument: '", argument, "'"))
     }
@@ -96,13 +109,19 @@ power = c("", "k", "M", "G", "T", "P", "Y");
 power_init = floor(log(inits, base=1000))
 conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", basename(data_name)), "_", gsub(".tab", "", basename(network)), "_", inits%/%(1000^power_init), power[1+power_init]);
 conditions = gsub(" ", "_", conditions)
+if (length(unused_perturbations) > 0) {
+    conditions = paste0(conditions, "_no", paste0(unused_perturbations, collapse="-") )
+}
+if (length(unused_readouts) > 0) {
+    conditions = paste0(conditions, "_ur", paste0(unused_readouts, collapse="-") )
+}
 folder = paste0( "run_", conditions, "_", Sys.Date(), "/" )
 dir.create(folder)
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0(folder, "distribution_", conditions, ".pdf"))
-model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method);
+model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 

@@ -1,6 +1,6 @@
-﻿Copyright (c) Nils Blüthgen and Bertram Klinger, 2013-
+Copyright (c) Nils Blüthgen and Bertram Klinger and Mathurin Dorel, 2013-
 
-Gnu General Public Licence
+Gnu General Public Licence version 3 (GPLv3)
 
 ---
 
@@ -14,28 +14,29 @@ Modular Response Analysis, in a way described in Klinger et al, 2013 using R.
 
 Requires the following C++ libraries to be installed (installation method depends on the OS): 
 
-ginac
-cln
+    ginac
+    cln
 
 And the following R packages: 
 
-Rcpp (>= 0.10.4)
-RhpcBLASctl
-Rgraphviz
-pheatmap
-lattice
-lhs
-parallel
+    Rcpp (>= 0.10.4)
+    BH
+    RhpcBLASctl
+    Rgraphviz
+    pheatmap
+    lattice
+    lhs
+    parallel
 
 You can install those packages in R with:
 
-source("https://bioconductor.org/biocLite.R")
-biocLite(c(“Rccp”,"RhpcBLASctl",”Rgraphviz”,”pheatmap”,"lattice","lhs","parallel"))
+    source("https://bioconductor.org/biocLite.R")
+    biocLite(c("Rccp","BH","RhpcBLASctl","Rgraphviz","pheatmap","lattice","lhs","parallel"))
 
 Unix (MacOS, BSD, GNU/Linux) installation guide:
-For a local installation, first create a folder for local R library in (e.g "home/<Username>/R")
-Open shell go to the folder of the package (“MRA_Signaling”)
-execute: R CMD INSTALL ./ (when recompiling use R CMD INSTALL --preclean ./)
+    For a local installation, first create a folder for local R library in (e.g "home/<Username>/R")
+    Open shell go to the folder of the package (“MRA_Signaling”)
+    execute: R CMD INSTALL ./ (when recompiling use R CMD INSTALL --preclean ./)
 
 Have fun with it! 
 

@@ -1,3 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// Generation of the Model numeric equations from the symbolic equations
+// Copyright (C) 2013- Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #include "generate_response.hpp"
 #include "helper_types.hpp"
 #include <boost/lexical_cast.hpp>
@@ -7,39 +27,21 @@ extern bool debug;
 extern bool verbosity;
 
 void generate_response( GiNaC::matrix &response,
-			std::vector <GiNaC::symbol> &x,
-			const int_matrix &adm, 
-			const ExperimentalDesign &exp_design,
-			const std::vector<std::string> &names
-			) {
-  x.clear();
- //  (I) -Build symbolic "r" matrix from adjacency matrix "adm"-
- if (debug) { std::cerr << "Building the response matrix..." << std::endl; }
-  size_t size=adm.shape()[0];               // because we need it all the time
-  int r_idx[size][size];                    // give a number to each link
-  GiNaC::matrix r(size,size);               // local response matrix r
-  
-  size_t c=0;  
-  for (size_t i=0; i<size; i++){
-    for (size_t j=0; j<size; j++){
-      std::string tmpstr;                
-      if (i==j) r(j,i)=-1;                         // -1 on the diagonal of the local response is required for MRA
-      if (adm[j][i]!=0){
-	    if (names.size()==size) {
-	      tmpstr= "r_" + names[j] + "_" + names[i];      // concatenates to "r_j_i" in tmpstr which can then be converted to str
-	    } else {
-	      tmpstr = "r_" + boost::lexical_cast<std::string>(j) + "_" + boost::lexical_cast<std::string>(i); 
-	    }
-        x.push_back(GiNaC::symbol(tmpstr));  // creates another symbol r with the position in the matrix (and adds one more entry to x)
-  	    r(j,i)=x[c];                               // puts the symbol in the matrix position
-	    r_idx[j][i]=c++;                           // to remember the position of the symbols
-      }
-      else r_idx[j][i]=-1;
-    }
-  }
-  
+            std::vector <GiNaC::symbol> &x,
+            const ModelStructure &structure,
+            const ExperimentalDesign &exp_design) {
+  //  (I) -Retrieve the symbolic "r" matrix, adjacency matrix "adm"
+  const std::vector<std::string> names = structure.getNames();
+  int_matrix r_idx;
+  copy_matrix(structure.getRidx(), r_idx);
+  int_matrix adm;
+  copy_matrix(structure.getAdjacencyMatrix(), adm);
+  const GiNaC::matrix r = structure.getR();
+  x = structure.getSymbols();
+  const size_t size=adm.shape()[0];
 
-  //  (II) -Include inhibitors as symbols-
+  // (II) -Include inhibitors as symbols-
+  size_t c = x.size();
   if (debug) { std::cerr << "Including the inhibitors..." << std::endl; }
   int inh_idx[exp_design.inhib_nodes.size()];
   for (size_t i=0; i<exp_design.inhib_nodes.size() ;i++ ) {
@@ -75,43 +77,43 @@ void generate_response( GiNaC::matrix &response,
 
           // Effect of the inhibitor, record which links should be multiplied by the inhibitory term to build r tilde
           std::vector< std::pair<GiNaC::symbol, GiNaC::ex> > inhibited_links;
-	      for (size_t l=0;l<exp_design.inhibitor.shape()[1];l++){
-	        if (exp_design.inhibitor[j][l] == 1) { 
-	            int i_temp = exp_design.inhib_nodes[l];	   
-	            for ( int m=0; m<size; m++) {
-		            if (r_idx[m][i_temp] > -1) { 
-		                inhibited_links.push_back(std::make_pair( x[r_idx[m][i_temp]], x[r_idx[m][i_temp]] *
-			            (exp(-pow(pow(x[inh_idx[l]],2),0.5))) )); // Force the inhibitor action to be between 0 and 1
+          for (size_t l=0;l<exp_design.inhibitor.shape()[1];l++){
+            if (exp_design.inhibitor[j][l] == 1) { 
+                int i_temp = exp_design.inhib_nodes[l];    
+                for ( int m=0; m<size; m++) {
+                    if (r_idx[m][i_temp] > -1) { 
+                        inhibited_links.push_back(std::make_pair( x[r_idx[m][i_temp]], x[r_idx[m][i_temp]] *
+                        (exp(-pow(pow(x[inh_idx[l]],2),0.5))) )); // Force the inhibitor action to be between 0 and 1
                         if (verbosity) {
                             std::cerr << "Substitute " << x[r_idx[m][i_temp]] << " by " << x[r_idx[m][i_temp]] *
-			                (exp(-pow(pow(x[inh_idx[l]],2),0.5))) << std::endl << std::endl;
+                            (exp(-pow(pow(x[inh_idx[l]],2),0.5))) << std::endl << std::endl;
                         }
-		            }
-	            }
-	        }
-	      }
+                    }
+                }
+            }
+          }
           
           // Effect of the simuli
           for (size_t k=0; k<exp_design.stimuli.shape()[1]; k++) {
             if (exp_design.stimuli[j][k] == 1) { 
-	            int s_temp= exp_design.stim_nodes[k];    
-	            GiNaC::ex Rtmp=R(exp_design.measured_nodes[i],s_temp);
+                int s_temp= exp_design.stim_nodes[k];    
+                GiNaC::ex Rtmp=R(exp_design.measured_nodes[i],s_temp);
                 // Substitute the inhibited links (r by r*i)
                 for (size_t l=0 ; l < inhibited_links.size() ; l++) {
                     Rtmp = Rtmp.subs(inhibited_links[l].first == inhibited_links[l].second);
                 }
-	            response(c,0)+=Rtmp;
-	        }
+                response(c,0)+=Rtmp;
+            }
           }
 
           // Effect of the inhibition on the basal activity
           for (size_t k=0;k<exp_design.inhibitor.shape()[1];k++){
-      	        if (exp_design.inhibitor[j][k] == 1) {
-	                int i_temp = exp_design.inhib_nodes[k];
-	                GiNaC::ex Rtmp2=0;
-	                for (int l=0; l<size;l++){                                        
+                if (exp_design.inhibitor[j][k] == 1) {
+                    int i_temp = exp_design.inhib_nodes[k];
+                    GiNaC::ex Rtmp2=0;
+                    for (int l=0; l<size;l++){                                        
                         // Propagate the effect from the nodes downstream to the inhibited node to the measured node
-	                    if (exp_design.basal_activity[i_temp]==1) { 
+                        if (exp_design.basal_activity[i_temp]==1) { 
                             if (r_idx[l][i_temp] > -1) {
                                 // Add the dampening factors to the propagation
                                 // The dampening of the directly inhibited links will only take place in case of feed-back
@@ -120,39 +122,39 @@ void generate_response( GiNaC::matrix &response,
                                     Rtmp3 = Rtmp3.subs(inhibited_links[m].first == inhibited_links[m].second);
                                 }
                                 // Negative perturbation due to the inhibition
-	                            Rtmp2 += Rtmp3 * x[r_idx[l][i_temp]] *
-		                        (-pow(pow(x[inh_idx[k]],2),0.5)); // Force the inhibitor effect to be negative
+                                Rtmp2 += Rtmp3 * x[r_idx[l][i_temp]] *
+                                (-pow(pow(x[inh_idx[k]],2),0.5)); // Force the inhibitor effect to be negative
                             }
-	                    }
-	                }
+                        }
+                    }
                     // Substitute the inhibited links (r by r*i)
-	                response(c,0) += Rtmp2;
-	            }
+                    response(c,0) += Rtmp2;
+                }
           }
-	  /*
+      /*
           // Suppress the effect on all the nodes without basal activity that are not directly stimulated
           for (size_t m=0; m<size;m++) {
-	        bool remove_activity=false;
-	        if (exp_design.basal_activity[m]==0) { 
+            bool remove_activity=false;
+            if (exp_design.basal_activity[m]==0) { 
                 // Select nodes without basal activity, but unselect those directly targeted by the stimulation (i.e. the receptor for the stimulation)
-	            remove_activity=true;
-	            for (size_t stim=0; stim<exp_design.stimuli.shape()[1]; stim++) {
-	                if (exp_design.stimuli[j][stim] == 1 && adm[m][exp_design.stim_nodes[stim]]!=0) { 
-		                remove_activity=false;
+                remove_activity=true;
+                for (size_t stim=0; stim<exp_design.stimuli.shape()[1]; stim++) {
+                    if (exp_design.stimuli[j][stim] == 1 && adm[m][exp_design.stim_nodes[stim]]!=0) { 
+                        remove_activity=false;
                     }
-	            }
+                }
                 // Remove the transmission by all input nodes (it includes the feedbacks for the non activated receptors)
-	            if (remove_activity) {
-	                for (int from=0; from<size;from++) {
-	                    if ((adm[m][from] != 0)) { 
-		                    response(c,0)=response(c,0).subs(x[r_idx[m][from]]==0);
-	                    }
-	                }
-	            }
+                if (remove_activity) {
+                    for (int from=0; from<size;from++) {
+                        if ((adm[m][from] != 0)) { 
+                            response(c,0)=response(c,0).subs(x[r_idx[m][from]]==0);
+                        }
+                    }
+                }
 
-	        }
+            }
           }
-	  */
+      */
           c++; // Next condition
     }
   }

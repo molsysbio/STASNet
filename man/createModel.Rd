@@ -6,7 +6,8 @@
 \usage{
 createModel(model_links, basal_file, data.stimulation, data.variation = "",
   nb_cores = 1, inits = 1000, perform_plots = F, precorrelate = T,
-  method = "geneticlhs")
+  method = "geneticlhs", unused_perturbations = c(),
+  unused_readouts = c())
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
@@ -28,6 +29,8 @@ random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting poin
 correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
 genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.}
+
+\item{unused_perturbations}{Perturbations in the dataset that should not be used}
 }
 \value{
 An MRAmodel object describing the model and its best fit, containing the data

@@ -7,7 +7,8 @@
 MRAmodelSet(nb_models = 1, model = NULL, design = NULL,
   structure = NULL, basal = matrix(), data = matrix(), cv = matrix(),
   parameters = vector(), bestfit = NA, names = c(), infos = c(),
-  param_range = list(), lower_values = c(), upper_values = c())
+  param_range = list(), lower_values = c(), upper_values = c(),
+  unused_perturbations = c(), unused_readouts = c())
 }
 \arguments{
 \item{nb_models}{Number of models in the set}

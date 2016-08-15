@@ -1,3 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// Helper functions to work on matrices
+// Copyright (C) 2013- Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #ifndef RREF_CPP
 #define RREF_CPP
 
@@ -5,6 +25,7 @@
 #include <cstddef>
 #include <cassert>
 #include <cmath>
+#include "helper_types.hpp"
  
 // Matrix traits: This describes how a matrix is accessed. By
 // externalizing this information into a traits class, the same code
@@ -95,6 +116,24 @@ template<typename MatrixType>
   for (index_type col = mt.min_column(A); col <= mt.max_column(A); ++col)
     std::swap(mt.element(A, i, col), mt.element(A, k, col));
 }
+// Swap columns i and j of a matrix A
+template<typename MatrixType>
+ void swap_cols(MatrixType &A,
+               typename matrix_traits<MatrixType>::index_type i,
+               typename matrix_traits<MatrixType>::index_type j)
+{
+  matrix_traits<MatrixType> mt;
+  typedef typename matrix_traits<MatrixType>::index_type index_type;
+
+  // check indices
+  assert(mt.min_column(A) <= i);
+  assert(i <= mt.max_column(A));
+  assert(mt.min_column(A) <= j);
+  assert(j <= mt.max_column(A));
+
+  for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+    std::swap(mt.element(A, row, i), mt.element(A, row, j));
+}
  
 // divide row i of matrix A by v
 template<typename MatrixType>
@@ -171,37 +210,22 @@ template<typename MatrixType>
     // lead++; ?
   }
 }
- 
-// Partially finish the gaussian elimination of a row echelon matrix, keeping only positive coefficients in the initial matrix
+
 template<typename MatrixType>
-void positive_reduction(MatrixType &A, size_t size) {
-
-    matrix_traits<MatrixType> mt;
-    typedef typename matrix_traits<MatrixType>::index_type index_type;
-
-    // Reduce top vectors with lower one
-    for (index_type row = mt.max_row(A); row > mt.min_row(A) ; row--) {
-        // Find where the row starts
-        index_type lead = 0;
-        while (mt.element(A, row, lead) == 0) { lead++; }
-
-        // Substract the current line from those where it is fully included
-        for (index_type i = mt.max_row(A) ; i >= mt.min_row(A) && i <= mt.max_row(A) ; i--) {
-            bool contained = true;
-            if (i != row) {
-                for (index_type col = lead ; col < size ; col++) {
-                    if (i >= 0 && mt.element(A, row, col) == 1 && mt.element(A, i, col) != 1) {
-                        contained = false;
-                    }
-                }
-                
-                if (contained) {
-                    add_multiple_row(A, i, row, -1);
-                }
-            }
-        }
+ void printMatrix(const MatrixType& A)
+{
+  matrix_traits<MatrixType> mt;
+  typedef typename matrix_traits<MatrixType>::index_type index_type;
+  for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+  {
+    for (index_type col = mt.min_column(A); col <= mt.max_column(A); ++col)
+    {
+        std::cout << mt.element(A, row, col) << "\t";
     }
-    
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
 }
+
 
 #endif //RREF_CPP

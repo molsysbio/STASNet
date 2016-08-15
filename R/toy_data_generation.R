@@ -213,10 +213,10 @@ createSimulation <- function(input_network, perturbations="", measured="", inhib
         inhibitions = rep(inhibitions[1], length(inhib_nodes))
     }
 
-    data = new(fitmodel:::Data)
+    data = new(STASNet:::Data)
     data$set_unstim_data( matrix( rep(10, nrow(stimuli)*length(measured)), nrow=nrow(stimuli) ))
 
-    model = new(fitmodel:::Model)
+    model = new(STASNet:::Model)
     model$setModel(expdes, structure)
     mra_model = MRAmodel(model, expdes, structure, basal=structure$names, parameters=model$getParameterFromLocalResponse(adm, inhibitions), data=data)
 

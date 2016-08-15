@@ -1,5 +1,5 @@
-library(fitmodel)
-context("General testing of fitmodel")
+library(STASNet)
+context("General testing of STASNet")
 DATA_FILE = "test_model_no_error_midas.csv"
 VAR_FILE = ""
 
@@ -35,7 +35,7 @@ test_that("The computation is consistent", {
 test_that("Import-export works correctly", {
     expect_output(exportModel(model, "model.mra"), NA)
     expect_output(importModel("model.mra"), NA)
-    expect_output(rebuildModel("model.mra", DATA_FILE), "Reading data from")
+    expect_output(rebuildModel("model.mra", DATA_FILE), NA)
 })
 
 test_that("Simulations works properly", {

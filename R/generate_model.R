@@ -1,5 +1,5 @@
 getModelStructure <- function(links) {
-  ModelStructure <- fitmodel:::ModelStructure
+  ModelStructure <- STASNet:::ModelStructure
   modelStructure =new(ModelStructure, as.character(links[,1]),as.character(links[,2]))
   return(modelStructure);
 }
@@ -29,7 +29,7 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
     stop("number inhibitors does not match in inhib.nodes / inhibitor");
   }
 
-  ExperimentalDesign <- fitmodel:::ExperimentalDesign;
+  ExperimentalDesign <- STASNet:::ExperimentalDesign;
   expdes=new(ExperimentalDesign);
 
   expdes$stim_nodes=match(as.character(stim.nodes),model.structure$names)-1;

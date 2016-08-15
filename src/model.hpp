@@ -1,3 +1,23 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// Prototype of the Model class
+// Copyright (C) 2016 Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #ifndef MODEL_HPP
 #define MODEL_HPP 
 
@@ -12,6 +32,7 @@
 #include "identifiability.hpp"
 #include "helper_types.hpp"
 #include "rref.hpp"
+#include "modelstructure.hpp"
 
 class Model {
 public:
@@ -19,8 +40,11 @@ public:
   typedef std::map<std::string,double> parametermap;
 
    Model(const GiNaC::matrix &response, 
-	 const std::vector<GiNaC::symbol> &symbols, 
-	 const ExperimentalDesign &expdes, bool linear_approximation );
+     const std::vector<GiNaC::symbol> &symbols, 
+     const ExperimentalDesign &expdes,
+     const ModelStructure &structure,
+     bool linear_approximation );
+             
   Model();
 
   Model(const Model &);
@@ -62,8 +86,8 @@ public:
   void convert_original_parameter_into_identifiable( std::vector<double> &p1, const std::vector<double> &p2 );
   void convert_parameter_map_into_identifiable(std::vector<double> &p1 , const parametermap &p2) ;
   void convert_identifiables_to_original_parameter(std::vector<double> &p_new,  const std::vector<double> &p_old) const;
-  static void convert_original_parameter_to_response_matrix(double_matrix &d, std::vector<double> &inh, const std::vector<double> &p, const int_matrix &adj);
-  static void convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh, const int_matrix &adj);
+  void convert_original_parameter_to_response_matrix(double_matrix &d, std::vector<double> &inh, const std::vector<double> &p);
+  void convert_response_matrix_to_original_parameter(std::vector<double> &p, const double_matrix &d, const std::vector<double> &inh);
   
   void print_original_parameters(std::ostream &os, std::vector<double> &p);
   ExperimentalDesign &exp_design() { return exp_design_; }
@@ -75,7 +99,7 @@ public:
 
   void printResponse() {
     for (std::vector<MathTree::math_item::Ptr>::iterator iter=constraints_.begin();
-	 iter!=constraints_.end(); iter++) {
+     iter!=constraints_.end(); iter++) {
       std::cout << **iter << std::endl;
     }
     for (parameterlist::iterator iter=param_constraints_.begin(); iter!=param_constraints_.end(); iter++) {
@@ -88,6 +112,7 @@ public:
   void printEquationMatrix();
   virtual void setNegativeInhibitions(double *p) const;
   std::vector<size_t> getInhibitorsIds() const;
+  void printSymbols();
 
   virtual size_t modelRank() const { return rank_; }
   
@@ -104,6 +129,7 @@ protected:
   
   // 
   ExperimentalDesign exp_design_;
+  ModelStructure structure_;
   std::vector< GiNaC::symbol > symbols_;
   double_matrix parameter_dependency_matrix_;
   int_matrix parameter_dependency_matrix_unreduced_;

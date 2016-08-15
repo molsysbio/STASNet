@@ -1,6 +1,25 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// Functions to perform the identifiability analysis of the model and generate
+// new parameters from the symbolic equations
+// Copyright (C) 2016 Mathurin Dorel, Bertram Klinger, Nils Bluthgen
+//
+// Institute of Pathology and Institute for Theoretical Biology
+// Charite - Universitätsmedizin Berlin - Chariteplatz 1, 10117 Berlin, Germany
+//
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #include "identifiability.hpp"
-
-
 #include <boost/shared_ptr.hpp>
 #include <boost/rational.hpp>
 #include <iostream>  
@@ -61,8 +80,6 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
             if (reduce_products) {
                 if (!GiNaC::is_a<GiNaC::symbol>(e.op(i))) {
                     boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
-                    // Wouldn't it be faster to directly call getParameterForExpression ?
-                    // Wouldn't mul be more accurate than container ?
                 } else {
                     multiplier*=e.op(i);
                 }
@@ -70,7 +87,7 @@ MathTree::math_item::Ptr put_into_mathtree_format (GiNaC::ex e, parameterlist &p
                 boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(put_into_mathtree_format(e.op(i), param, reduce_products));
             }
         }
-        
+        // Reduce the multiplication of symbols to one parameter 
         if (multiplier!=1) {
             MathTree::parameter::Ptr item2=param.getParameterForExpression(multiplier);
             boost::dynamic_pointer_cast<MathTree::container>(item)->add_item(item2);
@@ -158,16 +175,18 @@ void identifiability_analysis(   equation_matrix &output_matrix,
                  double_matrix &parameter_dependency_matrix,
                  int_matrix &parameter_dependency_matrix_unreduced,
                  const symbolic_matrix &input_matrix, 
-                 const std::vector<GiNaC::symbol> & vars) {
+                 std::vector<GiNaC::symbol> & vars,
+                 ModelStructure &structure) {
 
 
   // Generate new parameterisation
   output_matrix.resize(boost::extents[input_matrix.rows()][input_matrix.cols()]);
   parameterlist param; // List of correspondance (mathtree, GiNaC expression)
-  if (debug) { std::cerr << "Convering from GiNaC to matree format..." << std::endl; }
+  if (debug) { std::cerr << "Converting from GiNaC to mathtree format..." << std::endl; }
   for (size_t i=0; i<input_matrix.rows(); i++) {
     for (size_t j=0; j<input_matrix.cols(); j++) {
       if(verbosity > 9) {std::cerr << i << "," << j << " : " << input_matrix(i, j) << "\t" << std::endl;}
+      // Populate the param vector with (Mathtree, symbol product) pairs
       output_matrix[i][j]= put_into_mathtree_format(input_matrix(i,j).expand(),param);
     }
   }
@@ -233,6 +252,20 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
   to_reduced_row_echelon_form(rational_matrix_for_rref);
 
+  if (verbosity > 9) {
+    for (size_t ii=0; ii < vars.size(); ii++) { std::cout << vars[ii] << "\t"; }
+    std::cout << std::endl;
+    printMatrix(rational_matrix_for_rref);
+  }
+  remove_minus_one(rational_matrix_for_rref, structure, vars, vars.size());
+  if (verbosity > 5) { printMatrix(rational_matrix_for_rref); }
+  to_reduced_row_echelon_form(rational_matrix_for_rref); // To be sure
+  if (verbosity > 9) {
+    for (size_t ii=0; ii < vars.size(); ii++) { std::cout << vars[ii] << "\t"; }
+    std::cout << std::endl;
+    printMatrix(rational_matrix_for_rref);
+  }
+
   convert_rational_to_double_matrix(rational_matrix_for_rref, 
                     parameter_dependency_matrix);
   
@@ -263,3 +296,68 @@ void identifiability_analysis(   equation_matrix &output_matrix,
 
 }
  
+// Remove as many -1 as possible from a row echelon matrix by swapping columns
+template<typename MatrixType>
+ void remove_minus_one(MatrixType &A, ModelStructure& structure, std::vector<GiNaC::symbol> & vars, size_t size) {
+  matrix_traits<MatrixType> mt;
+  typedef typename matrix_traits<MatrixType>::index_type index_type;
+
+  std::vector<index_type> swaped;
+  bool go_on = true;
+  while (go_on) {
+    std::vector<index_type> swapable;
+    std::vector<index_type> leading_row;
+    std::vector<int> num_minus;
+    for (index_type column = mt.min_column(A); column <= size; ++column)
+    {
+      int one = 0;
+      int minus_one = 0;
+      index_type lrow = 0;
+      bool invalid = false;
+      for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+      {
+        if (mt.element(A, row, column) == 1) {
+          one++;
+          lrow = row;
+        } else if (mt.element(A, row, column) == -1) {
+          minus_one++;
+        } else if (mt.element(A, row, column) == 0) {
+        } else {
+          invalid = true;
+        }
+      }
+      if (one == 1 && minus_one > 0 && !invalid && std::find(swaped.begin(), swaped.end(), column) == swaped.end()) {
+        swapable.push_back(column);
+        leading_row.push_back(lrow);
+        num_minus.push_back(minus_one);
+      }
+    }
+
+    if (!swapable.empty()) {
+      // Select the column with the most -1
+      std::vector<index_type> indices;
+      for (size_t ii=0; ii < swapable.size(); ii++) { indices.push_back(ii); }
+      sort(indices.begin(), indices.end(), rev_index_cmp<std::vector<int> >(num_minus));
+      index_type swap_col = swapable[indices[0]];
+      index_type lrow = leading_row[indices[0]];
+
+      // Get the leading column of this row
+      index_type lcol = mt.min_column(A);
+      while (mt.element(A, lrow, lcol) != 1) { lcol++; }
+      swap_cols(A, swap_col, lcol);
+      std::swap(vars[swap_col], vars[lcol]); // Keep vars (symbols_ in Model) to avoid having to rewrite everything
+      structure.swap_symbols(swap_col, lcol);
+      for (index_type row = mt.min_row(A); row <= mt.max_row(A); ++row)
+      {
+          if (mt.element(A, row, lcol) == -1)
+          {
+            add_multiple_row(A, row, lrow, 1);
+          }
+      }
+      swaped.push_back(swap_col);
+      swaped.push_back(lcol);
+    } else {
+      go_on = false;
+    }
+  }
+}

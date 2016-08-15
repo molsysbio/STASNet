@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // setDebug
 void setDebug(bool debug_lvl);
-RcppExport SEXP fitmodel_setDebug(SEXP debug_lvlSEXP) {
+RcppExport SEXP STASNet_setDebug(SEXP debug_lvlSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< bool >::type debug_lvl(debug_lvlSEXP);
