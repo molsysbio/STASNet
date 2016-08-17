@@ -75,9 +75,9 @@ computeFitScore <- function(mra_model, refit_model=F) {
     Rscores = c()
     meanScores = c()
     for ( abc in 1:ncol(prediction) ) {
-        mdata = mean(data$stim_data[,abc])
-        Sbase = sum((data$stim_data[,abc]-mdata)^2)
-        Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2)
+        mdata = mean(data$stim_data[,abc], na.rm=T)
+        Sbase = sum((data$stim_data[,abc]-mdata)^2, na.rm=T)
+        Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2, na.rm=T)
         Rscores[colnames(prediction)[abc]] = 1 - Sfit/Sbase
     }
 

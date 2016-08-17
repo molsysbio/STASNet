@@ -14,7 +14,7 @@ getCombinationMatrix(perturbations, inhib_combo = 2, stim_combo = 1,
 
 \item{stim_combo}{Number of stimulations to use simultaneously in each perturbation}
 
-\item{byStim}{Whether the perturbations should be ordered according to the stimulations or the inhibtions}
+\item{byStim}{Whether the perturbations should be ordered according to the stimulations or the inhibitions}
 }
 \value{
 A perturbation matrix with the names of the nodes as columnnames
