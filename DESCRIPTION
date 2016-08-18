@@ -1,6 +1,6 @@
 Package: STASNet
 Type: Package
-Title: Fit and simulate model from perturbation data
+Title: Fit and Simulate Model from Perturbation Data
 Version: 0.9
 Date: 2016-08-01
 Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
@@ -8,7 +8,7 @@ Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
     role=c("aut", "cre"), email="dorel@horus.ens.fr"), person("Nils", "Bluethgen",
     role=c("aut", "cph", "ths"), email="nils.bluethgen@charite.de"))
 Description: Fits and simulates network model derived from perturbation data
-    using Modular Response Analysis and Profile Likelihood
+    using Modular Response Analysis and Profile Likelihood.
 License: GPL-3
 Depends:
     Rcpp (>= 0.10.4),

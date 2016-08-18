@@ -149,7 +149,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations="") {
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations="", unused_readouts=c()) {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -161,7 +161,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   basal_activity = as.character(read.delim(basal_nodes,header=FALSE)[,1])
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1], unused_perturbations, unused_readouts=c())
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1], unused_perturbations, dont_read=unused_readouts)
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
@@ -176,7 +176,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   data_ = new(STASNet:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
-    core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii], unused_perturbations, unused_readouts=c())
+    core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii], unused_perturbations, dont_read=unused_readouts)
     if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
@@ -607,7 +607,8 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
 
 # Initialise the parameters with a one core processing
 # needs corrections, not used anyway
-classic_initialisation <- function(model, data, samples) {
+classic_initialisation <- function(model, data, nb_samples) {
+  residuals = c()
   for (i in 1:nb_samples) {
     result = model$fitmodel( data, samples[i,] )
     residuals = c(residuals,result$residuals)

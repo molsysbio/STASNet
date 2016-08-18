@@ -8,12 +8,14 @@ createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=100
     folder_files = dir()
     model_set = list()
     model_set[[length(files)]] = ""
+    ii = 1
     for (file in files) {
         if (paste0(file, ".var") %in% folder_files) {
-            model_set[[i]] = create_model(model_links, paste0(file, ".csv"), basal_file, paste0(file, ".var"), cores, inits, init_distribution, method)
+            model_set[[ii]] = createModel(model_links, paste0(file, ".csv"), basal_file, paste0(file, ".var"), cores, inits, init_distribution, method)
         } else {
-            model_set[[i]] = create_model(model_links, paste0(file, ".csv"), basal_file, cores, inits, init_distribution, method)
+            model_set[[ii]] = createModel(model_links, paste0(file, ".csv"), basal_file, cores, inits, init_distribution, method)
         }
+        ii = ii+1
     }
 }
 
