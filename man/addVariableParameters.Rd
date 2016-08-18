@@ -2,7 +2,7 @@
 % Please edit documentation in R/create_model.R
 \name{addVariableParameters}
 \alias{addVariableParameters}
-\title{See if a MRAmodelSet requires some parameters to be variable among models to explain the variations}
+\title{Extend a MRAmodelSet with relevant variable parameters}
 \usage{
 addVariableParameters(modelset, nb_cores = 0, max_iterations = 0,
   nb_samples = 100, accuracy = 0.95, method = "geneticlhs")
@@ -13,6 +13,8 @@ addVariableParameters(modelset, nb_cores = 0, max_iterations = 0,
 \item{nb_cores}{Number of cores to use for the refitting with the new variable parameters}
 
 \item{max_iterations}{Maximum number of variable parameters to add (if 0 takes as many as possible)}
+
+\item{nb_samples}{Number of samples to generate to fit the new variable parameters}
 
 \item{accuracy}{Cutoff probability for the chi^2 test}
 

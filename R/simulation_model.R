@@ -9,7 +9,8 @@
 #' @param readouts List of nodes to simulate. If "all", all the nodes measured to fit the model will be used. Only nodes actually measured or inhibited for the model can be simulated.
 #' @param inhibition_effect A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.
 #' @return A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood
-#' @seealso \code{\link{getCombinationMatrix}}
+# @seealso \code{\link{getCombinationMatrix}}
+#' @family simulation
 #' @export
 simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA) {
   design = model_description$design
@@ -168,6 +169,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
 }
 
 # Give a set of parameter usable by the new model from the parameters fitted in the old model
+#' @family simulation
 getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_inhib, inhib_nodes, inhibition=-1, use_fitted_inhib=T) {
   # Get the adjacency matrix and the inhibitions values
   response = old_model$getLocalResponseFromParameter(old_parameters)
@@ -202,7 +204,7 @@ getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_
 #' @param byStim Whether the perturbations should be ordered according to the stimulations or the inhibitions
 #' @return A perturbation matrix with the names of the nodes as columnnames
 #' @export
-#' @seealso plotModelSimulation
+#' @family simulation
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1, byStim=T) {
   stimulators = perturbations[!grepl("i$", perturbations)]
@@ -317,8 +319,9 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #' @export
 #' @seealso getCombinationMatrix, simulateModel
 #' @author Mathurin Dorel \email{mathurin.dorel@@charite.de}
+#' @family simulation
 # TODO , plotsPerFrame = 4
-##' @param maxPlotsPerFrame Maximum number of perturbation per frame
+# @param maxPlotsPerFrame Maximum number of perturbation per frame
 plotSimulation <- function(prediction, log_axis=F) {
   if (log_axis) {
     ylog = "y"
@@ -391,6 +394,7 @@ plotSimulation <- function(prediction, log_axis=F) {
 }
 
 #' Simulate the model for the experimental design used for the fitting
+#' @param mra_model The MRAmodel to simulate
 #' @return A matrix containing the simulation with the names of the measured nodes as column names
 getSimulation <- function(mra_model) {
   prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction

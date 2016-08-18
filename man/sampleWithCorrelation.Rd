@@ -10,7 +10,17 @@ sampleWithCorrelation(model, core, nb_samples, shift = 0, correlated = "",
 \arguments{
 \item{model}{An MRAmodel object}
 
+\item{core}{A ModelCore list}
+
+\item{nb_samples}{Number of samples to generate}
+
 \item{shift}{A vector giving the shift to be applied to the normal distribution. Must have the same size as the number of parameters}
+
+\item{correlated}{List of parameters extracted with a linear model that should not be randomly initialised}
+
+\item{sd}{Standard deviation of the normal distribution to use for the sampling}
+
+\item{perform_plot}{Whether the linear models should be plotted}
 }
 \description{
 Produces shifted random samples with some parameters inferred from correlations in the measurements

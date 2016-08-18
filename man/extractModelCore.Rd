@@ -10,6 +10,8 @@ extractModelCore(model_structure, basal_activity, data_filename,
 \arguments{
 \item{model_structure}{Matrix of links [node1, node2]}
 
+\item{basal_activity}{The node of the structure with a basal activity}
+
 \item{data_filename}{Experimental data file name. Should be as follows, with one line per replicate:
 
          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
@@ -17,9 +19,11 @@ extractModelCore(model_structure, basal_activity, data_filename,
 -------------------------------------------------------------------------------------------------------------------------------------------------------------
 stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition}
 
+\item{var_file}{Variation file name. Same format as the data file.}
+
 \item{dont_perturb}{Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)}
 
-\item{dont_perturb}{Readouts to be removed for the fit, will not be used nor simulated. (vector of names)}
+\item{dont_read}{Readouts to be removed for the fit, will not be used nor simulated. (vector of names)}
 }
 \description{
 Extracts the data, the experimental design and the structure from the input files

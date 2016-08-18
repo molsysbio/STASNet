@@ -6,6 +6,14 @@
 \usage{
 computeFitScore(mra_model, refit_model = F)
 }
+\arguments{
+\item{mra_model}{The MRAmodel object for which the score should be computed}
+
+\item{refit_model}{Whether the model should be refitted before computing the scores}
+}
+\value{
+A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
+}
 \description{
 Compute 2 fitting scores for the model, the fraction of the variation in the data explained by the network, and the improvement compared to a model with no links
 Do the computation for each measured node and for the network

@@ -24,6 +24,8 @@ createModel(model_links, basal_file, data.stimulation, data.variation = "",
 
 \item{perform_plots}{Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not}
 
+\item{precorrelate}{Whether to infer some links using a linear model instead of a random initialisation}
+
 \item{method}{Method to be used for the initialisation, available methods are :
 random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
 correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
@@ -31,6 +33,8 @@ genetic : Genetic algorithm with mutation only. \emph{inits} is the total number
 annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.}
 
 \item{unused_perturbations}{Perturbations in the dataset that should not be used}
+
+\item{unused_readouts}{Readouts in the dataset that should not be used}
 }
 \value{
 An MRAmodel object describing the model and its best fit, containing the data
@@ -38,10 +42,20 @@ An MRAmodel object describing the model and its best fit, containing the data
 \description{
 Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 }
+\examples{
+\dontrun{
+model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDAS.csv
+model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
+model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
+model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
+}
+}
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
 \seealso{
 importModel, exportModel, rebuildModel
+
+Other Model initialisation: \code{\link{initModel}}
 }
 

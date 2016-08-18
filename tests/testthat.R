@@ -1,4 +1,4 @@
 library(testthat)
-library(fitmodel)
+library(STASNet)
 
 test_check("STASNet")

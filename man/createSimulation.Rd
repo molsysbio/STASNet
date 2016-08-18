@@ -14,7 +14,11 @@ createSimulation(input_network, perturbations = "", measured = "",
 
 \item{measured}{A list of nodes to be the measured nodes}
 
+\item{inhibitions}{A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.}
+
 \item{noise}{A numeric between 0 and 1 giving the noise level, interpreted as a coefficient of variation. 0 means no noise at all.}
+
+\item{replicates}{Number of replicates to simulate}
 }
 \description{
 Simulate data with noise from a network and a perturbation scheme
@@ -23,6 +27,10 @@ Simulate data with noise from a network and a perturbation scheme
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
 \seealso{
-\code{\link{generateToyNetwork}}, \code{\link{generateToyNetwork}}, \code{\link{getCombinationMatrix}}
+\code{\link{simulateModel}}
+
+Other toy data generation: \code{\link{addLayerLinks}},
+  \code{\link{generateToyDesign}},
+  \code{\link{generateToyNetwork}}
 }
 

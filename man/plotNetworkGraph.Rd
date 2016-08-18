@@ -4,14 +4,19 @@
 \alias{plotNetworkGraph}
 \title{Plot a graph from an adjacency list}
 \usage{
-plotNetworkGraph(links_list, expdes = "", local_values = "")
+plotNetworkGraph(structure, expdes = "", local_values = "")
 }
 \arguments{
-\item{links_list}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.}
+\item{structure}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.}
 
 \item{expdes}{An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.}
+
+\item{local_values}{A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input}
 }
 \description{
 Plot a graph from an adjacency list
+}
+\seealso{
+Other Network graph: \code{\link{plotModelGraph}}
 }
 

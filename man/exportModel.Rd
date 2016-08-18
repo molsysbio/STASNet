@@ -10,6 +10,8 @@ exportModel(model_description, file_name = "mra_model", export_data = FALSE)
 \item{model_description}{An MRAmodel object}
 
 \item{file_name}{Name of the output file}
+
+\item{export_data}{Whether the CVs should be incorporated to the .mra file or not}
 }
 \value{
 Nothing

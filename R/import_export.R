@@ -14,6 +14,7 @@ pastetab <- function(...) {
 #' Export an MRAmodel object in a .mra file
 #' @param model_description An MRAmodel object
 #' @param file_name Name of the output file
+#' @param export_data Whether the CVs should be incorporated to the .mra file or not
 #' @return Nothing
 #' @export
 #' @seealso importModel, rebuildModel

@@ -8,6 +8,8 @@ printParameters(model_description, precision = 2)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
+
+\item{precision}{Number of significant digits to print}
 }
 \value{
 Nothing

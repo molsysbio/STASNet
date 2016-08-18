@@ -3,6 +3,7 @@
 
 #' Print the value of each path from the model, with the profile likelihood infos if they are provided
 #' @param model_description An MRAmodel object
+#' @param precision Number of significant digits to print
 #' @return Nothing
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
@@ -42,7 +43,8 @@ printParameters <- function(model_description, precision=2) {
 #' @param model_description An MRAmodel object
 #' @return Nothing
 #' @export
-#' @seealso plotModelSimulation, createModel, importModel
+#' @seealso createModel, importModel
+#' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelAccuracy <- function(model_description) {
   # Calculate the mismatch
@@ -95,7 +97,9 @@ plotModelAccuracy <- function(model_description) {
 #' Plot the scores of the fit for each antibody, which is how much
 #' of the variation in the data is explained by the model
 #' @param mra_model An MRAmodel object
+#' @param ... Extra barplot parameters
 #' @export
+#' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelScores.MRAmodel <- function(mra_model, ...) {
     bb=barplot(mra_model$Rscores, xaxt="n", ...)
@@ -212,8 +216,9 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' @export
 #' @seealso selectMinimalModel, createModel
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-#' @examples
-#' ext_list = suggestExtension(MRAmodel) 
+#' @examples \dontrun{
+#' ext_list = suggestExtension(mramodel)
+#' }
 suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
   # Extra fitting informations from the model description
   model = model_description$model
@@ -266,6 +271,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 #'
 #' @param new_link integer link whose addition is to be tested
 #' @param adj integer matrix original adjacency matrix excluding the new_link 
+#' @param rank Rank of the input model
 #' @param init_residual numeric sum-squared error of original network
 #' @param model MRAmodel object of original network
 #' @param initial_response list containing the local_response matrix and inhibitor strength of original network
@@ -273,6 +279,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 #' @param data data object of MRAmodel object
 #' @param model_structure structure object of MRAmodel object
 #' @param sample numeric vector containing all starting values for new_link
+#' @param verbose Whether the function should be verbose or not
 addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )

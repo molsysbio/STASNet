@@ -26,6 +26,7 @@ Create the perturbation matrix for a set of perturbations, building all n-combin
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
 \seealso{
-plotModelSimulation
+Other simulation: \code{\link{plotSimulation}},
+  \code{\link{simulateModel}}
 }
 

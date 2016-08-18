@@ -33,7 +33,9 @@ Tries to add one link each and returns a list of links ordered by their chi-squa
 This list can then be based and compared to literature knowledge and if considered suitable manually added to the starting network and rerun with the createModel function.
 }
 \examples{
-ext_list = suggestExtension(MRAmodel) 
+\dontrun{
+ext_list = suggestExtension(mramodel)
+}
 }
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}

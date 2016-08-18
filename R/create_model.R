@@ -39,21 +39,25 @@ get_running_time <- function(init_time, text="") {
 #' @param nb_cores Number of cores that should be used for the computation
 #' @param inits Number of initialisation steps which should be performed (see method for the exact meaning of this value)
 #' @param perform_plots Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not
+#' @param precorrelate Whether to infer some links using a linear model instead of a random initialisation
 #' @param method Method to be used for the initialisation, available methods are :
 #'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
 #'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
 #' @param unused_perturbations Perturbations in the dataset that should not be used
+#' @param unused_readouts Readouts in the dataset that should not be used
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-#' @examples
-# model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDAS.csv
-# model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
-# model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
-# model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
+#' @examples \dontrun{
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv") # Produces a model for the network described in links.tab using the data in data_MIDAS.csv
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", "variation.var") # Uses the variation from a variation file
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detectCores()) # Uses all cores available (with the package parallel)
+#' model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
+#' }
+#' @family Model initialisation
 # TODO completely remove examples or add datafile so they work (or use data matrices)
 createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c()) {
   # Creation of the model structure object
@@ -147,6 +151,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' Build an MRAmodelSet
 #'
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
+#' @inheritParams createModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations="", unused_readouts=c()) {
@@ -214,11 +219,14 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   return(self)
 }
 
+#' Extend a MRAmodelSet with relevant variable parameters
+#'
 #' See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
 #'
 #' @param modelset An MRAmodelSet object
 #' @param nb_cores Number of cores to use for the refitting with the new variable parameters
 #' @param max_iterations Maximum number of variable parameters to add (if 0 takes as many as possible)
+#' @param nb_samples Number of samples to generate to fit the new variable parameters
 #' @param accuracy Cutoff probability for the chi^2 test
 #' @param method Name of the LHS method to use
 #' @return An updated MRAmodelSet with the new parameter sets
@@ -269,6 +277,14 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
 }
 
 #' Refit modelset by iterative relaxation of single parameters
+#'
+#' @param var_par ID of the variable parameter to test
+#' @param modelset A MRAmodelSet object
+#' @param nb_sub_params Number of parameters per submodel
+#' @param nb_cores Number of cores to use for the fitting
+#' @param nb_samples Number of samples to generate for the fitting
+#' @param method Method to use for the fitting
+#' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
 refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs"){
   model=modelset$model
   var_pars = unique(c( var_par, modelset$variable_parameters ))
@@ -286,7 +302,17 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
 
 
 #' Perform an initialisation of the model 
+#'
 #' Possibility to use different sampling methods
+#' @param model A MRAmodel object to initialise
+#' @param core A list containing the design and data
+#' @param inits Number of random samples to use for the initialisation
+#' @param precorrelate Whether the parameters should be precorrelated
+#' @param method The LHS method to use to generate the random samples
+#' @param nb_cores Maximum number of cores to use for the initialisation
+#' @param perform_plots Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not
+#' @return A list with the initialisation results
+#' @family Model initialisation
 initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
   expdes = core$design
   data = core$data
@@ -325,7 +351,10 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
 #' @param sample_size Size of each sample
 #' @param nb_samples Number of samples
 #' @param method Name of the LHS method to use
-getSamples <- function(sample_size, nb_samples, method="randomlhs",nb_cores=1) {
+#' @param nb_cores Number of cores to use to generate the samples
+#' @return A matrix with the random samples
+#' @author Bertram Klinger \email{klinger@@charite.de}
+getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) {
   valid_methods=data.frame(methods=c("randomlhs",
                                      "geneticlhs",
                                      "improvedlhs",
@@ -357,7 +386,12 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs",nb_cores=1) {
 # TODO put it in deep_initialisation
 #' Produces shifted random samples with some parameters inferred from correlations in the measurements
 #' @param model An MRAmodel object
+#' @param core A ModelCore list
+#' @param nb_samples Number of samples to generate
 #' @param shift A vector giving the shift to be applied to the normal distribution. Must have the same size as the number of parameters
+#' @param correlated List of parameters extracted with a linear model that should not be randomly initialised
+#' @param sd Standard deviation of the normal distribution to use for the sampling
+#' @param perform_plot Whether the linear models should be plotted
 sampleWithCorrelation <- function(model, core, nb_samples, shift=0, correlated="", sd=2, perform_plot=F) {
   if (!is.list(correlated)) {
     correlated = correlate_parameters(model, core, perform_plot)
@@ -519,6 +553,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 }
 
 # Parallel initialisation of the parameters
+# @family Model initialisation
 parallel_initialisation <- function(model, data, samples, NB_CORES) {
   # Put the samples under list format, as mclapply only take "one dimension" objects
   parallel_sampling = list()
@@ -695,21 +730,23 @@ extractStructure = function(model_links, names="") {
 
 #' Plot a graph from an adjacency list
 #'
-#' @param links_list A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
+#' @param structure A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.
+#' @param local_values A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input
 # @export
-plotNetworkGraph <- function(links_list, expdes="", local_values="") {
-    if (class(links_list) == "matrix") {
-        names = unique(as.vector(links_list))
+#' @family Network graph
+plotNetworkGraph <- function(structure, expdes="", local_values="") {
+    if (class(structure) == "matrix") {
+        names = unique(as.vector(structure))
         adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-        for (ii in 1:nrow(links_list)) {
-            adm[match(links_list[ii,2],rownames(adm)), links_list[ii,1]] = 1
+        for (ii in 1:nrow(structure)) {
+            adm[match(structure[ii,2],rownames(adm)), structure[ii,1]] = 1
         }
-    } else if (class(links_list) == "Rcpp_ModelStructure") {
-        adm = links_list$adjacencyMatrix
-        colnames(adm) = rownames(adm) = links_list$names
+    } else if (class(structure) == "Rcpp_ModelStructure") {
+        adm = structure$adjacencyMatrix
+        colnames(adm) = rownames(adm) = structure$names
     } else {
-        stop("Invalid 'links_list' in plotNetworkGraph, must be an edge list or a ModelStructure")
+        stop("Invalid 'structure' in plotNetworkGraph, must be an edge list or a ModelStructure")
     }
   
   len=length(rownames(adm))
@@ -796,14 +833,16 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
 
 #' Extracts the data, the experimental design and the structure from the input files
 #' @param model_structure Matrix of links [node1, node2]
+#' @param basal_activity The node of the structure with a basal activity
 #' @param data_filename Experimental data file name. Should be as follows, with one line per replicate:
 #'
 #'          stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
 #'
 #' -------------------------------------------------------------------------------------------------------------------------------------------------------------
 #' stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition
+#' @param var_file Variation file name. Same format as the data file.
 #' @param dont_perturb Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)
-#' @param dont_perturb Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
+#' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="", dont_perturb=c(), dont_read=c()) {
 
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
@@ -953,6 +992,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   return(core)
 }
 
+#' Import a save model with data files
+#'
 #' Build a fitted model from a .mra file, and import data for this model
 #' Does NOT perform any initialisation
 #' @param model_file A .mra file containing the information on the model
@@ -962,8 +1003,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @export
 #' @seealso importModel, exportModel, createModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-#' @examples
+#' @examples \dontrun{
 #' rebuildModel("model.mra", "data.csv", "data.var")
+#' }
 rebuildModel <- function(model_file, data_file, var_file="") {
   if (!grepl(".mra$", model_file)) {
     stop("The model file does not have the mra extension")

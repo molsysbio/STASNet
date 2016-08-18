@@ -14,12 +14,13 @@
 #' @param cv A matrix containing the coefficient of variation of the data used to build the model
 #' @param parameters A vector containing the values of the parameters of the model
 #' @param bestfit The residual chi-2 value associated with the best fit
-#' @param basefit The chi-2 value associated with the raw data (no fit)
 #' @param name Name of the model
 #' @param infos Extra information on the model
 #' @param param_range Alternative parameters sets for the model
-#' @param lower_value Lower bound on the values of the parameters
+#' @param lower_values Lower bound on the values of the parameters
 #' @param upper_values Upper bound on the values of the parameters
+#' @param unused_perturbations Perturbations from the data file that have not been used for the fitting
+#' @param unused_readouts Readouts from the data file that have not been used for the fitting
 #' @return An MRAmodel object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
@@ -57,6 +58,9 @@ MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv
 #'
 #' Compute 2 fitting scores for the model, the fraction of the variation in the data explained by the network, and the improvement compared to a model with no links
 #' Do the computation for each measured node and for the network
+#' @param mra_model The MRAmodel object for which the score should be computed
+#' @param refit_model Whether the model should be refitted before computing the scores
+#' @return A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
 computeFitScore <- function(mra_model, refit_model=F) {
     data = mra_model$data
 # The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason
@@ -94,8 +98,10 @@ getMeasuredNodesNames <- function(mra_model) {
 #' Plot the network used in the model
 #'
 #' Plot the network used in the model with the experimental design on top of it
-#' @param mra_model An MRAmodel object.
+#' @param mra_model A MRAmodel object.
 #' @export
+#' @family Model plots
+#' @family Network graph
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelGraph <- function(mra_model) {
     plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters))
