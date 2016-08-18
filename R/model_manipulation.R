@@ -122,7 +122,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   data = model_description$data
   if (is.na(model_description$bestfit)) {stop("Data are recquired to reduce the model")}
   
-  print("Performing model reduction…")
+  print("Performing model reduction...")
   init_residual = model_description$bestfit
   rank = model$modelRank()
   reduce=TRUE
@@ -225,7 +225,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   data = model_description$data
   if (is.na(model_description$bestfit)) {stop("Data are required to reduce the model")}
   
-  writeLines("Performing model extension…")
+  writeLines("Performing model extension...")
   init_residual = model_description$bestfit
   rank = model$modelRank()
   #determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)

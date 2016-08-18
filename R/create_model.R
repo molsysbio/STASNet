@@ -292,7 +292,7 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
   data = core$data
   # Parallelized version uses all cores but one to keep control
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
-  print (paste("Initializing the model parameters… (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
+  print (paste("Initializing the model parameters... (", inits, " random samplings) with ", nb_cores, " cores", sep=""))
   # Correlate directly measured and connected nodes -> they will not be sampled
   nr_known_par=0
   if (precorrelate){
@@ -724,7 +724,7 @@ plotNetworkGraph <- function(links_list, expdes="", local_values="") {
     }
   }
   
-  # setting of generaĺ  and creation of changed properties
+  # setting of general and creation of changed properties
   nodeRenderInfo(g1) <- list(shape="ellipse")
   nodeRenderInfo(g1) <- list(textCol="black")
   nodeRenderInfo(g1) <- list(lwd=1)

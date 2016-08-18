@@ -7,7 +7,7 @@
 #'
 #' For a walk-through as to how the package can be used to fit a model, see the vignette.
 #'
-#' @author Bertram Klinger \email{bertram.klinger@@charite.de}, Mathurin Dorel \email{dorel@@horus.ens.fr}, Nils Blüthgen \email{nils.bluethgen@@charite.de}
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}, Mathurin Dorel \email{dorel@@horus.ens.fr}, Nils Bluethgen \email{nils.bluethgen@@charite.de}
 #'
 #' @docType package
 #' @name fitmodel
