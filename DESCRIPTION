@@ -5,7 +5,7 @@ Version: 0.9
 Date: 2016-08-01
 Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
     email="bertram.klinger@charite.de"), person("Mathurin", "Dorel",
-    role=c("aut", "cre"), email="dorel@horus.ens.fr"), person("Nils", "Bluethgen",
+    role=c("aut", "cre"), email="mathurin.dorel@charite.de"), person("Nils", "Bluethgen",
     role=c("aut", "cph", "ths"), email="nils.bluethgen@charite.de"))
 Description: Fits and simulates network model derived from perturbation data
     using Modular Response Analysis and Profile Likelihood.
