@@ -1,6 +1,6 @@
 #!/usr/bin/Rscript
 #-*- coding: utf8 -*-
-suppressPackageStartupMessages(library(fitmodel))
+suppressPackageStartupMessages(library(STASNet))
 
 if (!exists("cargs")) {
     cargs = commandArgs()
