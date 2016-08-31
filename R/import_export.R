@@ -9,6 +9,15 @@ pastetab <- function(...) {
     return(paste(..., sep="\t"))
 }
 
+# Helper function to determine if an object is a string
+is.string <- function(x) {
+    if (is.character(x) && length(x) == 1) {
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
+}
+
 #' Exports the model in a file 
 #'
 #' Export an MRAmodel object in a .mra file
@@ -351,9 +360,7 @@ importModel <- function(file_name) {
 #' @export
 readMIDAS <- function(fname) {
     data_file = read.delim(fname, sep=",")
-    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS file, the mandatory 'DV' field is missing") }
-    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS file or the field 'ID:type' is missing") }
-    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS file, the mandatory 'TR' field is missing") }
+    checkMIDAS(data_file)
 
     measures = data.matrix(data_file[grepl("^DV", colnames(data_file))])
     treatments = data.matrix(data_file[grepl("^TR", colnames(data_file))])
@@ -363,5 +370,10 @@ readMIDAS <- function(fname) {
     colnames(measures) = gsub("DV.", "", colnames(measures))
 
     return(measures)
+}
+checkMIDAS <- function(data_file) {
+    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'DV' field is missing") }
+    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS data or the field 'ID:type' is missing") }
+    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'TR' field is missing") }
 }
 

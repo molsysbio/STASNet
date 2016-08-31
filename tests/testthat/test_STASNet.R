@@ -1,12 +1,15 @@
-library(STASNet)
-context("General testing of STASNet")
+#context("General testing of STASNet")
 DATA_FILE = "test_model_no_error_midas.csv"
 VAR_FILE = ""
 
-model = createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=1, perform_plots=F, method="geneticlhs")
+context("Model fitting accuracy")
+
+model = createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs")
+test_that("The model fit is completed", {
 # Check that we get the fit we expect
-expect_equal_to_reference(model$bestfit, "bestfit.rds")
-expect_equal_to_reference(model$Rscores, "rscores.rds", tolerance=1e-5)
+    expect_equal_to_reference(model$bestfit, "bestfit.rds")
+    expect_equal_to_reference(model$Rscores, "rscores.rds", tolerance=1e-5)
+})
 
 test_that("The model design is loaded correctly", {
     expect_equal_to_reference(model$design$inhibitor, "design_inhibitor.rds")
@@ -16,8 +19,7 @@ test_that("The model design is loaded correctly", {
     expect_equal_to_reference(model$design$measured_nodes, "design_measured_nodes.rds")
 })
 
-
-test_that("The model structure is loaded corretly", {
+test_that("The model structure is loaded correctly", {
     expect_equal_to_reference(model$structure$names, "structure_names.rds")
     expect_equal_to_reference(model$structure$adjacencyMatrix, "structure_adjacencyMatrix.rds")
 })
@@ -31,6 +33,8 @@ test_that("The data are loaded correctly", {
 test_that("The computation is consistent", {
     expect_equal( sum( ((model$model$simulate(model$data, model$parameters)$prediction - model$data$stim_data) / model$data$error)^2, na.rm=T ), model$bestfit )
 })
+
+context("Model manipulations work")
 
 test_that("Import-export works correctly", {
     expect_output(exportModel(model, "model.mra"), NA)

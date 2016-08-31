@@ -29,13 +29,14 @@ class ModelStructure {
 public:
   ModelStructure();
 
-  ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2);
+  ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2, std::string title="");
 
   void set(std::vector<std::string> names1,std::vector<std::string> names2);
 
   void buildLinks();
 
   std::vector<std::string> getNames() const;
+  std::string getTitle() const;
   
   const int_matrix &getAdjacencyMatrix() const;
   const int_matrix &getRidx() const;
@@ -51,6 +52,7 @@ public:
     
  private:
     std::vector<std::string> names;   // names of the nodes
+    std::string title;                // title of the structure
     int_matrix adjacencymatrix;       // adjacency matrix with 1 and 0
     int_matrix r_idx;            // give an id to each link
     std::vector<std::pair<size_t, size_t> > s_pos; // Position of each link in the adjacency matrix

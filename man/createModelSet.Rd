@@ -4,12 +4,15 @@
 \alias{createModelSet}
 \title{Build an MRAmodelSet}
 \usage{
-createModelSet(model_links, basal_nodes, csv_files, var_files = c(),
+createModelSet(model_links, basal_file, csv_files, var_files = c(),
   nb_cores = 1, inits = 1000, perform_plots = F, method = "geneticlhs",
-  unused_perturbations = "", unused_readouts = c())
+  unused_perturbations = "", unused_readouts = c(), MIN_CV = 0.1,
+  DEFAULT_CV = 0.3, model_name = "default")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
+
+\item{basal_file}{Path to the file indicating the nodes without basal activity. Extension .dat expected.}
 
 \item{nb_cores}{Number of cores that should be used for the computation}
 
@@ -26,6 +29,12 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 \item{unused_perturbations}{Perturbations in the dataset that should not be used}
 
 \item{unused_readouts}{Readouts in the dataset that should not be used}
+
+\item{MIN_CV}{Minimum coefficient of variation.}
+
+\item{DEFAULT_CV}{Default coefficient of variation to use when none is provided and there are no replicated in the data.}
+
+\item{model_name}{The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.}
 }
 \description{
 Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models

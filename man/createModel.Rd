@@ -7,7 +7,8 @@
 createModel(model_links, basal_file, data.stimulation, data.variation = "",
   nb_cores = 1, inits = 1000, perform_plots = F, precorrelate = T,
   method = "geneticlhs", unused_perturbations = c(),
-  unused_readouts = c())
+  unused_readouts = c(), MIN_CV = 0.1, DEFAULT_CV = 0.3,
+  model_name = "default")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
@@ -35,6 +36,12 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 \item{unused_perturbations}{Perturbations in the dataset that should not be used}
 
 \item{unused_readouts}{Readouts in the dataset that should not be used}
+
+\item{MIN_CV}{Minimum coefficient of variation.}
+
+\item{DEFAULT_CV}{Default coefficient of variation to use when none is provided and there are no replicated in the data.}
+
+\item{model_name}{The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.}
 }
 \value{
 An MRAmodel object describing the model and its best fit, containing the data
