@@ -17,8 +17,8 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
   }
   basal.activity = as.character(basal.activity[as.character(basal.activity) %in% model.structure$names])
   if ( sum(is.na(match(as.character(basal.activity),model.structure$names))) > 0 ) {
-    print("Unmatched names :")
-    print(basal.activity[is.na(match(as.character(basal.activity),model.structure$names))])
+    message("Unmatched names :")
+    message(basal.activity[is.na(match(as.character(basal.activity),model.structure$names))])
     stop("problem matching basal.activity names");
   }
   if ( !is.null(dim(stimuli)) && !is.null(dim(inhibitor)) &&  dim(stimuli)[1]!=dim(inhibitor)[1] ) {

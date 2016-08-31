@@ -63,7 +63,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   if (length(inhibitors) > 0 && length(match(inhibitors, inhibables))>0){
     present_inh = inhibitors %in% inhibables
     if (any(!present_inh)){
-      print(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used"))
+      message(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used"))
     }
     inhib_nodes = inhibitors[present_inh]
     inhibitions = as.matrix(target_matrix[, paste0(inhibitors[present_inh], "i")])
@@ -75,7 +75,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   if (length(stimulators) > 0 && length(match(stimulators, stimulables))>0){
     present_stim = stimulators %in% stimulables
     if (any(!present_stim)){
-      print(paste0(ifelse(sum(!present_stim)==1,"Node ","Nodes "), paste(stimulators[!present_stim], collapse=" , "), " not stimulated in the network and won't be used"))
+      message(paste0(ifelse(sum(!present_stim)==1,"Node ","Nodes "), paste(stimulators[!present_stim], collapse=" , "), " not stimulated in the network and won't be used"))
     }
     stim_nodes = stimulators[present_stim]
     stimulations = as.matrix(target_matrix[, stimulators[present_stim]])
@@ -95,17 +95,17 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     for (node in readouts) {
       if (is.character(readouts)) {
         if (!(node %in% nodes)) {
-          print(paste0("The node ", node, " is not in the network."))
+          message(paste0("The node ", node, " is not in the network."))
         } else if (!(node %in% measurables)) {
-          print(paste0("The node ", node, " cannot be measured with this model."))
+          message(paste0("The node ", node, " cannot be measured with this model."))
         } else {
           measured_nodes = c(measured_nodes, which(nodes == node)-1)
         }
       } else if (is.numeric(readouts)) { # Consider the R style numeration
         if (!(node %in% 1:length(nodes))) {
-          print(paste0("There are only ", length(nodes), " node in the network."))
+          message(paste0("There are only ", length(nodes), " node in the network."))
         } else if (!(node %in% measID)) {
-          print(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this model."))
+          message(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this model."))
         } else {
           measured_nodes = c(measured_nodes, node)
         }
