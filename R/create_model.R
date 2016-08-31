@@ -160,7 +160,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   basal_activity = as.character(read.delim(basal_nodes,header=FALSE)[,1])
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1], unused_perturbations, unused_readouts=c())
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[1], var_files[1], unused_perturbations, dont_read=c())
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
@@ -175,7 +175,7 @@ createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), n
   data_ = new(STASNet:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
-    core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii], unused_perturbations, unused_readouts=c())
+    core = extractModelCore(model_structure, basal_activity, csv_files[ii], var_files[ii], unused_perturbations, dont_read=c())
     if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
