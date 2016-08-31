@@ -222,10 +222,10 @@ importModel <- function(file_name) {
     }
 #    else if (grepl("[Aa](djacency|DJACENCY)", file[lnb])) { # Adjacency list
 #        lnb = lnb + 1
-#        print("Adjacency list not implemented yet")
+#        message("Adjacency list not implemented yet")
 #    } else { # List of links
 #        if (grepl("list|LIST", file[lnb])) { lnb = lnb + 1; }
-#        print("Link list not implemented yet")
+#        message("Link list not implemented yet")
 #        while (grepl("^L", file[lnb])) {
 #            line = gsub("^L( |\t)", "", file[lnb])
 #            line = unlist(strsplit(line, " |\t"))
