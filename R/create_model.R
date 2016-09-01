@@ -17,9 +17,9 @@ MIN_CV=0.1;     # parameters: minimal cv=0.1
 DEFAULT_CV=0.3; # parameters: default cv if there are only 2 replicates
 
 # Generates a random number between 0 and 1
-rand <- function(decimals=4) {
-  return(sample(1:10^decimals, size=1) / 10^decimals)
-}
+#rand <- function(n=1) {
+#  return(runif(n,min=0,max=1)
+#}
 
 get_running_time <- function(init_time, text="") {
   run_time = proc.time()["elapsed"]-init_time
@@ -45,6 +45,7 @@ get_running_time <- function(init_time, text="") {
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
 #' @param unused_perturbations Perturbations in the dataset that should not be used
+#' @param unused_readouts Measured nodes in the datasets that should not be used
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -148,7 +149,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations="") {
+createModelSet <- function(model_links, basal_nodes, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c()) {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -282,7 +283,6 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   
   return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
 }
-
 
 #' Perform an initialisation of the model 
 #' Possibility to use different sampling methods
@@ -828,7 +828,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     print(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)" ))
     data_values = data_values[,-which(colnames(data_values)%in%not_included)]
   }
-  # Remove extra readouts thtat should not be used
+  # Remove extra readouts that should not be used
   for (ro in dont_read) {
     if (ro %in% colnames(data_values)) {
       data_values = data_values[,-which(colnames(data_values)==ro)]

@@ -114,7 +114,6 @@ conditions = gsub(" ", "_", conditions)
 folder = paste0( "run_", conditions, "_", Sys.Date(), "/" )
 dir.create(folder)
 
-
 #### 1 FIT MODEL SET ####
 init_time = proc.time()["elapsed"];
 #pdf(paste0(folder, "distribution_", conditions, ".pdf"))
@@ -202,7 +201,3 @@ print("Finished")
 
 # Display the warnings if there are some
 warnings()
-
-# IDEAS :
-# data as last argument, possibility to give severals, in which case a comparison of the models is also done
-# one argument : name of a file with network, basal_nodes, and the name of the data files

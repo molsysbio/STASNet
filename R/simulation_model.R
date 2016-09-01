@@ -336,7 +336,7 @@ plotSimulation <- function(prediction, log_axis=F) {
       }
       # Plot the bars with the errors
       entity = colnames(prediction$bestfit)[node]
-      barplot(prediction$bestfit[,node], ylim=limits, ylab=paste0(entity, " fluorescence intensity (AU)"), log=ylog, col="#008000", main=entity)
+      barplot(prediction$bestfit[,node], ylim=limits, ylab="signal intensity (AU)", log=ylog, col="#008000", main=entity)
       text_pos = limits[2] - 0.1 * limits[2]
       segments( bars, low_var, bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
       text( bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2],ifelse(X<100000,round(X),signif(X,1)), "") }), pos=2, srt=90,offset=0.2 )
@@ -346,7 +346,7 @@ plotSimulation <- function(prediction, log_axis=F) {
       segments(bars[in_lim] - space, high_var[in_lim], bars[in_lim] + space, high_var[in_lim])
     } else {
       entity = colnames(prediction$bestfit)[node]
-      barplot(prediction$bestfit[,node], ylab=paste0(entity, "fluorescence intensity (AU)"), log=ylog, main=entity)
+      barplot(prediction$bestfit[,node], ylab="signal intensity (AU)", log=ylog, main=entity)
       low_var=0;
     }
     
