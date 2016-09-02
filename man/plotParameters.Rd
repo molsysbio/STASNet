@@ -6,6 +6,11 @@
 \usage{
 plotParameters(x, ...)
 }
+\arguments{
+\item{x}{A Model object}
+
+\item{...}{Plot parameters}
+}
 \description{
 Generic function to plot parameters
 }

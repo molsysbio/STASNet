@@ -2,14 +2,33 @@
 % Please edit documentation in R/create_model.R
 \name{initModel}
 \alias{initModel}
-\title{Perform an initialisation of the model 
-Possibility to use different sampling methods}
+\title{Perform an initialisation of the model}
 \usage{
 initModel(model, core, inits, precorrelate = T, method = "randomlhs",
   nb_cores = 1, perform_plots = F)
 }
+\arguments{
+\item{model}{A MRAmodel object to initialise}
+
+\item{core}{A list containing the design and data}
+
+\item{inits}{Number of random samples to use for the initialisation}
+
+\item{precorrelate}{Whether the parameters should be precorrelated}
+
+\item{method}{The LHS method to use to generate the random samples}
+
+\item{nb_cores}{Maximum number of cores to use for the initialisation}
+
+\item{perform_plots}{Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not}
+}
+\value{
+A list with the initialisation results
+}
 \description{
-Perform an initialisation of the model 
 Possibility to use different sampling methods
+}
+\seealso{
+Other Model initialisation: \code{\link{createModel}}
 }
 

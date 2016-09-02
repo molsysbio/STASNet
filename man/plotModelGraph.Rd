@@ -7,12 +7,20 @@
 plotModelGraph(mra_model)
 }
 \arguments{
-\item{mra_model}{An MRAmodel object.}
+\item{mra_model}{A MRAmodel object.}
 }
 \description{
 Plot the network used in the model with the experimental design on top of it
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
+}
+\seealso{
+Other Model plots: \code{\link{plotModelAccuracy}},
+  \code{\link{plotModelScores.MRAmodel}},
+  \code{\link{plotModelScores}},
+  \code{\link{plotParameters.modelGroup}}
+
+Other Network graph: \code{\link{plotNetworkGraph}}
 }
 

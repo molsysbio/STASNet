@@ -26,5 +26,9 @@ Generate an experimental design for a toy network, with all stimulus applied, so
 }
 \seealso{
 \code{\link{getCombinationMatrix}}, \code{\link{generateToyNetwork}}
+
+Other toy data generation: \code{\link{addLayerLinks}},
+  \code{\link{createSimulation}},
+  \code{\link{generateToyNetwork}}
 }
 

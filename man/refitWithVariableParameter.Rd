@@ -7,6 +7,22 @@
 refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores = 0,
   nb_samples = 5, method = "geneticlhs")
 }
+\arguments{
+\item{var_par}{ID of the variable parameter to test}
+
+\item{modelset}{A MRAmodelSet object}
+
+\item{nb_sub_params}{Number of parameters per submodel}
+
+\item{nb_cores}{Number of cores to use for the fitting}
+
+\item{nb_samples}{Number of samples to generate for the fitting}
+
+\item{method}{Method to use for the fitting}
+}
+\value{
+A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
+}
 \description{
 Refit modelset by iterative relaxation of single parameters
 }

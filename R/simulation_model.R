@@ -9,7 +9,8 @@
 #' @param readouts List of nodes to simulate. If "all", all the nodes measured to fit the model will be used. Only nodes actually measured or inhibited for the model can be simulated.
 #' @param inhibition_effect A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.
 #' @return A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood
-#' @seealso \code{\link{getCombinationMatrix}}
+# @seealso \code{\link{getCombinationMatrix}}
+#' @family simulation
 #' @export
 simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA) {
   design = model_description$design
@@ -62,25 +63,25 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   if (length(inhibitors) > 0 && length(match(inhibitors, inhibables))>0){
     present_inh = inhibitors %in% inhibables
     if (any(!present_inh)){
-      print(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used"))
+      message(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used", collapse="\n"))
     }
     inhib_nodes = inhibitors[present_inh]
-    inhibitions = target_matrix[, paste0(inhibitors[present_inh], "i")]
+    inhibitions = as.matrix(target_matrix[, paste0(inhibitors[present_inh], "i")])
   }else{
     inhib_nodes = c()
-    inhibitions = c()  
+    inhibitions = matrix(nrow=0, ncol=0)  
   }
   ## Set the stimuli matrices
   if (length(stimulators) > 0 && length(match(stimulators, stimulables))>0){
     present_stim = stimulators %in% stimulables
     if (any(!present_stim)){
-      print(paste0(ifelse(sum(!present_stim)==1,"Node ","Nodes "), paste(stimulators[!present_stim], collapse=" , "), " not stimulated in the network and won't be used"))
+      message(paste0(ifelse(sum(!present_stim)==1,"Node ","Nodes "), paste(stimulators[!present_stim], collapse=" , "), " not stimulated in the network and won't be used"))
     }
     stim_nodes = stimulators[present_stim]
-    stimulations = target_matrix[, stimulators[present_stim]]
+    stimulations = as.matrix(target_matrix[, stimulators[present_stim]])
   }else{
     stim_nodes = c()
-    stimulations = c()
+    stimulations = matrix(nrow=0, ncol=0)
   }
   
   if(length(stim_nodes)==0 && length(inhib_nodes)==0){
@@ -94,17 +95,17 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     for (node in readouts) {
       if (is.character(readouts)) {
         if (!(node %in% nodes)) {
-          print(paste0("The node ", node, " is not in the network."))
+          message(paste0("The node ", node, " is not in the network."))
         } else if (!(node %in% measurables)) {
-          print(paste0("The node ", node, " cannot be measured with this model."))
+          message(paste0("The node ", node, " cannot be measured with this model."))
         } else {
           measured_nodes = c(measured_nodes, which(nodes == node)-1)
         }
       } else if (is.numeric(readouts)) { # Consider the R style numeration
         if (!(node %in% 1:length(nodes))) {
-          print(paste0("There are only ", length(nodes), " node in the network."))
+          message(paste0("There are only ", length(nodes), " node in the network."))
         } else if (!(node %in% measID)) {
-          print(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this model."))
+          message(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this model."))
         } else {
           measured_nodes = c(measured_nodes, node)
         }
@@ -117,9 +118,9 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimulations, inhibitions, model_description$basal)
   
   # Set up the model and the data for the simulation
-  model = new(fitmodel:::Model)
+  model = new(STASNet:::Model)
   model$setModel( new_design, model_description$structure )
-  new_data = new(fitmodel:::Data)
+  new_data = new(STASNet:::Data)
   new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
   
   # Compute the predictions
@@ -168,6 +169,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
 }
 
 # Give a set of parameter usable by the new model from the parameters fitted in the old model
+#' @family simulation
 getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_inhib, inhib_nodes, inhibition=-1, use_fitted_inhib=T) {
   # Get the adjacency matrix and the inhibitions values
   response = old_model$getLocalResponseFromParameter(old_parameters)
@@ -199,40 +201,55 @@ getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_
 #' @param perturbations A vector with the name of the perturbation, either NODE for a stimulation a node, or NODEi for its inhibition
 #' @param inhib_combo Number of inhibitions to use simultaneously in each perturbation
 #' @param stim_combo Number of stimulations to use simultaneously in each perturbation
-#' @param byStim Whether the perturbations should be ordered according to the stimulations or the inhibtions
+#' @param byStim Whether the perturbations should be ordered according to the stimulations or the inhibitions
 #' @return A perturbation matrix with the names of the nodes as columnnames
 #' @export
-#' @seealso plotModelSimulation
+#' @family simulation
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1, byStim=T) {
   stimulators = perturbations[!grepl("i$", perturbations)]
-  if (stim_combo > length(stimulators) ) {
+  if (length(stimulators) > 0 && length(stimulators) > 0 && stim_combo > length(stimulators) ) {
     stop ("Not enough stimulations to build the combinations")
   }
   inhibitors = perturbations[grepl("i$", perturbations)]
-  if (inhib_combo > length(inhibitors) ) {
+  if (length(inhibitors) > 0 && inhib_combo > length(inhibitors) ) {
     stop ("Not enough inhibitions to build the combinations")
   }
-  
-  # Create the inhibition matrix
-  inhib_combos = build_combo(seq(length(inhibitors)), inhib_combo, c())
-  tmp = rep(0, length(inhibitors))
-  inhib_matrix = c()
-  for (i in 1:nrow(inhib_combos)) {
-    inhib_matrix = rbind(inhib_matrix, tmp)
-    inhib_matrix[i, inhib_combos[i,]] = 1
+  if (length(inhibitors) == 0 && length(perturbations) == 0) {
+    stop("Inhibitions or stimulations must be provided to build the combination matrix")
   }
-  colnames(inhib_matrix) = inhibitors
   
-  # Create the stimulation matrix
-  stim_combos = build_combo(seq(length(stimulators)), stim_combo, c())
-  tmp = rep(0, length(stimulators))
-  stim_matrix = c()
-  for (i in 1:nrow(stim_combos)) {
-    stim_matrix = rbind(stim_matrix, tmp)
-    stim_matrix[i, stim_combos[i,]] = 1
+  if (length(inhibitors) > 0) {
+    # Create the inhibition matrix
+    inhib_combos = build_combo(seq(length(inhibitors)), inhib_combo, c())
+    tmp = rep(0, length(inhibitors))
+    inhib_matrix = c()
+    for (i in 1:nrow(inhib_combos)) {
+      inhib_matrix = rbind(inhib_matrix, tmp)
+      inhib_matrix[i, inhib_combos[i,]] = 1
+    }
+    colnames(inhib_matrix) = inhibitors
+  }  
+
+  if (length(stimulators) > 0) {
+    # Create the stimulation matrix
+    stim_combos = build_combo(seq(length(stimulators)), stim_combo, c())
+    tmp = rep(0, length(stimulators))
+    stim_matrix = c()
+    for (i in 1:nrow(stim_combos)) {
+      stim_matrix = rbind(stim_matrix, tmp)
+      stim_matrix[i, stim_combos[i,]] = 1
+    }
+    colnames(stim_matrix) = stimulators
+  } else {
+    # Only use the inhibition/stimulation matrix if no stimulators/inhibitors are present
+    rownames(inhib_matrix) = NULL
+    return(inhib_matrix)
   }
-  colnames(stim_matrix) = stimulators
+  if (length(inhibitors) == 0) {
+    rownames(stim_matrix) = NULL
+    return(stim_matrix)
+  }
   
   # Merge the two matrices to get all the combinations
   ## Put a line of 0 to get the inhibition or stimulation alone
@@ -257,6 +274,9 @@ getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1
 }
 
 # Recursively build the n choose k combinations for a set
+# @param symbols Names of the elements to combine
+# @param remaining_steps Number of elements to add
+# @param to_extend Matrix of combinations to extend
 build_combo <- function (symbols, remaining_steps, to_extend) {
   if (remaining_steps <= 0) {
     return(to_extend)
@@ -299,8 +319,9 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #' @export
 #' @seealso getCombinationMatrix, simulateModel
 #' @author Mathurin Dorel \email{mathurin.dorel@@charite.de}
+#' @family simulation
 # TODO , plotsPerFrame = 4
-##' @param maxPlotsPerFrame Maximum number of perturbation per frame
+# @param maxPlotsPerFrame Maximum number of perturbation per frame
 plotSimulation <- function(prediction, log_axis=F) {
   if (log_axis) {
     ylog = "y"
@@ -373,6 +394,7 @@ plotSimulation <- function(prediction, log_axis=F) {
 }
 
 #' Simulate the model for the experimental design used for the fitting
+#' @param mra_model The MRAmodel to simulate
 #' @return A matrix containing the simulation with the names of the measured nodes as column names
 getSimulation <- function(mra_model) {
   prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction

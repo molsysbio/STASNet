@@ -32,7 +32,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col
   # linearized matrix order (1,1) (2,1) (3,1) (4,1)... for text inset
   ref=c(t(as.matrix(mat[nrow(mat):1,]))) 
 
-    # plot heatmap with textual inset
+  # Generate heatmap with textual inset
   p<- levelplot(x = t(as.matrix(m[nrow(m):1,])),
                 col.regions = col,
                 at = breaks,
@@ -50,7 +50,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col
                                  signif(ref,2),
                                  col = textCol,
                                  cex = 0.8)})
-  print(p)
+  print(p) # Plot the heatmap
 }
 
 define_breaks <- function(m,lim = Inf,fixedRange = F) {

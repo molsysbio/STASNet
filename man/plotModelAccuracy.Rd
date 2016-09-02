@@ -19,6 +19,11 @@ Plot heatmaps of the model simulation against the data weighted by the error, as
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
 \seealso{
-plotModelSimulation, createModel, importModel
+createModel, importModel
+
+Other Model plots: \code{\link{plotModelGraph}},
+  \code{\link{plotModelScores.MRAmodel}},
+  \code{\link{plotModelScores}},
+  \code{\link{plotParameters.modelGroup}}
 }
 

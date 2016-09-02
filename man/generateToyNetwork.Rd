@@ -26,4 +26,9 @@ A 2-columns matrix representing the network as an adjacency list
 \description{
 Generate a fake network tab file
 }
+\seealso{
+Other toy data generation: \code{\link{addLayerLinks}},
+  \code{\link{createSimulation}},
+  \code{\link{generateToyDesign}}
+}
 

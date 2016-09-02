@@ -11,6 +11,7 @@
 #' @param fname A filename where the adjacency list should be saved, "" for no saving.
 #' @return A 2-columns matrix representing the network as an adjacency list
 #' @export
+#' @family toy data generation
 generateToyNetwork <- function(ninputs, p_link=0.2, layers=c(3, 3), nfeedbacks=0, p_layer_link=0, fname="") {
     nlayers = length(layers)
     if (is.numeric(p_link)) { p_link = rep(p_link, nlayers) }
@@ -64,6 +65,7 @@ generateToyNetwork <- function(ninputs, p_link=0.2, layers=c(3, 3), nfeedbacks=0
 #' @param ldown List of nodes of the lower layer
 #' @param p_link Probability of linking two nodes between the layer
 #' @param connect_bottom Whether each node of the lower layer must have at least on link
+#' @family toy data generation
 addLayerLinks <- function(links, lup, ldown, p_link=0.2, connect_bottom = TRUE) {
     if (p_link > 0) {
         for (ndown in ldown) {
@@ -93,6 +95,7 @@ addLayerLinks <- function(links, lup, ldown, p_link=0.2, connect_bottom = TRUE) 
 #' @return An experimental design object
 #' @seealso \code{\link{getCombinationMatrix}}, \code{\link{generateToyNetwork}}
 #' @export
+#' @family toy data generation
 # TODO @param clever Optimize measurements and inhibitions in order to maximise the number of identifiable nodes
 generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo=1) {
     clever = FALSE
@@ -167,9 +170,12 @@ readNetworkAdj <- function(network_file) {
 #' @param input_network The input network. A 2 or 3 columns matrix representing an adjacency list, or an adjacency matrix. Alternatively, the name of a csv file where such matrix is writen (without headers for an adjacency list, with the nodes names in the first line for an adjacency matrix). In case of a 2 columns adjacency list, the values of all links is assumed to be 1, if 3 columns, the 3rd columns is used as coefficient.
 #' @param perturbations The experimental design. A matrix where the column names are the names of the perturbation: NODE for a stimulation and NODEi for an inhibition. Alternatively, the name of csv file where the matrix is writen, the first line is used as column names.
 #' @param measured A list of nodes to be the measured nodes
+#' @param inhibitions A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.
 #' @param noise A numeric between 0 and 1 giving the noise level, interpreted as a coefficient of variation. 0 means no noise at all.
+#' @param replicates Number of replicates to simulate
 #' @export
-#' @seealso \code{\link{generateToyNetwork}}, \code{\link{generateToyNetwork}}, \code{\link{getCombinationMatrix}}
+#' @seealso \code{\link{simulateModel}}
+#' @family toy data generation
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 createSimulation <- function(input_network, perturbations="", measured="", inhibitions=0.5, noise=0, replicates=3) {
     adm = readNetworkAdj(input_network)

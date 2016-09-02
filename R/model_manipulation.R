@@ -1,16 +1,21 @@
 ########################### model_manipulation.R ###########################
 # Functions to change and visualise the model
 
-#' Print the value of each path from the model, with the profile likelihood infos if they are provided
+#' Print the value of the parameters of the model
+#'
+#' Print the value of each path from the model, with the profile likelihood infos if they are provided.
 #' @param model_description An MRAmodel object
+#' @param precision Number of significant digits to print
 #' @return Nothing
+#' @details The print function is 'message' and thus produces an output in stderr
 #' @export
+#' @seealso \code{\link{message}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 printParameters <- function(model_description, precision=2) {
   model = model_description$model
   parameters = model_description$parameters
   
-  print("Parameters :")
+  message("Parameters :")
   paths = model$getParametersLinks()
   if (length(model_description$lower_values) > 0) {
     for (i in 1:length(paths)) {
@@ -29,11 +34,11 @@ printParameters <- function(model_description, precision=2) {
           text = paste(text, "-", signif(model_description$upper_values[i], precision), ")")
         }
       }
-      print(text)
+      message(text)
     }
   } else {
     for (i in 1:length(paths)) {
-      print (paste( simplify_path_name(paths[i]), ":", signif(parameters[i], precision) ))
+      message (paste( simplify_path_name(paths[i]), ":", signif(parameters[i], precision) ))
     }
   }
 }
@@ -42,7 +47,8 @@ printParameters <- function(model_description, precision=2) {
 #' @param model_description An MRAmodel object
 #' @return Nothing
 #' @export
-#' @seealso plotModelSimulation, createModel, importModel
+#' @seealso createModel, importModel
+#' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelAccuracy <- function(model_description) {
   # Calculate the mismatch
@@ -71,8 +77,8 @@ plotModelAccuracy <- function(model_description) {
     treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
   }
 
-  print("Treatments : ")
-  print(treatments)
+  message("Treatments : ")
+  message(paste(treatments, collapse=" "))
   colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
 
@@ -95,7 +101,9 @@ plotModelAccuracy <- function(model_description) {
 #' Plot the scores of the fit for each antibody, which is how much
 #' of the variation in the data is explained by the model
 #' @param mra_model An MRAmodel object
+#' @param ... Extra barplot parameters
 #' @export
+#' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelScores.MRAmodel <- function(mra_model, ...) {
     bb=barplot(mra_model$Rscores, xaxt="n", ...)
@@ -122,7 +130,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   data = model_description$data
   if (is.na(model_description$bestfit)) {stop("Data are recquired to reduce the model")}
   
-  print("Performing model reduction…")
+  message("Performing model reduction...")
   init_residual = model_description$bestfit
   rank = model$modelRank()
   reduce=TRUE
@@ -149,9 +157,9 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
       
       if (verbose) {
         dr = rank - new_rank
-        print(paste("old :", rank, ", new : ", new_rank))
+        message(paste("old :", rank, ", new : ", new_rank))
         deltares = residuals[length(residuals)]-init_residual
-        print(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
+        message(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
       }
       
       newadj[i]=1; ## Slightly accelerate the computation
@@ -169,20 +177,20 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
       rank = new_rank
       initial_response=params[,order.res[1]]
       init_residual = residuals[order.res[1]]
-      #print(initial_response)
-      print(paste0("Remove ",
+      #message(initial_response)
+      message(paste0("Remove ",
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                    model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
       
-      print(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", deltares, ",  p-value = ", pchisq(deltares, df=dr) ))
-      print("------------------------------------------------------------------------------------------------------")
+      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", deltares, ",  p-value = ", pchisq(deltares, df=dr) ))
+      message("------------------------------------------------------------------------------------------------------")
       
       model_description$bestfit = sort(residuals)[1]
     } else {
       reduce=FALSE
     }
   }
-  print("Reduction complete")
+  message("Reduction complete")
   # We recover the final model
   ## Basal activity and data do not change
   model_description$structure$setAdjacencyMatrix(adj)
@@ -212,8 +220,9 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' @export
 #' @seealso selectMinimalModel, createModel
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-#' @examples
-#' ext_list = suggestExtension(MRAmodel) 
+#' @examples \dontrun{
+#' ext_list = suggestExtension(mramodel)
+#' }
 suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
   # Extra fitting informations from the model description
   model = model_description$model
@@ -225,7 +234,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   data = model_description$data
   if (is.na(model_description$bestfit)) {stop("Data are required to reduce the model")}
   
-  writeLines("Performing model extension…")
+  message("Performing model extension...")
   init_residual = model_description$bestfit
   rank = model$modelRank()
   #determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)
@@ -233,7 +242,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   if (length(setdiff(expdes$stim_nodes,expdes$measured_nodes))>0)
     exclude[setdiff(expdes$stim_nodes,expdes$measured_nodes)+1,]=1 
   links_to_test=which( adj==0 & exclude==0)
-  writeLines(paste0(length(links_to_test)," links will be tested..."))
+  message(paste0(length(links_to_test)," links will be tested..."))
   sample = c(10^c(2:-1),0,-10^c(-1:2))
   
   # Each link is added and compared to the previous model
@@ -249,10 +258,10 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
   extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method="BH"))
   
-  writeLines("Extension trial completed!")
+  message("Extension trial completed!")
   if (length(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)>0){
-    print("Significant link extensions:")
-    print(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,])
+    message("Significant link extensions:")
+    message(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,])
   }
   if(print)
     write.table(extension_mat,"Additional_link_suggestion.txt",quote = F,row.names = F)
@@ -266,6 +275,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 #'
 #' @param new_link integer link whose addition is to be tested
 #' @param adj integer matrix original adjacency matrix excluding the new_link 
+#' @param rank Rank of the input model
 #' @param init_residual numeric sum-squared error of original network
 #' @param model MRAmodel object of original network
 #' @param initial_response list containing the local_response matrix and inhibitor strength of original network
@@ -273,6 +283,7 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 #' @param data data object of MRAmodel object
 #' @param model_structure structure object of MRAmodel object
 #' @param sample numeric vector containing all starting values for new_link
+#' @param verbose Whether the function should be verbose or not
 addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
@@ -283,7 +294,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
     paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
     tmp_result = model$fitmodel( data,paramstmp )
     if ( verbose == T )
-    writeLines( paste0( "for ", jj ," : ",tmp_result$residuals ) )
+    message( paste0( "for ", jj ," : ",tmp_result$residuals ) )
     if ( tmp_result$residuals < best_res ){
       best_res = tmp_result$residuals
       result = tmp_result
@@ -307,7 +318,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
     if ( verbose == T ){
-    writeLines(paste("[",extension_mat[1], "]" ,
+    message(paste("[",extension_mat[1], "]" ,
                      ", new : ", new_rank,
                      extension_mat[2],"->",
                      extension_mat[3],

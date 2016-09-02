@@ -2,15 +2,27 @@
 % Please edit documentation in R/model_set.R
 \name{createDataSet}
 \alias{createDataSet}
-\title{Import multiple files}
+\title{Import multiple files to create a group of models}
 \usage{
 createDataSet(model_links, data_list, basal_file, cores = 1, inits = 1000,
   init_distribution = F, method = "default")
 }
 \arguments{
+\item{model_links}{An adjacency matrix}
+
 \item{data_list}{Name of the file containing the list of the files for the data without the extension}
+
+\item{basal_file}{File with basal activity}
+
+\item{cores}{Number of cores to use}
+
+\item{inits}{Number of inits to do}
+
+\item{init_distribution}{Whether the initial distribution should be plotted}
+
+\item{method}{The LHs method to use}
 }
 \description{
-Import multiple files
+Import multiple files to create a group of models
 }
 

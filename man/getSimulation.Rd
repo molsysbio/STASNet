@@ -6,6 +6,9 @@
 \usage{
 getSimulation(mra_model)
 }
+\arguments{
+\item{mra_model}{The MRAmodel to simulate}
+}
 \value{
 A matrix containing the simulation with the names of the measured nodes as column names
 }

@@ -6,7 +6,7 @@
 \usage{
 MRAmodelSet(nb_models = 1, model = NULL, design = NULL,
   structure = NULL, basal = matrix(), data = matrix(), cv = matrix(),
-  parameters = vector(), bestfit = NA, names = c(), infos = c(),
+  parameters = vector(), bestfit = NA, name = c(), infos = c(),
   param_range = list(), lower_values = c(), upper_values = c(),
   unused_perturbations = c(), unused_readouts = c())
 }
@@ -21,7 +21,7 @@ MRAmodelSet(nb_models = 1, model = NULL, design = NULL,
 
 \item{basal}{A matrix describing the basal activity of the nodes in the network}
 
-\item{data}{An object of class Data with aggregated data for all models}
+\item{data}{An object of class Data}
 
 \item{cv}{A matrix containing the coefficient of variation of the data used to build the model}
 
@@ -29,17 +29,19 @@ MRAmodelSet(nb_models = 1, model = NULL, design = NULL,
 
 \item{bestfit}{The residual chi-2 value associated with the best fit}
 
+\item{name}{Name of the model}
+
 \item{infos}{Extra information on the model}
 
 \item{param_range}{Alternative parameters sets for the model}
 
+\item{lower_values}{Lower bound on the values of the parameters}
+
 \item{upper_values}{Upper bound on the values of the parameters}
 
-\item{basefit}{The chi-2 value associated with the raw data (no fit)}
+\item{unused_perturbations}{Perturbations from the data file that have not been used for the fitting}
 
-\item{name}{Name of the model}
-
-\item{lower_value}{Lower bound on the values of the parameters}
+\item{unused_readouts}{Readouts from the data file that have not been used for the fitting}
 }
 \value{
 An MRAmodelSet object

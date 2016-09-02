@@ -12,8 +12,16 @@ getSamples(sample_size, nb_samples, method = "randomlhs", nb_cores = 1)
 \item{nb_samples}{Number of samples}
 
 \item{method}{Name of the LHS method to use}
+
+\item{nb_cores}{Number of cores to use to generate the samples}
+}
+\value{
+A matrix with the random samples
 }
 \description{
 Get LHS samples
+}
+\author{
+Bertram Klinger \email{klinger@charite.de}
 }
 

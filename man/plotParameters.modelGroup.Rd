@@ -7,9 +7,15 @@
 \method{plotParameters}{modelGroup}(model_group)
 }
 \arguments{
-\item{model_group}{Object of class modelGroup}
+\item{model_group}{A modelGroup object}
 }
 \description{
 Plot the parameters fitted for each model as an heatmap
+}
+\seealso{
+Other Model plots: \code{\link{plotModelAccuracy}},
+  \code{\link{plotModelGraph}},
+  \code{\link{plotModelScores.MRAmodel}},
+  \code{\link{plotModelScores}}
 }
 
