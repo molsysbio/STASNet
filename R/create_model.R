@@ -114,7 +114,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
       cij = suppressWarnings(cor(setii, setjj, use="na.or.complete")) # NA if one vector has a standard deviation of 0
       if (perform_plots) {
           if ((!is.na(cij) && cij > 0.999) || (range_var(setii) > 0.05 && range_var(setjj) > 0.05)) {
-            plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\ncor=", cij), col=residuals[best_sets])
+            plot(setii, setjj, xlab=paths[ii], ylab=paths[jj], main=paste0("Values for the best fits\nscore=", cij), col=residuals[best_sets])
           }
       }
     }
@@ -509,7 +509,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       correlated$list = c(correlated$list, param)
       correlated$values = c(correlated$values, params_vector[param])
       correlated$infos = c(correlated$infos, paste0("Correlated link ", simplify_path_name(links[param]), " = ", params_vector[param]))
-      message(correlated$infos)
+      message(correlated$infos[len(correlated$infos)])
     }
   }
   return(correlated)
@@ -892,7 +892,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 
   # Warn for the measured nodes that have not been found in the network, and don't use them
   if (length(not_included) > 0) {
-    message(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)" ))
+    message(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)\n"))
     data_values = as.matrix(data_values[,-which(colnames(data_values)%in%not_included)])
   }
   # Remove extra readouts that should not be used

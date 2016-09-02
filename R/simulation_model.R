@@ -63,7 +63,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   if (length(inhibitors) > 0 && length(match(inhibitors, inhibables))>0){
     present_inh = inhibitors %in% inhibables
     if (any(!present_inh)){
-      message(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used", collapse="\n"))
+      message(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used\n"))
     }
     inhib_nodes = inhibitors[present_inh]
     inhibitions = as.matrix(target_matrix[, paste0(inhibitors[present_inh], "i")])
