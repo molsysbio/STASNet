@@ -503,7 +503,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       correlated$list = c(correlated$list, param)
       correlated$values = c(correlated$values, params_vector[param])
       correlated$infos = c(correlated$infos, paste0("Correlated link ", simplify_path_name(links[param]), " = ", params_vector[param]))
-      message(correlated$infos[len(correlated$infos)])
+      message(correlated$infos[length(correlated$infos)])
     }
   }
   return(correlated)
