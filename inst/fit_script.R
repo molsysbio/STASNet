@@ -4,8 +4,6 @@
 # Hidden from the R installer but with the other scripts from the package
 
 #out = capture.output(try({
-library("STASNet")
-
 # Print the time it took in a readable format
 get_running_time <- function(init_time, text="") {
     run_time = proc.time()["elapsed"]-init_time
@@ -43,7 +41,25 @@ unused_readouts = c()
 
 # Collect the filenames based on their extension
 for (argument in cargs) {
-    if (grepl(".tab$", argument)) {
+    if (grepl("--help|-h", argument)) {
+        message("Help for STASNet fitting script:")
+        message("The script expect a .csv file with data in MIDAS format, a .tab file with the network structure and a .dat file with the nodes with basal activity.")
+        message("A .var file with the error in MIDAS format can also be provided.")
+        message("    --help | -h                  Displays help")
+        message("    -i<int>                      Number of initialisations")
+        message("    -c<int>                      Maximum of cores to use (0 for auto-detection)")
+        message("    --mr                         Apply model reduction")
+        message("    -m<string>                   Method to apply for the initialisation")
+        message("    --nopl                       Disable profile likelihood")
+        message("    -s<int>                      Number of steps for the profile likelihood")
+        message("    --noplots                    Cancel plot generation")
+        message("    -v                           Activate debug")
+        message("    -D<float>                    Default coefficient of variation")
+        message("    -D<float>                    Minimum coefficient of variation")
+        message("    -u'<string1> <string2> ...'  List of perturbations to ignore")
+        message("    -d'<string1> <string2> ...'  List of readouts to ignore")
+        quit()
+    } else if (grepl(".tab$", argument)) {
         network = paste0(getwd(), "/", argument)
     } else if (grepl(".data$", argument) || grepl(".csv$", argument)) {
         data = paste0(getwd(), "/", argument)
@@ -70,8 +86,8 @@ for (argument in cargs) {
             nb_steps = 1000
             print("Incorrect number of steps, performing with 1000")
         }
-    } else if (grepl("^-nr$", argument)) {
-        reduction = FALSE
+    } else if (grepl("^--mr$", argument)) {
+        reduction = TRUE
     } else if (grepl("^-m", argument)) {
         method = gsub("^-m", "", argument)
     } else if (argument == "--nopl") {
@@ -82,6 +98,10 @@ for (argument in cargs) {
         STASNet:::setDebug(T)
     } else if (grepl("^--npc", argument)) {
         precorrelate = FALSE
+    } else if (grepl("^-D", argument)) {
+        min_cv = as.numeric(gsub("^-D", "", argument))
+    } else if (grepl("^-M", argument)) {
+        default_cv = as.numeric(gsub("^-M", "", argument))
     } else if (grepl("^-u", argument)) {
         argument = gsub("^-u", "", argument)
         argument = gsub("\"", "", argument)
@@ -94,6 +114,8 @@ for (argument in cargs) {
         print(paste0("Unknown argument: '", argument, "'"))
     }
 }
+library("STASNet")
+
 if (cores == 0) {
     cores = detectCores() - 1;
 }
@@ -116,13 +138,19 @@ if (length(unused_perturbations) > 0) {
 if (length(unused_readouts) > 0) {
     conditions = paste0(conditions, "_ur", paste0(unused_readouts, collapse="-") )
 }
+if (exists("min_cv")) {
+    conditions = paste0(conditions, "_mincv", min_cv)
+} else { min_cv = 0.1 }
+if (exists("default_cv")) {
+    conditions = paste0(conditions, "_defaultcv", default_cv)
+} else { default_cv = 0.3 }
 folder = paste0( "run_", conditions, "_", Sys.Date(), "/" )
 dir.create(folder)
 
 #### Creates the model from network and basal files and fits a minimal model to the data
 init_time = proc.time()["elapsed"];
 pdf(paste0(folder, "distribution_", conditions, ".pdf"))
-model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations);
+model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, MIN_CV=min_cv, DEFAULT_CV=default_cv);
 dev.off()
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 

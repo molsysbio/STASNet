@@ -898,6 +898,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Remove extra readouts that should not be used
   for (ro in dont_read) {
     if (ro %in% colnames(data_values)) {
+      message(paste(ro, "readout will not be used for the fit\n"))
       data_values = as.matrix(data_values[,-which(colnames(data_values)==ro)])
     }
   }
@@ -909,10 +910,15 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     }
   }
   dont_perturb = dont_perturb[which(dont_perturb%in%vpert)]
-  not_perturbable = c(not_perturbable, dont_perturb)
   rm_rows = c()
-  if (length(not_perturbable) > 0) {
-    message(paste(not_perturbable , " perturbation not compatible with the network structure, it will not be used" ))
+  if (length(not_perturbable) > 0 || length(dont_perturb) > 0) {
+    if (length(not_perturbable) > 0) {
+      message(paste(not_perturbable , "perturbation not compatible with the network structure, it will not be used\n" ))
+    }
+    if (length(dont_perturb) > 0) {
+      message(paste(dont_perturb, "perturbation will not be used for the fit\n"))
+    }
+    not_perturbable = c(not_perturbable, dont_perturb)
     rm_rows = unique(unlist(sapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
     perturbations = perturbations[,-which(colnames(perturbations)%in%not_perturbable)]
   }
