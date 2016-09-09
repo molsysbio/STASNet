@@ -135,6 +135,7 @@ if (recomputing) {
     }
     folder = "./"
     conditions = paste0(mra_name)
+    init_time = proc.time()["elapsed"];
 } else {
     if (network == "") {
         stop("A network structure (adjacency list, .tab) file is required.")
