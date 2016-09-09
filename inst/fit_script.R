@@ -17,7 +17,7 @@ get_running_time <- function(init_time, text="") {
 # Takes relative paths as arguments in the order network data basal
 
 reduction = FALSE
-perform_pl = TRUE
+perform_pl = FALSE
 perf_plots = TRUE
 
 data = ""
@@ -38,6 +38,7 @@ if (!exists("cargs")) {
 }
 unused_perturbations = c()
 unused_readouts = c()
+recomputing = FALSE
 
 # Collect the filenames based on their extension
 for (argument in cargs) {
@@ -48,7 +49,7 @@ for (argument in cargs) {
         message("    --help | -h                  Displays help")
         message("    -i<int>                      Number of initialisations")
         message("    -c<int>                      Maximum of cores to use (0 for auto-detection)")
-        message("    --mr                         Apply model reduction")
+        message("    --mr | --reduce              Apply model reduction")
         message("    -m<string>                   Method to apply for the initialisation")
         message("    --nopl                       Disable profile likelihood")
         message("    -s<int>                      Number of steps for the profile likelihood")
@@ -64,6 +65,10 @@ for (argument in cargs) {
     } else if (grepl(".data$", argument) || grepl(".csv$", argument)) {
         data = paste0(getwd(), "/", argument)
         data_name = basename(argument)
+    } else if (grepl(".mra$", argument)) {
+        mra_file = paste0(getwd(), "/", argument)
+        mra_name = gsub(".mra$", "", basename(mra_file))
+        recomputing = TRUE
     } else if (grepl(".dat$", argument)) {
         basal_nodes = paste0(getwd(), "/", argument)
     } else if (grepl(".var$", argument)) {
@@ -86,10 +91,12 @@ for (argument in cargs) {
             nb_steps = 1000
             print("Incorrect number of steps, performing with 1000")
         }
-    } else if (grepl("^--mr$", argument)) {
+    } else if (grepl("^--mr$", argument) || grepl("^--reduce$", argument)) {
         reduction = TRUE
     } else if (grepl("^-m", argument)) {
         method = gsub("^-m", "", argument)
+    } else if (argument == "--pl") {
+        perform_pl = TRUE
     } else if (argument == "--nopl") {
         perform_pl = FALSE
     } else if (argument == "--noplots" || argument == "--noplot") {
@@ -119,52 +126,63 @@ library("STASNet")
 if (cores == 0) {
     cores = detectCores() - 1;
 }
-if (network == "") {
-    stop("A network structure (adjacency list, .tab) file is required.")
-} else if (data == "") {
-    stop("A data file (.data) is required")
-} else if (basal_nodes == "") {
-    stop("A basal activity (.dat) list file is required")
+
+if (recomputing) {
+    if (data != "") {
+        model = rebuildModel(mra_file, data, variation)
+    } else {
+        stop("Can't rebuild a model without data")
+    }
+    folder = "./"
+    conditions = paste0(mra_name)
+} else {
+    if (network == "") {
+        stop("A network structure (adjacency list, .tab) file is required.")
+    } else if (data == "") {
+        stop("A data file (.data) is required")
+    } else if (basal_nodes == "") {
+        stop("A basal activity (.dat) list file is required")
+    }
+
+    # Extract the name and the number of initialisations
+    power = c("", "k", "M", "G", "T", "P", "Y");
+    power_init = floor(log(inits, base=1000))
+    conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", basename(data_name)), "_", gsub(".tab", "", basename(network)), "_", inits%/%(1000^power_init), power[1+power_init]);
+    conditions = gsub(" ", "_", conditions)
+    if (length(unused_perturbations) > 0) {
+        conditions = paste0(conditions, "_no", paste0(unused_perturbations, collapse="-") )
+    }
+    if (length(unused_readouts) > 0) {
+        conditions = paste0(conditions, "_ur", paste0(unused_readouts, collapse="-") )
+    }
+    if (exists("min_cv")) {
+        conditions = paste0(conditions, "_mincv", min_cv)
+    } else { min_cv = 0.1 }
+    if (exists("default_cv")) {
+        conditions = paste0(conditions, "_defaultcv", default_cv)
+    } else { default_cv = 0.3 }
+    folder = paste0( "run_", conditions, "_", Sys.Date(), "/" )
+    dir.create(folder)
+
+    #### Creates the model from network and basal files and fits a minimal model to the data
+    init_time = proc.time()["elapsed"];
+    pdf(paste0(folder, "distribution_", conditions, ".pdf"))
+    model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, MIN_CV=min_cv, DEFAULT_CV=default_cv);
+    dev.off()
+    get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
+
+    # Plot the graph of the network in a pdf
+    pdf(paste0( folder, "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", basename(network)) ) ))
+    plotModelGraph(model)
+    dev.off()
+
+    mat=model$data$stim_data
+    pdf(paste0(folder, "accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
+    plotModelAccuracy(model)
+    plotModelScores(model, main=paste0("Global R = ", model$bestfitscore))
+    dev.off()
+    printParameters(model)
 }
-
-# Extract the name and the number of initialisations
-power = c("", "k", "M", "G", "T", "P", "Y");
-power_init = floor(log(inits, base=1000))
-conditions = paste0( gsub("(_MIDAS)?.(csv|data)", "", basename(data_name)), "_", gsub(".tab", "", basename(network)), "_", inits%/%(1000^power_init), power[1+power_init]);
-conditions = gsub(" ", "_", conditions)
-if (length(unused_perturbations) > 0) {
-    conditions = paste0(conditions, "_no", paste0(unused_perturbations, collapse="-") )
-}
-if (length(unused_readouts) > 0) {
-    conditions = paste0(conditions, "_ur", paste0(unused_readouts, collapse="-") )
-}
-if (exists("min_cv")) {
-    conditions = paste0(conditions, "_mincv", min_cv)
-} else { min_cv = 0.1 }
-if (exists("default_cv")) {
-    conditions = paste0(conditions, "_defaultcv", default_cv)
-} else { default_cv = 0.3 }
-folder = paste0( "run_", conditions, "_", Sys.Date(), "/" )
-dir.create(folder)
-
-#### Creates the model from network and basal files and fits a minimal model to the data
-init_time = proc.time()["elapsed"];
-pdf(paste0(folder, "distribution_", conditions, ".pdf"))
-model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, MIN_CV=min_cv, DEFAULT_CV=default_cv);
-dev.off()
-get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
-
-# Plot the graph of the network in a pdf
-pdf(paste0( folder, "graph_", gsub(" ", "_", gsub(".tab$", ".pdf", basename(network)) ) ))
-plotModelGraph(model)
-dev.off()
-
-mat=model$data$stim_data
-pdf(paste0(folder, "accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
-plotModelAccuracy(model)
-plotModelScores(model, main=paste0("Global R = ", model$bestfitscore))
-dev.off()
-printParameters(model)
 
 if (method == "annealing") {
     stop("debugging annealing")
@@ -172,6 +190,7 @@ if (method == "annealing") {
 
 # Perform the profile likelihood
 if (perform_pl) {
+    conditions = paste0(conditions, "+pl")
     profiles = profileLikelihood(model, nb_steps, nb_cores=min(cores, length(model$parameters)));
     model = addPLinfos(model, profiles);
     get_running_time(init_time, paste("to run the program with", nb_steps, "points for the profile likelihood."));
@@ -189,14 +208,19 @@ plotModelSimulation( model )
 dev.off()
 
 if (reduction) {
+    conditions = paste0(conditions, "+red")
 # Reduce the model and see what changed
     print("Reduction of the model...")
     reduced_model = selectMinimalModel(model)
 # Profile likelihood on the reduced model
-    reduced_profiles = profileLikelihood(reduced_model, nb_steps, nb_cores=min(cores, length(reduced_model$parameters)));
-    reduced_model = addPLinfos(reduced_model, reduced_profiles)
+    if (perform_pl) {
+        reduced_profiles = profileLikelihood(reduced_model, nb_steps, nb_cores=min(cores, length(reduced_model$parameters)));
+        reduced_model = addPLinfos(reduced_model, reduced_profiles)
+        if (perf_plots) {
+            niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
+        }
+    }
     exportModel(reduced_model, paste0(folder, "reduced_", conditions, ".mra"));
-    niplotPL(reduced_profiles, data_name=paste0("reduced_", data_name))
 # Plot the simulated conditions
     pdf(paste0(folder, "reduced_all_", conditions, ".pdf"))
     plotModelSimulation( reduced_model )
