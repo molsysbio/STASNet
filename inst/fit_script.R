@@ -210,10 +210,10 @@ dev.off()
 
 if (reduction) {
     conditions = paste0(conditions, "+red")
-# Reduce the model and see what changed
+    # Reduce the model and see what changed
     print("Reduction of the model...")
     reduced_model = selectMinimalModel(model)
-# Profile likelihood on the reduced model
+    # Profile likelihood on the reduced model
     if (perform_pl) {
         reduced_profiles = profileLikelihood(reduced_model, nb_steps, nb_cores=min(cores, length(reduced_model$parameters)));
         reduced_model = addPLinfos(reduced_model, reduced_profiles)
@@ -222,9 +222,17 @@ if (reduction) {
         }
     }
     exportModel(reduced_model, paste0(folder, "reduced_", conditions, ".mra"));
-# Plot the simulated conditions
+    # Plot the simulated conditions
     pdf(paste0(folder, "reduced_all_", conditions, ".pdf"))
     plotModelSimulation( reduced_model )
+    dev.off()
+
+    pdf(paste0(folder, "reduced_accuracy_", conditions, ".pdf"))
+    plotModelAccuracy(reduced_model)
+    plotModelScores(reduced_model, main=paste0("Global R = ", reduced_model$bestfitscore))
+    dev.off()
+    pdf(paste0(folder, "reduced_accuracy_", conditions, ".pdf"))
+    plotModelGraph(reduced_model)
     dev.off()
 
     get_running_time(init_time, "with the model reduction");
