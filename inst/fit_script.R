@@ -99,9 +99,9 @@ for (argument in cargs) {
     } else if (grepl("^--npc", argument)) {
         precorrelate = FALSE
     } else if (grepl("^-D", argument)) {
-        min_cv = as.numeric(gsub("^-D", "", argument))
+        default_cv = as.numeric(gsub("^-D", "", argument))
     } else if (grepl("^-M", argument)) {
-        default_cv = as.numeric(gsub("^-M", "", argument))
+        min_cv = as.numeric(gsub("^-M", "", argument))
     } else if (grepl("^-u", argument)) {
         argument = gsub("^-u", "", argument)
         argument = gsub("\"", "", argument)
