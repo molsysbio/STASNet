@@ -56,13 +56,13 @@ compareModels <- function(files) {
 #' @return An MRAmodelSet object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c()) {
+MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c(), min_cv=0.1, default_cv=0.3) {
     if (length(name) != nb_models) {
         name = rep(name[1], nb_models)
     }
 
     # An MRAmodelSet is an MRAmodel
-    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations)
+    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations, min_cv, default_cv)
     # With some extra attributes
     class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models

@@ -51,3 +51,4 @@ test_that("createModel works with R objects", {
 test_that("createModelSet works with R objects", {
     expect_silent( suppressMessages(createModelSet(dumb_structure, dumb_activity, list(m1=dumb_midas, m2=dumb_midas), list(m1=dumb_variation, m2=dumb_variation), model_name=c("m1", "m2"), inits=10)) )
 })
+

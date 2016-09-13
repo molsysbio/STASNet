@@ -129,13 +129,8 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   }
   
   # Information required to run the model (including the model itself)
-  infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links), fit_info)
-  if (is.string(data.stimulation)) {
-    model_name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(data.stimulation)))
-  } else {
-    model_name = model_name
-  }
-  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
+  infos = generate_infos(data.stimulation, inits, sort(residuals)[1:5], method, model_links, model_name, fit_info)
+  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=infos$name, infos=infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv = DEFAULT_CV)
   message(paste("Residual score =", model_description$bestfitscore))
   
   return(model_description)
@@ -205,14 +200,9 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   parameters = results$params[bestid,]
   bestfit = results$residuals[bestid]
   
-  infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-  if (is.character(csv_files)) {
-    names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
-  } else {
-    names = model_name
-  }
-  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
-  # param_range, lower_values, upper_values)
+  infos = generate_infos(csv_files, inits, sort(results$residuals)[1:5], method, model_links, model_name)
+  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV)
+  # param_range, lower_values, upper_values defined using profile likelihood
   return(self)
 }
 
@@ -250,12 +240,16 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
     
     bestres = min(unlist(psets["residuals",]))
     deltares = modelset$bestfit - bestres
-    if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+    df1 = modelset$nb_models-1 # Extra parameters
+    data_count = sum(!is.na(modelset$data$stim_data) & !is.nan(modelset$data$stim_data))
+    df2 = data_count - (length(modelset$parameters) + df1) # Degrees of freedom of the augmented model
+    f_score = (deltares/df1) / (bestres/df2)
+    if (f_score > qf(accuracy, df1, df2)) {
       res_id = which.min(unlist(psets["residuals",]))
       par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
       new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
       
-      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pchisq(deltares, df=modelset$nb_models),2) ))
+      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pf(f_score, df1, df2),2) ))
       writeLines(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
       writeLines(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
        
@@ -1052,9 +1046,9 @@ rebuildModel <- function(model_file, data_file, var_file="") {
   }
   model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
-  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts)
+  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
   return(model)
 }
