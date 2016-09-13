@@ -74,7 +74,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   model$setModel(expdes, model_structure)
   
   # INITIAL FIT
-  results <- initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
+  results = initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
   
   # Choice of the best fit
   params = results$params
@@ -305,6 +305,9 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
 #' @return A list with the initialisation results
 #' @family Model initialisation
 initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
+  if (inits <= 0) {
+    stop("Number of initialisations must be a positive integer")
+  }
   expdes = core$design
   data = core$data
   # Parallelized version uses all cores but one to keep control

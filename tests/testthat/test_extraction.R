@@ -52,3 +52,13 @@ test_that("createModelSet works with R objects", {
     expect_silent( suppressMessages(createModelSet(dumb_structure, dumb_activity, list(m1=dumb_midas, m2=dumb_midas), list(m1=dumb_variation, m2=dumb_variation), model_name=c("m1", "m2"), inits=10)) )
 })
 
+
+context("Limit cases for createModel")
+
+test_that("Limit cases work", {
+    expect_error(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=0)), "Number of initialisations") # No initialisation
+    expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=1))) # Only one initialisation
+    expect_error(suppressMessages(createModel(dumb_activity, dumb_midas, inits=10))) # Argument forgotten
+    expect_error(suppressMessages(createModel(dumb_activity, dumb_structure,dumb_midas, inits=10))) # Arguments inverted
+})
+
