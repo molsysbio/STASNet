@@ -35,30 +35,92 @@ test_that("extractBasalActivity behaves as expected", {
 })
 
 context("Model creation with R objects")
-
 dumb_midas[,1] = c("c", "t", "t", "t", "t")
 dumb_midas[,c(2,3)] = cbind(c(0,1,1,0,0), c(0,0,1,0,1)) # Perturbations
 dumb_midas[,c(5,6)] = cbind(c(1, 2, 1.5, 1, 0.5), c(1, 4, 2, 1, 0.5))
 no_control_midas = dumb_midas[-1,]
+no_perturbations_midas = dumb_midas[,c(-2, -3)]
 dumb_variation = dumb_midas
 dumb_variation[,c(5,6)] = 0.1
 test_that("createModel works with R objects", {
     expect_silent( suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, dumb_variation, inits=10)) ) # With error model
     expect_silent( suppressMessages(createModel(dumb_structure, dumb_midas, dumb_variation, inits=10)) ) # Without error model
     expect_error(createModel(dumb_structure, dumb_activity, no_control_midas, inits=10)) # Missing control data
+    expect_error(createModel(dumb_structure, dumb_activity, no_perturbations_midas, inits=10)) # Missing perturabtion
 })
 
 test_that("createModelSet works with R objects", {
     expect_silent( suppressMessages(createModelSet(dumb_structure, dumb_activity, list(m1=dumb_midas, m2=dumb_midas), list(m1=dumb_variation, m2=dumb_variation), model_name=c("m1", "m2"), inits=10)) )
 })
 
-
 context("Limit cases for createModel")
 
-test_that("Limit cases work", {
+test_that("Limit cases number of initialisations behave as expected", {
     expect_error(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=0)), "Number of initialisations") # No initialisation
-    expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=1))) # Only one initialisation
+    #expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=1))) # Only one initialisation
+})
+test_that("Misused arguments raise error", {
     expect_error(suppressMessages(createModel(dumb_activity, dumb_midas, inits=10))) # Argument forgotten
-    expect_error(suppressMessages(createModel(dumb_activity, dumb_structure,dumb_midas, inits=10))) # Arguments inverted
+    expect_error(suppressMessages(createModel(dumb_activity, dumb_structure, dumb_midas, inits=10))) # Arguments inverted
 })
 
+context("No inhibition or simulations")
+
+only_stim = dumb_midas[, -3]
+only_inhib = dumb_midas[, -2]
+test_that("Only inhibitions works", {
+    expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_inhib, inits=1)))
+})
+test_that("Only inhibitions works in extractModelCore", {
+    expect_silent(extractModelCore(dumb_structure, dumb_activity, only_inhib))
+})
+test_that("Only stimulations works", {
+    expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_stim, inits=1)))
+})
+test_that("Deleting all inhibitions work", {
+    expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N2i")) ))
+})
+test_that("Deleting all stimulations work", {
+    expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N1")) ))
+})
+
+context("Model core data extraction")
+
+test_that("extractModelCore works as expected", {
+    expect_silent(suppressMessages(extractModelCore(dumb_structure, dumb_activity, dumb_midas)))
+})
+test_that("extractModelCore error when perturbations are missing", {
+    expect_error(suppressMessages(extractModelCore(dumb_structure, dumb_activity, no_perturbations_midas)))
+})
+
+context("Helper functions")
+
+alph=c("a", "b", "c", "d")
+num = 1:4
+combine = paste0(alph, num)
+test_df = data.frame(list(a=num, b=alph, c=alph), row.names=combine)
+
+print(test_df)
+print(sub_data_frame(test_df, 1)$a)
+print(data.frame(a=1, b="a", c="a", row.names=combine[1])$a)
+
+test_that("Select one row using sub_data_frame", {
+    expect_equal( sub_data_frame(test_df, 1), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
+#a=test_df$a[1], b=test_df$a[1], c=test_df$a[1] -> gives numbers
+#a=test_d[1,1], b=test_df[1,2], c=test_df[1,3] -> gives factors
+})
+test_that("Select one row by name with sub_data_frame", {
+    expect_equal( sub_data_frame(test_df, "a1"), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
+})
+test_that("Select several rows with sub_data_frame", {
+    expect_equal( sub_data_frame(test_df, c("a1", "c3")), test_df[c("a1", "c3"),] )
+})
+test_that("Select one colum using sub_data_frame", {
+    expect_equal( sub_data_frame(test_df, cols=1), data.frame(a=num, row.names=combine) )
+})
+test_that("Select one colum by name with sub_data_frame", {
+    expect_equal( sub_data_frame(test_df, cols="a"), data.frame(a=num, row.names=combine) )
+})
+test_that("Select several colum using sub_data_frame", {
+    expect_equal( sub_data_frame(test_df, cols=c("a", "b")), test_df[, c("a", "b")] )
+})

@@ -865,21 +865,26 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 #' Extracts the data, the experimental design and the structure from the input files
 #' @param model_structure Matrix of links [node1, node2]
 #' @param basal_activity The node of the structure with a basal activity
-#' @param data_filename Experimental data under the MIDAS format. See extractMIDAS.
+#' @param datas Experimental data under the MIDAS format. See extractMIDAS.
 #' @param var_file Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.
 #' @param dont_perturb Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
 #' @seealso \code{\link{extractMIDAS}}
-extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
+extractModelCore <- function(model_structure, basal_activity, datas, var_file="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
 
+  model_structure = extractStructure(model_structure)
+  basal_activity = extractBasalActivity(basal_activity)
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
-  data_file = extractMIDAS(data_filename)
+  data_file = extractMIDAS(datas)
   data_values = data_file[,grepl("DV.", colnames(data_file))]
   colnames(data_values) = gsub("^[A-Z]{2}.", "", colnames(data_values))
   not_included = colnames(data_values)[!(colnames(data_values) %in% model_structure$names)]
-  perturbations = data_file[,grepl("TR.", colnames(data_file))]
+  perturbations = sub_data_frame(data_file, cols=grepl("TR.", colnames(data_file)))
+  if (ncol(perturbations) == 0) {
+    stop("Perturbation informations are required")
+  }
   colnames(perturbations) = gsub("^[A-Z]{2}.", "", colnames(perturbations))
   not_perturbable = colnames(perturbations)[!(colnames(perturbations)%in%vpert)]
   id_colums = grepl("ID.type", colnames(data_file))
@@ -917,7 +922,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     }
     not_perturbable = c(not_perturbable, dont_perturb)
     rm_rows = unique(unlist(sapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
-    perturbations = perturbations[,-which(colnames(perturbations)%in%not_perturbable)]
+    perturbations = sub_data_frame(perturbations, cols=-which(colnames(perturbations)%in%not_perturbable))
   }
 
   # Means of basal activity of the network and of the blank fixation of the antibodies
@@ -938,7 +943,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   rm_rows = c(rm_rows, controls, blanks) # Delete the perturbations that cannot be used with the blank and controls from the dataset
   if (length(rm_rows) > 0) {
     data_values = data_values[-rm_rows,]
-    perturbations = perturbations[-rm_rows,]
+    perturbations = sub_data_frame(perturbations, -rm_rows)
   }
 
   # Compute the mean and standard deviation of the data
@@ -1001,15 +1006,23 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   data$set_error( as.matrix( error ))
 
   # Extract experimental design
-  perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations))]
+  perturbations = sub_data_frame(aggregate(perturbations, by=perturbations, max, na.rm=T), cols=-(1:ncol(perturbations)))
   names = colnames(perturbations)
   stim_names = names[grepl("[^i]$", names)]
   stim_nodes = as.character( stim_names[ stim_names %in% model_structure$names] )
   names = gsub("i$", "", names[grepl("i$", names)])
   inhib_nodes = as.character( names[names %in% model_structure$names] )
 
-  stimuli = as.matrix(perturbations[,stim_nodes])
-  inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep="")])
+  if (length(stim_nodes) > 0) {
+    stimuli = as.matrix(perturbations[,stim_nodes])
+  } else {
+    stimuli = matrix(NA, ncol=0, nrow=nrow(perturbations))
+  }
+  if (length(inhib_nodes) > 0) {
+    inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep="")])
+  } else {
+    inhibitor = matrix(NA, ncol=0, nrow=nrow(perturbations))
+  }
   if (verbose > 3) {
     message("Stimulated nodes")
     message(stimuli)
