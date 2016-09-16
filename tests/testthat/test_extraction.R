@@ -28,9 +28,16 @@ test_that("extractMIDAS behaves as expected", {
 })
 
 dumb_activity = c("N1", "N2")
-test_that("extractBasalActivity behaves as expected", {
+test_that("extractBasalActivity works with a vector", {
     expect_equal(extractBasalActivity(dumb_activity), dumb_activity)
+})
+test_that("extractBasalActivity works with a filename", {
     expect_equal(extractBasalActivity("dumb_basal.dat"), dumb_activity)
+})
+test_that("extractBasalActivity works with empty string", {
+    expect_equal(extractBasalActivity(""), c(""))
+})
+test_that("extractBasalActivity raise an error for non existing files", {
     suppressWarnings(expect_error(extractBasalActivity("does_not_exist"), "cannot open the connection"))
 })
 

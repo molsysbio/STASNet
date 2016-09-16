@@ -715,7 +715,7 @@ extractStructure <- function(to_detect, names="") {
 #' @export
 # TODO extraction of the basal activity with different format
 extractBasalActivity <- function(to_detect) {
-  if (is.string(to_detect)) {
+  if (is.string(to_detect) && to_detect != "") {
     return(as.character(read.delim(to_detect,header=FALSE)[,1]))
     #unlist(read.delim(to_detect,header = F,colClasses = "character"))
   } else {
