@@ -320,7 +320,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   deltares = init_residual-result$residuals
   data_count = sum(!is.na(data$stim_data) & !is.nan(data$stim_data))
   dfreedom = data_count - length(result$parameters)
-  f_score (deltares/dr) / (result$residuals/dfreedom)
+  f_score = (deltares/dr) / (result$residuals/dfreedom)
   extension_mat = matrix(c(new_link,
                            model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
                            model_structure$names[(new_link-1) %% dim(adj)[1]+1],

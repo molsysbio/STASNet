@@ -17,6 +17,7 @@ get_running_time <- function(init_time, text="") {
 # Takes relative paths as arguments in the order network data basal
 
 reduction = FALSE
+extension = FALSE
 perform_pl = FALSE
 perf_plots = TRUE
 
@@ -50,6 +51,7 @@ for (argument in cargs) {
         message("    -i<int>                      Number of initialisations")
         message("    -c<int>                      Maximum of cores to use (0 for auto-detection)")
         message("    --mr | --reduce              Apply model reduction")
+        message("    --ext | --extension          Compute possible extensions to the network")
         message("    -m<string>                   Method to apply for the initialisation")
         message("    --nopl                       Disable profile likelihood")
         message("    -s<int>                      Number of steps for the profile likelihood")
@@ -93,6 +95,8 @@ for (argument in cargs) {
         }
     } else if (grepl("^--mr$", argument) || grepl("^--reduce$", argument)) {
         reduction = TRUE
+    } else if (grepl("^--ext$", argument) || grepl("^--extension$", argument)) {
+        extension = TRUE
     } else if (grepl("^-m", argument)) {
         method = gsub("^-m", "", argument)
     } else if (argument == "--pl") {
@@ -236,6 +240,11 @@ if (reduction) {
     dev.off()
 
     get_running_time(init_time, "with the model reduction");
+}
+
+if (extension) {
+    sug_ext = suggestExtension(model, T, cores)
+    write.table(sug_ext, paste0(folder, "extension_", conditions, ".csv"), row.names=FALSE)
 }
 
 print("Finished")

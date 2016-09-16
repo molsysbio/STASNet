@@ -96,4 +96,9 @@ test_that("The reduced chi score is computed correctly", {
     expect_equal(computeReducedChiScore(incomplete_model)$reducedChi, 5)
 })
 
+context("Model extension")
+
+test_that("The extension function works withtout bugs", {
+    expect_output(suggestExtension(model, T, 8), "")
+})
 
