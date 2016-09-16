@@ -100,10 +100,6 @@ num = 1:4
 combine = paste0(alph, num)
 test_df = data.frame(list(a=num, b=alph, c=alph), row.names=combine)
 
-print(test_df)
-print(sub_data_frame(test_df, 1)$a)
-print(data.frame(a=1, b="a", c="a", row.names=combine[1])$a)
-
 test_that("Select one row using sub_data_frame", {
     expect_equal( sub_data_frame(test_df, 1), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
 #a=test_df$a[1], b=test_df$a[1], c=test_df$a[1] -> gives numbers
