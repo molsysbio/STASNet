@@ -231,7 +231,7 @@ if (reduction) {
     plotModelAccuracy(reduced_model)
     plotModelScores(reduced_model, main=paste0("Global R = ", reduced_model$bestfitscore))
     dev.off()
-    pdf(paste0(folder, "reduced_accuracy_", conditions, ".pdf"))
+    pdf(paste0(folder, "reduced_graph_", conditions, ".pdf"))
     plotModelGraph(reduced_model)
     dev.off()
 
