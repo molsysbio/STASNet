@@ -3,6 +3,7 @@
 
 # Hidden from the R installer but with the other scripts from the package
 
+#out = capture.output(try({
 library("STASNet")
 
 # Print the time it took in a readable format
@@ -11,7 +12,7 @@ get_running_time <- function(init_time, text="") {
     run_hours = run_time %/% 3600;
     run_minutes = (run_time - 3600 * run_hours) %/% 60;
     run_seconds = run_time - 3600 * run_hours - 60 * run_minutes;
-    print(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
+    message(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
 }
 
 # Create a model from the data and fit a minimal model
@@ -187,3 +188,5 @@ print("Finished")
 # Display the warnings if there are some
 warnings()
 
+#}), type="message")
+#print(out)

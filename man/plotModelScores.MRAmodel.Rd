@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{mra_model}{An MRAmodel object}
+
+\item{...}{Extra barplot parameters}
 }
 \description{
 Plot the scores of the fit for each antibody, which is how much
@@ -15,5 +17,11 @@ of the variation in the data is explained by the model
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
+}
+\seealso{
+Other Model plots: \code{\link{plotModelAccuracy}},
+  \code{\link{plotModelGraph}},
+  \code{\link{plotModelScores}},
+  \code{\link{plotParameters.modelGroup}}
 }
 

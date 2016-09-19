@@ -16,7 +16,7 @@ For a complete list of functions and classes, use 'library(help=fitmodel)'.
 For a walk-through as to how the package can be used to fit a model, see the vignette.
 }
 \author{
-Bertram Klinger \email{bertram.klinger@charite.de}, Mathurin Dorel \email{dorel@horus.ens.fr}, Nils Blüthgen \email{nils.bluethgen@charite.de}
+Bertram Klinger \email{bertram.klinger@charite.de}, Mathurin Dorel \email{dorel@horus.ens.fr}, Nils Bluethgen \email{nils.bluethgen@charite.de}
 }
 \references{
 Klinger et al. (2013) Network quantification of EGFR signaling unveils potential for targeted combination therapy. Molecular Systems Biology.

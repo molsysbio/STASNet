@@ -12,6 +12,8 @@ addLink(new_link, adj, rank, init_residual, model, initial_response, expdes,
 
 \item{adj}{integer matrix original adjacency matrix excluding the new_link}
 
+\item{rank}{Rank of the input model}
+
 \item{init_residual}{numeric sum-squared error of original network}
 
 \item{model}{MRAmodel object of original network}
@@ -25,6 +27,8 @@ addLink(new_link, adj, rank, init_residual, model, initial_response, expdes,
 \item{model_structure}{structure object of MRAmodel object}
 
 \item{sample}{numeric vector containing all starting values for new_link}
+
+\item{verbose}{Whether the function should be verbose or not}
 }
 \description{
 add Link routine

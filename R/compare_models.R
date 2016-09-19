@@ -65,15 +65,18 @@ plotResiduals <- function(model_group) {
 #' Plot the fitting scores of the model
 #'
 #' Generic function to plot scores for measured nodes fitting
+#' @param x A Model object
+#' @param ... Passed to base::barplot
 #' @export
 #' @seealso plotScores.modelGroup, plotScores.MRAmodel
+#' @family Model plots
 plotModelScores <- function(x, ...) { UseMethod("plotModelScores", x) }
 #' Plot the measurement scores for a group of models
 #'
 #' Plot the scores for each measured node fitting as a barplot with a bar for each model for each measurement
 #' @param model_group A modelGroup object
 #' @param ... Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements
-#' @return See barplot
+#' @return See \code{\link{base::barplot}}
 #' @export
 plotModelScores.modelGroup <- function(model_group, ...) {
     table = c()
@@ -86,15 +89,17 @@ plotModelScores.modelGroup <- function(model_group, ...) {
 #' Plot parameters
 #'
 #' Generic function to plot parameters
+#' @param x A Model object
+#' @param ... Plot parameters
 #' @export
 #' @seealso plotParameters.modelGroup
 plotParameters <- function(x, ...) { UseMethod("plotParameters", x) }
 #' Plot the parameters of the models
 #'
 #' Plot the parameters fitted for each model as an heatmap
+#' @param model_group A modelGroup object
 #' @export
-#' @param model_group Object of class modelGroup
-#' @export
+#' @family Model plots
 plotParameters.modelGroup <- function(model_group) {
     all_links = model_group$links
     param_matrix = c()

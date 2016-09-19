@@ -5,7 +5,7 @@ date: "`r Sys.Date()`"
 output: 
     html_vignette:
         toc: yes
-        toc_depth: 2
+        toc_depth: 3
         theme: united
 vignette: >
   %\VignetteIndexEntry{Using the STASNet package}
@@ -49,31 +49,69 @@ system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
 ```
 ![Use diagram](use_diagram.png)
 
-3 August 2016
-
 Loading the library:
 ```{r}
 library(STASNet)
 ```
 
+## Test dataset
+```{r, eval=T}
+# Structure as adjacency list
+structure = rbind(c("N1", "N2"), c("N2", "N3"), c("N2", "N5"), c("N5", "N4"), c("N3", "N4"))
+basal = c("N1", "N2", "N3", "N4", "N5")
+midas_data = as.data.frame(matrix(0, nrow=4, ncol=7,
+    dimnames=list(NULL, c("ID:type", "TR:N1", "TR:N2i", "DA:ALL", "DV:N2", "DV:N3", "DV:N4"))))
+midas_data[,1] = c("c", "t", "t", "t") # Type of experiment
+midas_data[,c(2,3)] = cbind(c(0,1,1,0), c(0,0,1,1)) # Perturbations
+midas_data[,c(5:7)] = cbind(c(1, 2, 2, 1), c(1, 2, 1.4, 0.7), c(1, 4, 2, 0.5)) # Experimental values
+print(midas_data)
+```
+
 ## Creation of the model
 
-Create the model using the data and the network layout as previous knowledge, both provided as file names.
+Create the model using the data and the network layout as previous knowledge.
+
 NOTE: Depending on the number of initialisations ('inits') and the size of the network it is possible that
 the global optimum is not reached. Results can thus vary between runs of createModel for big network with an
 insufficient number of initialisations.
 
-```{r, eval=T}
-setwd(system.file("extdata", package="STASNet"))
-model = createModel("network.tab", "basal.dat", "HCT116_MIDAS.csv", inits=10, perform_plots=T,
-                    method="randomlhs");
+
+```{r}
+#setwd(system.file("extdata", package="STASNet"))
+#model = createModel("network.tab", "basal.dat", "HCT116_MIDAS.csv", inits=100, perform_plots=T,
+#                    method="randomlhs");
+model = createModel(structure, basal, midas_data, inits=100)
+```
+```{r, echo=F}
+#TODO: replace the HCT116 dataset with the trimed dataset used in the package
 ```
 
-Evaluate how the simulation compares to the data
+We can then visualise the resulting network. Be aware that the fitted values are paths and not directly link,
+thus the values displayed on a link should not be taken as is (use printParameters to get the actual paths).
+
+```{r}
+printParameters(model)
+plotModelGraph(model)
+```
+
+We can the evaluate how the simulation compares to the data.
 
 ```{r}
 plotModelAccuracy(model)
 plotModelScores(model)
 simulation = plotModelSimulation(model, "all", "all")
 print(simulation)
+```
+
+## Creation of a Model set
+
+A model set is a join fitting of several dataset with the same model and some links varying independently between models.
+
+```{r, eval=F}
+mset = createModelSet("network.tab", "basal.tab", c("Widr_"))
+```
+
+
+```{r, eval=F}
+mset = addVariableParameters(mset)
 ```

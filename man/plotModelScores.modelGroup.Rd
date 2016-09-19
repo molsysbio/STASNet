@@ -12,7 +12,7 @@
 \item{...}{Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements}
 }
 \value{
-See barplot
+See \code{\link{base::barplot}}
 }
 \description{
 Plot the scores for each measured node fitting as a barplot with a bar for each model for each measurement

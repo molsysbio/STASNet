@@ -26,6 +26,7 @@ Get the target simulations in a MIDAS design-like or list format
 Simulate a model for a specified set of perturbation
 }
 \seealso{
-\code{\link{getCombinationMatrix}}
+Other simulation: \code{\link{getCombinationMatrix}},
+  \code{\link{plotSimulation}}
 }
 

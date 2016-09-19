@@ -6,10 +6,20 @@
 \usage{
 plotModelScores(x, ...)
 }
+\arguments{
+\item{x}{A Model object}
+
+\item{...}{Passed to base::barplot}
+}
 \description{
 Generic function to plot scores for measured nodes fitting
 }
 \seealso{
 plotScores.modelGroup, plotScores.MRAmodel
+
+Other Model plots: \code{\link{plotModelAccuracy}},
+  \code{\link{plotModelGraph}},
+  \code{\link{plotModelScores.MRAmodel}},
+  \code{\link{plotParameters.modelGroup}}
 }
 

@@ -9,11 +9,21 @@ pastetab <- function(...) {
     return(paste(..., sep="\t"))
 }
 
+# Helper function to determine if an object is a string
+is.string <- function(x) {
+    if (is.character(x) && length(x) == 1) {
+        return(TRUE)
+    } else {
+        return(FALSE)
+    }
+}
+
 #' Exports the model in a file 
 #'
 #' Export an MRAmodel object in a .mra file
 #' @param model_description An MRAmodel object
 #' @param file_name Name of the output file
+#' @param export_data Whether the CVs should be incorporated to the .mra file or not
 #' @return Nothing
 #' @export
 #' @seealso importModel, rebuildModel
@@ -212,10 +222,10 @@ importModel <- function(file_name) {
     }
 #    else if (grepl("[Aa](djacency|DJACENCY)", file[lnb])) { # Adjacency list
 #        lnb = lnb + 1
-#        print("Adjacency list not implemented yet")
+#        message("Adjacency list not implemented yet")
 #    } else { # List of links
 #        if (grepl("list|LIST", file[lnb])) { lnb = lnb + 1; }
-#        print("Link list not implemented yet")
+#        message("Link list not implemented yet")
 #        while (grepl("^L", file[lnb])) {
 #            line = gsub("^L( |\t)", "", file[lnb])
 #            line = unlist(strsplit(line, " |\t"))
@@ -350,9 +360,7 @@ importModel <- function(file_name) {
 #' @export
 readMIDAS <- function(fname) {
     data_file = read.delim(fname, sep=",")
-    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS file, the mandatory 'DV' field is missing") }
-    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS file or the field 'ID:type' is missing") }
-    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS file, the mandatory 'TR' field is missing") }
+    checkMIDAS(data_file)
 
     measures = data.matrix(data_file[grepl("^DV", colnames(data_file))])
     treatments = data.matrix(data_file[grepl("^TR", colnames(data_file))])
@@ -362,5 +370,10 @@ readMIDAS <- function(fname) {
     colnames(measures) = gsub("DV.", "", colnames(measures))
 
     return(measures)
+}
+checkMIDAS <- function(data_file) {
+    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'DV' field is missing") }
+    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS data or the field 'ID:type' is missing") }
+    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'TR' field is missing") }
 }
 

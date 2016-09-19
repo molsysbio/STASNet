@@ -16,14 +16,14 @@ profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
 
     init_params = model_description$parameters
     init_residual = model_description$bestfit
-    print(paste(length(init_params), " paths to evaluate"))
+    message(paste(length(init_params), " paths to evaluate"))
 
     profiles = parallelPL(model, data, init_params, nb_points, nb_cores)
 
     # Print results
-    print(paste("Residual =", init_residual))
-    print(paste("Residual score =", model_description$bestfitscore))
-    print_error_intervals(profiles)
+    message(paste("Residual =", init_residual))
+    message(paste("Residual score =", model_description$bestfitscore))
+    message_error_intervals(profiles)
 
     return(profiles)
 }
@@ -34,7 +34,7 @@ parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
         NB_CORES = detectCores()-1
     }
 
-    profiles = mclapply(seq(length(init_params)), function(path, model, data, init_params) { profile = model$profileLikelihood(data, init_params, path, nb_points) ; print(paste0("Parameter ", path, "/", length(init_params), " decided")) ; return(profile) }, model, data, init_params, mc.cores=NB_CORES )
+    profiles = mclapply(seq(length(init_params)), function(path, model, data, init_params) { profile = model$profileLikelihood(data, init_params, path, nb_points) ; message(paste0("Parameter ", path, "/", length(init_params), " decided")) ; return(profile) }, model, data, init_params, mc.cores=NB_CORES )
     for (path in 1:length(init_params)) {
         # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
         # TODO : Integrate in the plot, not here
@@ -108,13 +108,13 @@ print_error_intervals <- function(profiles) {
 
         # Print differently if there is non identifiability
         if (profiles[[i]]$lower_pointwise && profiles[[i]]$upper_pointwise) {
-            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(", profiles[[i]]$explored[lidx], "-", profiles[[i]]$explored[hidx], ")"))
+            message(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(", profiles[[i]]$explored[lidx], "-", profiles[[i]]$explored[hidx], ")"))
         } else if (profiles[[i]]$lower_pointwise) {
-            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(", profiles[[i]]$explored[lidx], "- ni )"))
+            message(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(", profiles[[i]]$explored[lidx], "- ni )"))
         } else if (profiles[[i]]$upper_pointwise) {
-            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "( ni -", profiles[[i]]$explored[hidx], ")"))
+            message(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "( ni -", profiles[[i]]$explored[hidx], ")"))
         } else {
-            print(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(non identifiable)"))
+            message(paste( profiles[[i]]$path, "=", profiles[[i]]$value, "(non identifiable)"))
         }
     }
 }
@@ -171,14 +171,14 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
         residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[2]
         profile$residuals[ profile$pathid, profile$residuals[profile$pathid,] > residual_limit ] = residual_limit
     }
-    # Sort the profiles to print differently whether they are identifiable or not
+    # Sort the profiles to output differently whether they are identifiable or not
     sorted_profiles = classify_profiles(profiles)
     i_profiles = sorted_profiles[[1]]
     ni_profiles = sorted_profiles[[2]]
 
 # Non identifiables
     nbni = length(ni_profiles)
-    print(paste(nbni, "non identifiable paths"))
+    message(paste(nbni, "non identifiable paths"))
     # Compute the dimension, minimal size if there are not enough non identifiables
     if (nbni > 3) {
         dimension = 2 * nbni + 1
@@ -209,10 +209,10 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
                 else {
                     limy = range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], na.rm=T)
                 }
-                #print (limy)
+                #message (limy)
                 ### Modification of limy if it reaches Inf, should not have to be done
-                if (!is.finite(limy[1]) ) {limy[1] = 0; print(paste("Error in low lim value :", ni_profiles[[ni]]$thresholds[2]))}
-                if (!is.finite(limy[2]) ) {limy[2] = 10000; print(paste("Error in high lim value :", ni_profiles[[ni]]$thresholds[2]))}
+                if (!is.finite(limy[1]) ) {limy[1] = 0; message(paste("Error in low lim value :", ni_profiles[[ni]]$thresholds[2]))}
+                if (!is.finite(limy[2]) ) {limy[2] = 10000; message(paste("Error in high lim value :", ni_profiles[[ni]]$thresholds[2]))}
                 
                 plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1, ylim = limy)
                 # Print labels on the right and bottom
@@ -226,13 +226,13 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
                     lines( rep(ni_profiles[[ni]]$value, 2), c( pl_range[1]-0.1*(pl_range[1]-ni_profiles[[ni]]$threshold[1]), pl_range[1]+0.1*(pl_range[1]-ni_profiles[[ni]]$threshold[1]) ), col="red")
                 }
             }
-            print(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"))
+            message(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"))
         }
     }
 
 # Identifiables
     nbid = length(i_profiles)
-    print(paste(nbid, "identifiable paths"))
+    message(paste(nbid, "identifiable paths"))
     par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) )
     if (nbid > 0) {
         for (id in 1:nbid) {
@@ -251,7 +251,7 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
                 }
             }
             title (main=i_profiles[[id]]$path, outer=T)
-            print(paste("Identifiable path", i_profiles[[id]]$path, "plotted") )
+            message(paste("Identifiable path", i_profiles[[id]]$path, "plotted") )
         }
     }
 
@@ -274,7 +274,7 @@ classify_profiles <- function (profiles) {
         }
     }
     sorted_profiles = list(i_profiles, ni_profiles)
-    print("Profiles sorted")
+    message("Profiles sorted")
     return(sorted_profiles)
 }
 

@@ -2,8 +2,7 @@
 % Please edit documentation in R/create_model.R
 \name{rebuildModel}
 \alias{rebuildModel}
-\title{Build a fitted model from a .mra file, and import data for this model
-Does NOT perform any initialisation}
+\title{Import a save model with data files}
 \usage{
 rebuildModel(model_file, data_file, var_file = "")
 }
@@ -22,7 +21,9 @@ Build a fitted model from a .mra file, and import data for this model
 Does NOT perform any initialisation
 }
 \examples{
+\dontrun{
 rebuildModel("model.mra", "data.csv", "data.var")
+}
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

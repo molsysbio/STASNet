@@ -32,11 +32,13 @@ MRAmodel(model, design, structure, basal = matrix(), data = matrix(),
 
 \item{param_range}{Alternative parameters sets for the model}
 
+\item{lower_values}{Lower bound on the values of the parameters}
+
 \item{upper_values}{Upper bound on the values of the parameters}
 
-\item{basefit}{The chi-2 value associated with the raw data (no fit)}
+\item{unused_perturbations}{Perturbations from the data file that have not been used for the fitting}
 
-\item{lower_value}{Lower bound on the values of the parameters}
+\item{unused_readouts}{Readouts from the data file that have not been used for the fitting}
 }
 \value{
 An MRAmodel object

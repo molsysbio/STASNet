@@ -27,11 +27,12 @@ extern bool debug;
 
 ModelStructure::ModelStructure() : names(), adjacencymatrix() {} 
 
-ModelStructure::ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2) : names(), adjacencymatrix() {
+ModelStructure::ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2, std::string title) : names(), adjacencymatrix(), title(title) {
   set(names1,names2);
 } 
 
 std::vector<std::string> ModelStructure::getNames() const { return names ; }
+std::string ModelStructure::getTitle() const { return title ; }
   
 const int_matrix &ModelStructure::getAdjacencyMatrix() const { return adjacencymatrix ; }
 const int_matrix &ModelStructure::getRidx() const { return r_idx ; }
@@ -140,11 +141,12 @@ RCPP_MODULE(ModelStructureEx){
 
     class_<ModelStructure>( "ModelStructure" )
       .default_constructor()
-      .constructor<std::vector<std::string>,std::vector<std::string> >()
+      .constructor<std::vector<std::string>,std::vector<std::string>, std::string >()
       .method( "set", &ModelStructure::set )
       .property( "adjacencyMatrix", &ModelStructure::getAdjacencyMatrix )
       .method("setAdjacencyMatrix", &ModelStructure::setAdjacencyMatrix )
       .property( "names", &ModelStructure::getNames, "Names" )
+      .property( "title", &ModelStructure::getTitle, "Title" )
       ;
 }
 

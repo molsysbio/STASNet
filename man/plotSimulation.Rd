@@ -12,8 +12,6 @@ plotSimulation(prediction, log_axis = F)
 \item{prediction}{A list of the model predictions as produced by \link{simulateModel}}
 
 \item{log_axis}{Boolean, whether the ordinate axis should be in log scale}
-
-\item{maxPlotsPerFrame}{Maximum number of perturbation per frame}
 }
 \value{
 Invisibly, the matrix of the results of the simulation
@@ -28,5 +26,8 @@ Mathurin Dorel \email{mathurin.dorel@charite.de}
 }
 \seealso{
 getCombinationMatrix, simulateModel
+
+Other simulation: \code{\link{getCombinationMatrix}},
+  \code{\link{simulateModel}}
 }
 

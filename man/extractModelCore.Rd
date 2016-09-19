@@ -5,23 +5,30 @@
 \title{Extracts the data, the experimental design and the structure from the input files}
 \usage{
 extractModelCore(model_structure, basal_activity, data_filename,
-  var_file = "", dont_perturb = c(), dont_read = c())
+  var_file = "", dont_perturb = c(), dont_read = c(), MIN_CV = 0.1,
+  DEFAULT_CV = 0.3)
 }
 \arguments{
 \item{model_structure}{Matrix of links [node1, node2]}
 
-\item{data_filename}{Experimental data file name. Should be as follows, with one line per replicate:
+\item{basal_activity}{The node of the structure with a basal activity}
 
-         stimulator                |          inhibitor                |                         type                       | [one column per measured nodes]
+\item{data_filename}{Experimental data under the MIDAS format. See extractMIDAS.}
 
--------------------------------------------------------------------------------------------------------------------------------------------------------------
-stimulator name or solvant if none | inhibitor name or solvant if none | c for control, b for blank and t for experiment |    measure for the condition}
+\item{var_file}{Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.}
 
 \item{dont_perturb}{Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)}
 
-\item{dont_perturb}{Readouts to be removed for the fit, will not be used nor simulated. (vector of names)}
+\item{dont_read}{Readouts to be removed for the fit, will not be used nor simulated. (vector of names)}
+
+\item{MIN_CV}{Minimum coefficient of variation.}
+
+\item{DEFAULT_CV}{Default coefficient of variation to use when none is provided and there are no replicated in the data.}
 }
 \description{
 Extracts the data, the experimental design and the structure from the input files
+}
+\seealso{
+\code{\link{extractMIDAS}}
 }
 

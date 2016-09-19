@@ -2,20 +2,28 @@
 % Please edit documentation in R/model_manipulation.R
 \name{printParameters}
 \alias{printParameters}
-\title{Print the value of each path from the model, with the profile likelihood infos if they are provided}
+\title{Print the value of the parameters of the model}
 \usage{
 printParameters(model_description, precision = 2)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
+
+\item{precision}{Number of significant digits to print}
 }
 \value{
 Nothing
 }
 \description{
-Print the value of each path from the model, with the profile likelihood infos if they are provided
+Print the value of each path from the model, with the profile likelihood infos if they are provided.
+}
+\details{
+The print function is 'message' and thus produces an output in stderr
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
+}
+\seealso{
+\code{\link{message}}
 }
 

@@ -1,19 +1,27 @@
 ############################ model_set.R ################################
 # The MRAmodelSet object, to fit multiple dataset on the same network
 
-#' Import multiple files 
+#' Import multiple files to create a group of models
+#' @param model_links An adjacency matrix
 #' @param data_list Name of the file containing the list of the files for the data without the extension
+#' @param basal_file File with basal activity
+#' @param cores Number of cores to use
+#' @param inits Number of inits to do
+#' @param init_distribution Whether the initial distribution should be plotted
+#' @param method The LHs method to use
 createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=1000, init_distribution=F, method="default") {
     files = unique(gsub("\\..*$", "", readLines(data_list)))
     folder_files = dir()
     model_set = list()
     model_set[[length(files)]] = ""
+    ii = 1
     for (file in files) {
         if (paste0(file, ".var") %in% folder_files) {
-            model_set[[i]] = create_model(model_links, paste0(file, ".csv"), basal_file, paste0(file, ".var"), cores, inits, init_distribution, method)
+            model_set[[ii]] = createModel(model_links, paste0(file, ".csv"), basal_file, paste0(file, ".var"), cores, inits, init_distribution, method)
         } else {
-            model_set[[i]] = create_model(model_links, paste0(file, ".csv"), basal_file, cores, inits, init_distribution, method)
+            model_set[[ii]] = createModel(model_links, paste0(file, ".csv"), basal_file, cores, inits, init_distribution, method)
         }
+        ii = ii+1
     }
 }
 
@@ -44,34 +52,21 @@ compareModels <- function(files) {
 #' Build an MRAmodelSet, which contains all the information required to simulate a set of MRAmodels, ensuring that the sets of parameters are similar for all models
 #'
 #' @param nb_models Number of models in the set
-#' @param model An object of class Model
-#' @param design An object of class ExperimentalDesign
-#' @param structure An object of class ModelStructure
-#' @param basal A matrix describing the basal activity of the nodes in the network
-#' @param data An object of class Data with aggregated data for all models
-#' @param cv A matrix containing the coefficient of variation of the data used to build the model
-#' @param parameters A vector containing the values of the parameters of the model
-#' @param bestfit The residual chi-2 value associated with the best fit
-#' @param basefit The chi-2 value associated with the raw data (no fit)
-#' @param name Name of the model
-#' @param infos Extra information on the model
-#' @param param_range Alternative parameters sets for the model
-#' @param lower_value Lower bound on the values of the parameters
-#' @param upper_values Upper bound on the values of the parameters
+#' @inheritParams MRAmodel
 #' @return An MRAmodelSet object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, names=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c()) {
-    if (length(names) != nb_models) {
-        names = rep(names[1], nb_models)
+MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c()) {
+    if (length(name) != nb_models) {
+        name = rep(name[1], nb_models)
     }
 
     # An MRAmodelSet is an MRAmodel
-    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(names, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations)
+    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations)
     # With some extra attributes
     class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models
-    self$names = names
+    self$names = name
     self$variable_parameters = c()
 
     return(self)
