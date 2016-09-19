@@ -19,5 +19,5 @@ loadModule("ExperimentalDesignEx", TRUE)
 loadModule("DataEx", TRUE)
 loadModule("ModelEx", TRUE)
 
-#ExperimentalDesign <- fitmodel::ExperimentalDesign
-#ModelStructure=fitmodel::ModelStructure
+#ExperimentalDesign <- STASNet::ExperimentalDesign
+#ModelStructure=STASNet::ModelStructure

@@ -539,7 +539,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
   
   fitmodelset_wrapper <- function(params, data, model) {
     # TODO add keep_constant control
-    if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a fitmodel::DataSet object") }
+    if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a STASNet::DataSet object") }
     init = proc.time()[3]
     result = model$fitmodelset(data, params)
     if (verbose) {
