@@ -96,6 +96,17 @@ plotModelAccuracy <- function(model_description) {
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
 
+#' Compute the error of the model
+#'
+#' @param mra_model An MRAmodel object
+#' @return A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
+getModelError <- function(mra_model) {
+    simulation = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+    mismatch = (mra_model$data$stim_data - simulation) / mra_model$data$error
+    residual = sum(mismatch^2, na.rm=T)
+    return(list(simulation=simulation, mismatch=mismatch, residual=residual))
+}
+
 #' Plot the scores of each antibody
 #'
 #' Plot the scores of the fit for each antibody, which is how much
@@ -348,3 +359,24 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   }
   return(extension_mat)
 }
+
+#' Computes the fitting scores for a new parameter set
+#'
+#' Test the model with the provided parameter set and returns the fit, the scores and the (possibly updated) parameter set
+#' @inheritParams computeFitScore
+#' @param new_parameters A vector of parameters to use for the new fit
+#' @return An objet of class MRAmodel
+#' @export
+# TODO specialisation of update ??
+testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
+    if (length(new_parameters) != length(mra_model$parameters)) {
+        stop("The number of parameters is incorrect")
+    }
+    tmp_model = mra_model
+    tmp_model$parameters = new_parameters
+    tmp_model = computeFitScore(tmp_model, refit_model)
+    tmp_model$bestfit = getModelError(tmp_model)$residual
+
+    return(tmp_model)
+}
+
