@@ -384,7 +384,7 @@ readMIDAS <- function(fname) {
     rownames(measures)[rownames(measures)==""] = as.character(data_file[,"ID.type"])[rownames(measures)==""]
     colnames(measures) = gsub("DV.", "", colnames(measures))
 
-    return(measures)
+    return(measures[order(rownames(measures)),])
 }
 checkMIDAS <- function(data_file) {
     if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'DV' field is missing") }
