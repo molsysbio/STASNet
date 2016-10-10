@@ -55,6 +55,8 @@ test_that("createModel works with R objects", {
     expect_error(createModel(dumb_structure, dumb_activity, no_control_midas, inits=10)) # Missing control data
     expect_error(createModel(dumb_structure, dumb_activity, no_perturbations_midas, inits=10)) # Missing perturabtion
 })
+# Create a model for later use
+dumb_model = suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, dumb_variation, inits=10))
 
 test_that("createModelSet works with R objects", {
     expect_silent( suppressMessages(createModelSet(dumb_structure, dumb_activity, list(m1=dumb_midas, m2=dumb_midas), list(m1=dumb_variation, m2=dumb_variation), model_name=c("m1", "m2"), inits=10)) )
