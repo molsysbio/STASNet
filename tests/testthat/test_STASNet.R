@@ -63,11 +63,11 @@ test_that("getCombinationMatrix works properly", {
 })
 # With stimulation missing
 test_that("getCombinationMatrix without stimulation", {
-    expect_equal(getCombinationMatrix(c("N2i", "N3i"), 1, 1), matrix(c(1, 0, 0, 1), ncol=2, dimnames=list(NULL, c("N2i", "N3i"))))
+    expect_equal(getCombinationMatrix(c("N2i", "N3i"), 1, 1), matrix(c(0, 1, 0, 0, 0, 1), ncol=2, dimnames=list(NULL, c("N2i", "N3i"))))
 })
 # With inhibition missing
 test_that("getCombinationMatrix without inhibition", {
-    expect_equal(getCombinationMatrix(c("N1", "N2"), 1, 1), matrix(c(1, 0, 0, 1), ncol=2, dimnames=list(NULL, c("N1", "N2"))))
+    expect_equal(getCombinationMatrix(c("N1", "N2"), 1, 1), matrix(c(0, 1, 0, 0, 0, 1), ncol=2, dimnames=list(NULL, c("N1", "N2"))))
 })
 test_that("getCombinationMatrix raises an error if stim_combo is a string", {
     expect_error( getCombinationMatrix(c("N1", "N3i"), 1, "N2i"), "stim_combo" )
@@ -138,6 +138,9 @@ test_that("Simulation of a subset of the conditions", {
     expect_silent( simulateModel(refit, getCombinationMatrix(c("N1", "N2i"), 1)) )
     .GlobalEnv$simulation_sconditions = simulateModel(refit, getCombinationMatrix(c("N1", "N2i"), 1))
 })
+test_that("Duplicated conditions are eliminated", {
+    expect_silent( simulateModel(refit, rbind(0, getCombinationMatrix(c("N1", "N2i"), 1))) )
+})
 test_that("The data are subseted properly", {
     expect_equal( simulation_sconditions$data, simulated_data[c(1, 4, 2, 5), ] )
 })
@@ -150,10 +153,12 @@ test_that("Simulation without stimulations", {
 test_that("Simulation without perturbations", {
     expect_error( simulateModel(refit, matrix(ncol=0, nrow=0)), "No valid perturbations" )
 })
+test_that("Simulation without wrong perturbations", {
+    expect_error( simulateModel(refit, getCombinationMatrix(c("N4", "N1i"), 1)), "No valid perturbations" )
+})
 test_that("Simulation without valid perturbations", {
     expect_error( simulateModel(refit, getCombinationMatrix(c("N4", "N1i"), 1)), "No valid perturbations" )
 })
- simulateModel(refit, readouts=c("N3", "N4")) 
 test_that("Simulation of a subset of the readouts", {
     expect_silent( simulateModel(refit, readouts=c("N3", "N4")) )
     .GlobalEnv$simulation_sreadouts = simulateModel(refit, readouts=c("N3", "N4"))
