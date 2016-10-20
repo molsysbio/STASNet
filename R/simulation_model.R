@@ -146,13 +146,14 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
       }
     }
   }
+  simulated_nodes = unique(simulated_nodes)
   node_index = suppressWarnings(!is.na(as.numeric(simulated_nodes)))
   simulated_nodes[node_index] = model_description$structure$names[as.numeric(simulated_nodes[node_index])]
   if (length(simulated_nodes) == 0) {
     stop("None of the simulations required correspond to nodes measured in the network.")
   }
-  simulated_index = which(model_description$structure$names %in% simulated_nodes)-1 # C++ Index of node
-  simulated_cols = which(design$measured_nodes %in% simulated_index) # Index in result matrix columns
+  simulated_index = sapply(simulated_nodes, function(nn) { which(model_description$structure$names==nn)-1 } ) # C++ index of the simulated_nodes
+  simulated_cols = sapply(simulated_index, function(idx) { which(design$measured_nodes==idx) } ) # Index in result matrix column, ordered like simulated_nodes
   new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, simulated_nodes, stimulations, inhibitions, model_description$basal)
   
   # Set up the model and the data for the simulation
@@ -430,8 +431,8 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_color="#559955", sim_color="#AAAAFF") {
   colors = sim_color
   if (with_data && length(prediction$data) > 0) {
-      colors = c(sim_color, data_color)
-      if (length(prediction$error) > 0) {
+      colors = c(data_color, sim_color)
+      if (length(prediction$error) > 0 && sum(!is.na(prediction$error)) > 0) {
           with_variation = TRUE
       }
   } else {
@@ -454,20 +455,17 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
     # Collects the positions of the bars
     par(mar = c(1, 6, 4, 4))
     if (with_data) {
-        to_plot = rbind(prediction$bestfit[,node], prediction$data[,node])
+        to_plot = rbind(prediction$data[,node], prediction$bestfit[,node])
         bars = barplot(to_plot, plot=F, beside=TRUE)
-        sim_bars = bars[1,]
+        sim_bars = bars[2,]
+        data_bars = bars[1,]
         bars = colMeans(bars)
-        limits = c(ifelse(log_axis, 1, 0), 2 * max(c(prediction$bestfit[,node], prediction$data[,node]))) # Expect values > 1
+        limits = c(ifelse(log_axis, 1, 0), 2 * max(c(prediction$bestfit[,node], prediction$data[,node]), na.rm=TRUE)) # Expect values > 1
     } else {
         to_plot = prediction$bestfit[,node]
         bars = barplot(to_plot, plot=F, beside=TRUE)
         sim_bars = bars
-        limits = c(ifelse(log_axis, 1, 0), 2 * max(prediction$bestfit[,node])) # Expect values > 1
-    }
-    to_plot = prediction$bestfit[,node]
-    if (with_data) {
-        to_plot = rbind(to_plot, prediction$data[,node])
+        limits = c(ifelse(log_axis, 1, 0), 2 * max(prediction$bestfit[,node]), na.rm=TRUE) # Expect values > 1
     }
     if (length(prediction$variants) > 0) {
       low_var = numeric()
@@ -480,7 +478,7 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
           variants = c(variants, prediction$variants[[set]][perturbation, node])
         }
         low_var = c(low_var, sort(variants)[1])
-        limits[1] = min(limits[1], low_var)
+        limits[1] = min(limits[1], low_var, na.rm=TRUE)
         # If the inaccuracy yields negative activity, we correct if log scale is used
         if (low_var <= 0 && log_axis) { low_var = 0.000001 }
         high_var = c(high_var, sort(variants, decreasing=T)[1])
@@ -499,24 +497,21 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       entity = colnames(prediction$bestfit)[node]
       barplot(to_plot, ylab=paste0(entity, " activity (AU)"), log=ylog, main=entity, beside=TRUE, col=colors)
       low_var=0;
-      limits[1] = 1.2 * max(prediction$bestfit[,node])
+      limits[1] = 1.2 * max(prediction$bestfit[,node], na.rm=TRUE)
     }
     
     # Write the conditions used
     par(mar = c(0, 6, 0, 4), xpd=NA)
-    #eplot( xlim=c(0, max(bars)), ylim=c(0, ncol(prediction$conditions)) )
-    #barplot(prediction$bestfit[,node], plot=F, beside=TRUE)
     pert_name_x = ifelse(length(bars)>1, bars[1]-(bars[2]-bars[1])/2, 0)
     for (pert in 1:ncol(prediction$conditions)) {
       legend_line = rep("-", nrow(prediction$conditions))
       legend_line[prediction$conditions[, pert] == 1] = "+"
       #legend_line = c(colnames(prediction$conditions)[pert], legend_line)
-      y_coord = min(0, low_var)-pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
+      y_coord = min(0, low_var, na.rm=TRUE)-pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
       if (log_axis) {
           y_coord = 1 / ( pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1) )
       }
       text(bars, y_coord, legend_line)
-#      text(-1 + 3/nrow(prediction$conditions)
       text(pert_name_x, y_coord, colnames(prediction$conditions)[pert], pos=2)
     }
     eplot( xlim=c(0, 1), ylim=c(0, 1) )

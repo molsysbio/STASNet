@@ -186,6 +186,9 @@ test_that("Message when inexistant inhibition is required", {
 test_that("The final matrix is correctly reduced with false inhibition", {
     expect_equal( nrow(noinhib_sim$bestfit), 2)
 })
+test_that("Requested readouts are duplicated", {
+    expect_silent( simulateModel(refit, getCombinationMatrix(c("N1", "N2i"), 1), c("N2", "N3", "N2")) )
+})
 test_that("Prediction of new conditions", {
     expect_silent( simulateModel(refit, getCombinationMatrix(c("N1", "N2i", "N3i"))) )
 })
