@@ -458,12 +458,13 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
         bars = barplot(to_plot, plot=F, beside=TRUE)
         sim_bars = bars[1,]
         bars = colMeans(bars)
+        limits = c(ifelse(log_axis, 1, 0), 2 * max(c(prediction$bestfit[,node], prediction$data[,node]))) # Expect values > 1
     } else {
         to_plot = prediction$bestfit[,node]
         bars = barplot(to_plot, plot=F, beside=TRUE)
         sim_bars = bars
+        limits = c(ifelse(log_axis, 1, 0), 2 * max(prediction$bestfit[,node])) # Expect values > 1
     }
-    limits = c(ifelse(log_axis, 1, 0), 2 * max(prediction$bestfit[,node])) # Expect values > 1
     to_plot = prediction$bestfit[,node]
     if (with_data) {
         to_plot = rbind(to_plot, prediction$data[,node])
