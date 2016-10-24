@@ -54,6 +54,7 @@ for (argument in cargs) {
         message("    --ext | --extension          Compute possible extensions to the network")
         message("    -m<string>                   Method to apply for the initialisation")
         message("    --nopl                       Disable profile likelihood")
+        message("    --pl                       Enable profile likelihood")
         message("    -s<int>                      Number of steps for the profile likelihood")
         message("    --noplots                    Cancel plot generation")
         message("    -v                           Activate debug")
