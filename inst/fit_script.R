@@ -45,6 +45,10 @@ recomputing = FALSE
 for (argument in cargs) {
     if (grepl("--help|-h", argument)) {
         message("Help for STASNet fitting script:")
+        message("  Initial fitting:")
+        message("    fit_script.R data.csv [data.var] network.tab basal.dat [options]")
+        message("  Reloading a fitted network:")
+        message("    fit_script.R fit.mra [data.csv] [data.var] [options]")
         message("The script expect a .csv file with data in MIDAS format, a .tab file with the network structure and a .dat file with the nodes with basal activity.")
         message("A .var file with the error in MIDAS format can also be provided.")
         message("    --help | -h                  Displays help")
