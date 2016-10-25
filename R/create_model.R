@@ -867,33 +867,34 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 
 #' Extracts the data, the experimental design and the structure from the input files
 #' @param model_structure Matrix of links [node1, node2]
-#' @param basal_activity The node of the structure with a basal activity
+#' @param basal_activity Nodes of the structure with basal activity
 #' @param data_filename Experimental data under the MIDAS format. See extractMIDAS.
-#' @param var_file Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.
+#' @param var_filename Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.
 #' @param dont_perturb Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param MIN_CV Minimum coefficient of variation.
-#' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
+#' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicates in the data.
 #' @seealso \code{\link{extractMIDAS}}
-extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
+extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
 
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
   data_file = extractMIDAS(data_filename)
-  data_values = data_file[,grepl("DV.", colnames(data_file))]
+  data_values = data_file[,grepl("^DV.", colnames(data_file))]
   colnames(data_values) = gsub("^[A-Z]{2}.", "", colnames(data_values))
-  not_included = colnames(data_values)[!(colnames(data_values) %in% model_structure$names)]
-  perturbations = data_file[,grepl("TR.", colnames(data_file))]
+  not_included = setdiff(colnames(data_values), model_structure$names)
+  perturbations = data_file[,grepl("^TR.", colnames(data_file))]
   colnames(perturbations) = gsub("^[A-Z]{2}.", "", colnames(perturbations))
-  not_perturbable = colnames(perturbations)[!(colnames(perturbations)%in%vpert)]
-  id_colums = grepl("ID.type", colnames(data_file))
-  blanks = grep("b|blank", data_file[,id_colums])
-  controls = grep("c|control", data_file[,id_colums])
-  if (length(controls) == 0) { stop("Control experiments are required (indicated as 'control' in the column 'ID:type', see extractMIDAS)") }
-
+  not_perturbable = setdiff(colnames(perturbations), vpert)
+  id_colums = grepl("^ID.type", colnames(data_file))
+  blanks = which(tolower(data_file[,id_colums]) %in% c("b","blank"))
+  controls = which(tolower(data_file[,id_colums]) %in% c("c","ctl","ctrl","control"))
+  if (length(controls) == 0) { 
+    stop("Control experiments are required (indicated as 'control' in the column 'ID:type', see extractMIDAS)")
+    }
   # Warn for the measured nodes that have not been found in the network, and don't use them
   if (length(not_included) > 0) {
     message(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)\n"))
-    data_values = as.matrix(data_values[,-which(colnames(data_values)%in%not_included)])
+    data_values = as.matrix(data_values[,-which(colnames(data_values) %in% not_included)])
   }
   # Remove extra readouts that should not be used
   for (ro in dont_read) {
@@ -901,48 +902,49 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
       data_values = as.matrix(data_values[,-which(colnames(data_values)==ro)])
     }
   }
-
   # Remove the perturbations that cannot be simulated to get a correct fit
   for (erm in dont_perturb) {
     if (!erm %in% vpert) {
       message(paste0(erm, " is not a valid perturbation name for this dataset"))
     }
   }
-  dont_perturb = dont_perturb[which(dont_perturb%in%vpert)]
+  dont_perturb = dont_perturb[which(dont_perturb %in% vpert)]
   not_perturbable = c(not_perturbable, dont_perturb)
   rm_rows = c()
   if (length(not_perturbable) > 0) {
     message(paste(not_perturbable , " perturbation not compatible with the network structure, it will not be used" ))
     rm_rows = unique(unlist(sapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
-    perturbations = perturbations[,-which(colnames(perturbations)%in%not_perturbable)]
+    perturbations = perturbations[,-which(colnames(perturbations) %in% not_perturbable)]
   }
-
-  # Means of basal activity of the network and of the blank fixation of the antibodies
+  # Means of the blank fixation of the antibodies
   if (length(blanks) == 0) {
     blank_values = rep(0, ncol(data_values))
-  } else if (length(blanks) == 1) {
-    blank_values = data_values[blanks,]
   } else {
-    blank_values = colMeans(data_values[blanks,])
+    blank_values = colMeans(data_values[blanks,,drop=F], na.rm=T)
   }
-  blank_values[is.nan(blank_values)] = 0; # For perturbations without blank values 
-  if (length(controls) == 1) {
-    unstim_values = as.matrix(data_values[controls,])
-  } else {
-    unstim_values = colMeans(data_values[controls,])
+  blank_values[is.nan(blank_values)] = 0 # For perturbations without blank values 
+  # Means of basal activity of antibodies
+  unstim_values = colMeans(data_values[controls,,drop=F], na.rm=T)
+  if (any(is.nan(unstim_values)|is.na(unstim_values))) {
+    stop("Unstimulated data are required to simulate the network")
   }
-  check_unstim = lapply(unstim_values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are required to simulate the network")}})
-  rm_rows = c(rm_rows, controls, blanks) # Delete the perturbations that cannot be used with the blank and controls from the dataset
-  if (length(rm_rows) > 0) {
-    data_values = data_values[-rm_rows,]
-    perturbations = perturbations[-rm_rows,]
+  # Calculate statistics for variation data
+  if (length(c(rm_rows,blanks))>0){
+    mean_stat = aggregate(data_values[-c(rm_rows,blanks),], by=perturbations[-c(rm_rows,blanks),], mean, na.rm=T)[,-(1:ncol(perturbations))]
+    sd_stat = aggregate(data_values[-c(rm_rows,blanks),], by=perturbations[-c(rm_rows,blanks),], sd, na.rm=T)[,-(1:ncol(perturbations))]
+  }else{
+    mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
+    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=T)[,-(1:ncol(perturbations))]
   }
-
+  # Delete the perturbations that cannot be used, blank and controls from the dataset
+  rm_rows = c(rm_rows, controls, blanks) 
+  data_values = data_values[-rm_rows,,drop=F]
+  perturbations = perturbations[-rm_rows,,drop=F]
   # Compute the mean and standard deviation of the data
   mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
   blank_values = matrix(rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values))
-  unstim_values = matrix(rep(unstim_values,each=dim(mean_values)[1]),nrow=dim(mean_values)[1])
-  sd_values = aggregate(data_values, by=perturbations, sd, na.rm=T)[,-(1:ncol(perturbations))]
+  unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
+  colnames(unstim_values) <- colnames(mean_values)
   if (verbose > 7) {
     message("Data used:")
     message(mean_values)
@@ -952,76 +954,102 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
 
   # Error model
-  if (any(var_file != "")) {
+  if (any(var_filename != "")) {
     # We use the CV file if there is one
     # The format and the order of the conditions are assumed to be the same as the data file
-    message(paste0("Using var file ", var_file))
-    variation_file = extractMIDAS(var_file)
-    if (ncol(variation_file) <= 1) {
-      variation_file = read.delim(var_file, sep="\t") # Accept tab-delimited MIDAS files
-    }
+    message(paste0("Using var file ", var_filename))
+    variation_file = extractMIDAS(var_filename)
     # Check that the number of samples is the same for the measurements and the variation and that the names in the measurements file and in the variation file match
-    if (nrow(variation_file) != nrow(data_file)) { stop("Different number of experiments for the variation and the measurement files") }
-    matchError = FALSE
-    for (name in colnames(variation_file)) {
-      if (!(name %in% colnames(data_file))) {
-        matchError = TRUE
-        write(paste0("Field ", name, " from the variation file is not in the measurement file"), stderr())
-      }
+    if (nrow(variation_file) != nrow(data_file)) {
+      stop("Different number of experiments for the variation and the measurement files") 
     }
-    if (matchError) { stop("Names of the variation and measurement files do not match") }
-    # Gather the cv values corresponding to the experimental design
-    pre_cv = variation_file[, grepl("^DV", colnames(variation_file))]
-    colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
-    cv_values = pre_cv[,colnames(pre_cv)%in%colnames(mean_values)]
+    notInVar = setdiff(colnames(data_file),colnames(variation_file))
+    if (length(notInVar)>0){
+      stop(paste0("Names of the variation and measurement files do not match","\n",
+                  "Columns ",paste0(notInVar,collapse=" "),
+                  " from data file are not found in var file!"))
+    }
+    # Reorder and filter variation columns to columns present in data file
+    variation_file=variation_file[,colnames(data_file)]
+    # Check whether the order and type of the perturbations is preserved
+    if (!all(data_file[,grepl("^TR.", colnames(data_file))]==variation_file[,grepl("^TR.", colnames(variation_file))])){
+      stop("Order or type of experiments in the variation file is differen from the measurement file, please adapt them to be the same!") 
+    }
+    # Gather the relevant cv values
+    cv_values = variation_file[, grepl("^DV", colnames(variation_file))]
+    colnames(cv_values) = gsub("^[A-Z]{2}.", "", colnames(cv_values))
     cv_values = cv_values[-rm_rows,]
     cv_values = aggregate(cv_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
   } else {
-    cv_values = sd_values / mean_values
-    median_cv = apply(cv_values, 2, median, na.rm=T)
-#    median_cv = matrix(rep(colMedians(cv_values, na.rm=T), nrow(cv_values)), nrow=nrow(cv_values))
-    cv_values[!(mean_values > 2 * blank_values)] = DEFAULT_CV
-    cv_values = t(apply(cv_values, 1, function(X) { sapply(1:length(X), function(ii) { ifelse(X[ii]>median_cv[ii] && !is.na(X[ii]), X[ii], median_cv[ii]) }) }))
-    cv_values[is.nan(cv_values)] = DEFAULT_CV
+    # remove measurements not different from blank
+    mean_stat[mean_stat <= 2 * blank_values] = NA
+    median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
+    cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
 
+  cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
-  cv_values[is.na(cv_values)] = DEFAULT_CV
   error = blank_values + cv_values * mean_values
   error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt
 
-  # Create data object
-  data=new(STASNet:::Data)
-  data$set_unstim_data ( as.matrix(unstim_values) )
-  data$set_scale( data$unstim_data )
-  data$set_stim_data( as.matrix(mean_values) )
-  data$set_error( as.matrix( error ))
-
   # Extract experimental design
-  perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations))]
+  perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
   names = colnames(perturbations)
   stim_names = names[grepl("[^i]$", names)]
-  stim_nodes = as.character( stim_names[ stim_names %in% model_structure$names] )
+  stim_nodes = as.character( stim_names[match(model_structure$names, stim_names, nomatch = 0)] )
   names = gsub("i$", "", names[grepl("i$", names)])
-  inhib_nodes = as.character( names[names %in% model_structure$names] )
+  inhib_nodes = as.character( names[match(model_structure$names, names, nomatch = 0 )] )
 
   stimuli = as.matrix(perturbations[,stim_nodes])
   inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep="")])
+  measured_nodes = colnames(mean_values)[match(model_structure$names, colnames(mean_values), nomatch = 0 )]
+  
+  # Arrange data according to experimental design
+  stim_motifs = aggregate(stimuli,by=as.data.frame(stimuli),max,na.rm=T)[,-(1:ncol(stimuli)),drop=F] # sorts automatically
+  inh_motifs = aggregate(inhibitor,by=as.data.frame(inhibitor),max,na.rm=T)[,-(1:ncol(inhibitor)),drop=F] # sorts automatically
+  
+  error_sort = error[0, measured_nodes]
+  stim_data_sort = mean_values[0, measured_nodes]
+  cv_sort = cv_values[0,measured_nodes]
+  stim_sort = stimuli[0, ]
+  inh_sort = inhibitor[0, ]
+  for (ii in 1:nrow(stim_motifs)){
+    stim_pos = apply(stimuli==matrix(rep(stim_motifs[ii,], each=nrow(stimuli)), nrow=nrow(stimuli)), 1, all)
+    for (jj in 1: nrow(inh_motifs)){
+      inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
+      if (any(stim_pos & inh_pos)){
+        error_sort = rbind(error_sort, error[stim_pos & inh_pos, measured_nodes])
+        stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos & inh_pos, measured_nodes])
+        cv_sort = rbind(cv_sort, cv_values[stim_pos & inh_pos, measured_nodes])
+        stim_sort = rbind(stim_sort, stimuli[stim_pos & inh_pos, ])
+        inh_sort = rbind(inh_sort, inhibitor[stim_pos & inh_pos, ])
+      }
+    }
+  }
+  
   if (verbose > 3) {
     message("Stimulated nodes")
-    message(stimuli)
+    message(stim_sort)
     message("Inhibited nodes")
-    message(inhibitor)
+    message(inh_sort)
   }
-  measured_nodes = colnames(mean_values)
-  expdes=getExperimentalDesign(model_structure,stim_nodes,inhib_nodes,measured_nodes,stimuli,inhibitor,basal_activity)
-
+  
+  expdes=getExperimentalDesign(model_structure, stim_nodes, inhib_nodes, measured_nodes, stim_sort, inh_sort, basal_activity)
+  
+  # Create data object
+  data=new(STASNet:::Data)
+  data$set_unstim_data ( as.matrix(unstim_values[ , measured_nodes] ) )
+  data$set_scale( data$unstim_data )
+  data$set_stim_data( as.matrix(stim_data_sort) )
+  data$set_error( as.matrix( error_sort ))
+  
+  # Finalize object 
   core = list()
   core$design = expdes
   core$data = data
   core$structure = model_structure
   core$basal = expdes$basal_activity
-  core$cv = as.matrix(cv_values)
+  core$cv = as.matrix(cv_sort)
 
   return(core)
 }

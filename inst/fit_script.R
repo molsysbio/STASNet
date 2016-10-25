@@ -32,6 +32,7 @@ method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
 precorrelate=T
+extend=T
 
 if (!exists("cargs")) {
     cargs = commandArgs(trailingOnly=T)
@@ -90,6 +91,8 @@ for (argument in cargs) {
         argument = gsub("^-d", "", argument)
         argument = gsub("\"", "", argument)
         unused_readouts = c( unused_readouts, unlist(strsplit(argument, " |\t")) )
+    } else if (grepl("^--noext", argument)) {
+      extend == FALSE
     } else if (grepl("^-", argument)) {
         print(paste0("Unknown argument: '", argument, "'"))
     }
@@ -177,9 +180,16 @@ if (reduction) {
     get_running_time(init_time, "with the model reduction");
 }
 
+
+if (extend){
+  print("Performing extension analysis...")
+
+  expmat=suggestExtension(model_description = model,
+                          parallel = TRUE,
+                          mc = cores,
+                          print = TRUE)
+}
 print("Finished")
-
-
 
 # IDEAS :
 # data as last argument, possibility to give severals, in which case a comparison of the models is also done
