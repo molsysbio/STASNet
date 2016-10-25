@@ -65,7 +65,7 @@ simplify_path_name <- function (path_name) {
     # Look for the node(s) without predecessor (i.e the first node of the path(s))
     selected=which(elements[,1]=="")
     if (is.na(selected[1])){
-      stop(writeLines(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
+      stop(paste0(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
     }
 
     # Build the most simple sub path(s)
@@ -101,7 +101,7 @@ simplify_path_name <- function (path_name) {
 }
 
 # Print each path value with its error from the profile likelihood
-print_error_intervals <- function(profiles) {
+message_error_intervals <- function(profiles) {
     for (i in 1:length(profiles)) {
         lidx = profiles[[i]]$lower_error_index[1]
         hidx = profiles[[i]]$upper_error_index[1]

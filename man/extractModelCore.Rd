@@ -4,16 +4,15 @@
 \alias{extractModelCore}
 \title{Extracts the data, the experimental design and the structure from the input files}
 \usage{
-extractModelCore(model_structure, basal_activity, data_filename,
-  var_file = "", dont_perturb = c(), dont_read = c(), MIN_CV = 0.1,
-  DEFAULT_CV = 0.3)
+extractModelCore(model_structure, basal_activity, datas, var_file = "",
+  dont_perturb = c(), dont_read = c(), MIN_CV = 0.1, DEFAULT_CV = 0.3)
 }
 \arguments{
 \item{model_structure}{Matrix of links [node1, node2]}
 
 \item{basal_activity}{The node of the structure with a basal activity}
 
-\item{data_filename}{Experimental data under the MIDAS format. See extractMIDAS.}
+\item{datas}{Experimental data under the MIDAS format. See extractMIDAS.}
 
 \item{var_file}{Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.}
 

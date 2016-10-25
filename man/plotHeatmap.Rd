@@ -6,7 +6,7 @@
 \usage{
 plotHeatmap(mat, main = "", lim = Inf, fixedRange = F, stripOut = 0.05,
   col = colorRampPalette(c("deepskyblue", "white", "red1")),
-  textCol = "gray10")
+  textCol = "gray10", sig_numbers = 2)
 }
 \arguments{
 \item{mat}{a numeric matrix that should be plotted}
@@ -22,6 +22,8 @@ plotHeatmap(mat, main = "", lim = Inf, fixedRange = F, stripOut = 0.05,
 \item{col}{colorRampPalette object indicating the colormap}
 
 \item{textCol}{string denoting the color of inset text}
+
+\item{sig_numbers}{number of significant parameters to display in the heatmap}
 }
 \value{
 Nothing

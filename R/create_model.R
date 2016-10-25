@@ -74,7 +74,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   model$setModel(expdes, model_structure)
   
   # INITIAL FIT
-  results <- initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
+  results = initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
   
   # Choice of the best fit
   params = results$params
@@ -129,13 +129,8 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   }
   
   # Information required to run the model (including the model itself)
-  infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links), fit_info)
-  if (is.string(data.stimulation)) {
-    model_name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(data.stimulation)))
-  } else {
-    model_name = model_name
-  }
-  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
+  infos = generate_infos(data.stimulation, inits, sort(residuals)[1:5], method, model_links, model_name, fit_info)
+  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=infos$name, infos=infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv = DEFAULT_CV)
   message(paste("Residual score =", model_description$bestfitscore))
   
   return(model_description)
@@ -205,14 +200,9 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   parameters = results$params[bestid,]
   bestfit = results$residuals[bestid]
   
-  infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-  if (is.character(csv_files)) {
-    names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
-  } else {
-    names = model_name
-  }
-  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
-  # param_range, lower_values, upper_values)
+  infos = generate_infos(csv_files, inits, sort(results$residuals)[1:5], method, model_links, model_name)
+  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV)
+  # param_range, lower_values, upper_values defined using profile likelihood
   return(self)
 }
 
@@ -250,12 +240,16 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
     
     bestres = min(unlist(psets["residuals",]))
     deltares = modelset$bestfit - bestres
-    if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+    df1 = modelset$nb_models-1 # Extra parameters
+    data_count = sum(!is.na(modelset$data$stim_data) & !is.nan(modelset$data$stim_data))
+    df2 = data_count - (length(modelset$parameters) + df1) # Degrees of freedom of the augmented model
+    f_score = (deltares/df1) / (bestres/df2)
+    if (f_score > qf(accuracy, df1, df2)) {
       res_id = which.min(unlist(psets["residuals",]))
       par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
       new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
       
-      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pchisq(deltares, df=modelset$nb_models),2) ))
+      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pf(f_score, df1, df2),2) ))
       writeLines(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
       writeLines(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
        
@@ -311,6 +305,9 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
 #' @return A list with the initialisation results
 #' @family Model initialisation
 initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
+  if (inits <= 0) {
+    stop("Number of initialisations must be a positive integer")
+  }
   expdes = core$design
   data = core$data
   # Parallelized version uses all cores but one to keep control
@@ -718,7 +715,7 @@ extractStructure <- function(to_detect, names="") {
 #' @export
 # TODO extraction of the basal activity with different format
 extractBasalActivity <- function(to_detect) {
-  if (is.string(to_detect)) {
+  if (is.string(to_detect) && to_detect != "") {
     return(as.character(read.delim(to_detect,header=FALSE)[,1]))
     #unlist(read.delim(to_detect,header = F,colClasses = "character"))
   } else {
@@ -867,9 +864,9 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 
 #' Extracts the data, the experimental design and the structure from the input files
 #' @param model_structure Matrix of links [node1, node2]
-#' @param basal_activity Nodes of the structure with basal activity
-#' @param data_filename Experimental data under the MIDAS format. See extractMIDAS.
-#' @param var_filename Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.
+#' @param basal_activity The node of the structure with a basal activity
+#' @param datas Experimental data under the MIDAS format. See extractMIDAS.
+#' @param var_file Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.
 #' @param dont_perturb Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param MIN_CV Minimum coefficient of variation.
@@ -877,12 +874,17 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 #' @seealso \code{\link{extractMIDAS}}
 extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
 
+  model_structure = extractStructure(model_structure)
+  basal_activity = extractBasalActivity(basal_activity)
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
   data_file = extractMIDAS(data_filename)
   data_values = data_file[,grepl("^DV.", colnames(data_file))]
   colnames(data_values) = gsub("^[A-Z]{2}.", "", colnames(data_values))
   not_included = setdiff(colnames(data_values), model_structure$names)
   perturbations = data_file[,grepl("^TR.", colnames(data_file))]
+  if (ncol(perturbations) == 0) {
+    stop("Perturbation informations are required")
+  }
   colnames(perturbations) = gsub("^[A-Z]{2}.", "", colnames(perturbations))
   not_perturbable = setdiff(colnames(perturbations), vpert)
   id_colums = grepl("^ID.type", colnames(data_file))
@@ -899,6 +901,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Remove extra readouts that should not be used
   for (ro in dont_read) {
     if (ro %in% colnames(data_values)) {
+      message(paste(ro, "readout will not be used for the fit\n"))
       data_values = as.matrix(data_values[,-which(colnames(data_values)==ro)])
     }
   }
@@ -911,10 +914,16 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   dont_perturb = dont_perturb[which(dont_perturb %in% vpert)]
   not_perturbable = c(not_perturbable, dont_perturb)
   rm_rows = c()
-  if (length(not_perturbable) > 0) {
-    message(paste(not_perturbable , " perturbation not compatible with the network structure, it will not be used" ))
+  if (length(not_perturbable) > 0 || length(dont_perturb) > 0) {
+    if (length(not_perturbable) > 0) {
+      message(paste(not_perturbable , "perturbation not compatible with the network structure, it will not be used\n" ))
+    }
+    if (length(dont_perturb) > 0) {
+      message(paste(dont_perturb, "perturbation will not be used for the fit\n"))
+    }
+    not_perturbable = c(not_perturbable, dont_perturb)
     rm_rows = unique(unlist(sapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
-    perturbations = perturbations[,-which(colnames(perturbations) %in% not_perturbable)]
+    perturbations = perturbations[,-which(colnames(perturbations) %in% not_perturbable), drop=F]
   }
   # Means of the blank fixation of the antibodies
   if (length(blanks) == 0) {
@@ -1074,9 +1083,9 @@ rebuildModel <- function(model_file, data_file, var_file="") {
   }
   model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
-  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts)
+  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
   return(model)
 }

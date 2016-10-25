@@ -96,6 +96,17 @@ plotModelAccuracy <- function(model_description) {
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
 
+#' Compute the error of the model
+#'
+#' @param mra_model An MRAmodel object
+#' @return A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
+getModelError <- function(mra_model) {
+    simulation = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+    mismatch = (mra_model$data$stim_data - simulation) / mra_model$data$error
+    residual = sum(mismatch^2, na.rm=T)
+    return(list(simulation=simulation, mismatch=mismatch, residual=residual))
+}
+
 #' Plot the scores of each antibody
 #'
 #' Plot the scores of the fit for each antibody, which is how much
@@ -113,9 +124,14 @@ plotModelScores.MRAmodel <- function(mra_model, ...) {
     invisible(bb)
 }
 
-#' Selection of a minimal model by the removal of non significant links with a Chi^2 test
-#' @param model_description A list describing the model, as the one produced by createModel or importModel
-#' @param accuracy Probability of the confidence interval for the Chi^2 test. The link can be removed if 0 is included in this interval.
+#' @rdname selectMinimalModel
+reduceModel <- function(model_description, accuracy=0.95) {
+    selectMinimalModel(model_description, accuracy)
+}
+
+#' Selection of a minimal model by the removal of non significant links with an F-test
+#' @param model_description An MRAmodel object, as the one produced by createModel or importModel
+#' @param accuracy Probability threshold, the type I error for each link will be 1-accuracy. Multiple testing is not taken into account.
 #' @return An MRAmodel object of the reduced model with the data
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
@@ -129,6 +145,8 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   adj = model_structure$adjacencyMatrix
   data = model_description$data
   if (is.na(model_description$bestfit)) {stop("Data are recquired to reduce the model")}
+  real_data = model_description$data$stim_data
+  data_count = sum(!is.na(real_data) & !is.nan(real_data))
   
   message("Performing model reduction...")
   init_residual = model_description$bestfit
@@ -148,7 +166,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
       model_structure$setAdjacencyMatrix( newadj )
       model$setModel ( expdes, model_structure )
       paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
-      result = model$fitmodel( data,paramstmp)
+      result = model$fitmodel(data, paramstmp)
       response.matrix = model$getLocalResponseFromParameter( result$parameter )
       residuals = c(residuals, result$residuals);   
       params = cbind(params, c(response.matrix))
@@ -158,8 +176,11 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
       if (verbose) {
         dr = rank - new_rank
         message(paste("old :", rank, ", new : ", new_rank))
-        deltares = residuals[length(residuals)]-init_residual
-        message(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
+        new_residual = residuals[length(residuals)]
+        dfreedom = data_count - rank
+        deltares = new_residual - init_residual
+        f_score = ((new_residual - init_residual) / dr) / (init_residual/dfreedom)
+        message(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pf(f_score, dr, dfreedom) ))
       }
       
       newadj[i]=1; ## Slightly accelerate the computation
@@ -168,11 +189,14 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
     order.res=order(residuals)
     # The loss of degree of freedom is equal to the difference in the ranks of the matrices
     new_rank = ranks[order.res[1]]
+    new_residual = residuals[order.res[1]]
     dr = rank - new_rank
-    deltares = residuals[order.res[1]]-init_residual
+    deltares = new_residual - init_residual
+    dfreedom = data_count - rank
+    f_score = ((new_residual - init_residual) / dr) / (init_residual/dfreedom)
     # Some boundary cases might give low improvement of the fit
     if (deltares < 0) { warning(paste("Negative delta residual :", deltares)) ; deltares = -deltares  }
-    if (deltares < qchisq(accuracy, df=dr)) {
+    if (f_score < qf(accuracy, df1=dr, df2=dfreedom)) {
       adj[links.to.test[order.res[1]]]=0
       rank = new_rank
       initial_response=params[,order.res[1]]
@@ -182,7 +206,7 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                    model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
       
-      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", deltares, ",  p-value = ", pchisq(deltares, df=dr) ))
+      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", deltares, ",  p-value = ", pf(f_score, df1=dr, df2=dfreedom) ))
       message("------------------------------------------------------------------------------------------------------")
       
       model_description$bestfit = sort(residuals)[1]
@@ -200,8 +224,9 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   model_description$param_range = list()
   model_description$lower_values = c()
   model_description$upper_values = c()
+# TODO either create another model or update the statistics
   
-  return(model_description)
+  return(computeFitScore(model_description))
 }
 
 #' Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model
@@ -304,6 +329,9 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   new_rank = model$modelRank()
   dr = new_rank-rank
   deltares = init_residual-result$residuals
+  data_count = sum(!is.na(data$stim_data) & !is.nan(data$stim_data))
+  dfreedom = data_count - length(result$parameters)
+  f_score = (deltares/dr) / (result$residuals/dfreedom)
   extension_mat = matrix(c(new_link,
                            model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
                            model_structure$names[(new_link-1) %% dim(adj)[1]+1],
@@ -312,7 +340,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                            new_rank,
                            deltares,
                            dr,
-                           1-pchisq(deltares, df=dr)),nrow=1)  
+                           1-pf(f_score, dr, dfreedom)),nrow=1)  
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
   adj[new_link] = 0
   model_structure$setAdjacencyMatrix( adj )
@@ -331,3 +359,24 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   }
   return(extension_mat)
 }
+
+#' Computes the fitting scores for a new parameter set
+#'
+#' Test the model with the provided parameter set and returns the fit, the scores and the (possibly updated) parameter set
+#' @inheritParams computeFitScore
+#' @param new_parameters A vector of parameters to use for the new fit
+#' @return An objet of class MRAmodel
+#' @export
+# TODO specialisation of update ??
+testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
+    if (length(new_parameters) != length(mra_model$parameters)) {
+        stop("The number of parameters is incorrect")
+    }
+    tmp_model = mra_model
+    tmp_model$parameters = new_parameters
+    tmp_model = computeFitScore(tmp_model, refit_model)
+    tmp_model$bestfit = getModelError(tmp_model)$residual
+
+    return(tmp_model)
+}
+

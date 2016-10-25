@@ -47,12 +47,15 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
     writeLines(paste0("BF ", model_description$bestfit), handle)
     writeLines(paste0("BFS ", model_description$bestfitscore), handle)
     writeLines(paste0("RS ", paste(model_description$Rscores, collapse=" ")), handle)
+    # Unused readouts and perturbations
     if (length(model_description$unused_perturbations) > 0) {
         writeLines(paste0("UP ", paste(model_description$unused_perturbations, collapse=" ")), handle)
     }
     if (length(model_description$unused_readouts) > 0) {
         writeLines(paste0("UR ", paste(model_description$unused_readouts, collapse=" ")), handle)
     }
+    writeLines(paste0("MCV ", model_description$min_cv), handle)
+    writeLines(paste0("DCV ", model_description$default_cv), handle)
 
     # Names of the nodes, with info on basal activity
     for (name in model_description$structure$names) {
@@ -116,6 +119,7 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
         line = paste0(design$stimuli[r,], collapse = " ")
         writeLines(paste0("S ", line), handle)
     }
+    # Measured nodes with the unstimulated value
     for (i in 1:length(design$measured_nodes)) {
         writeLines(paste0("MN ", model_description$structure$names[1 + design$measured_nodes[i]], " ", model_description$data$unstim_data[1, i]), handle)
     }
@@ -193,6 +197,17 @@ importModel <- function(file_name) {
     if (grepl("^UR", file[lnb])) {
         unused_readouts = gsub("^UR( |\t)", "", file[lnb])
         unused_readouts = unlist(strsplit(unused_perturbations, " |\t"))
+        lnb = lnb + 1
+    }
+    # CV settings
+    min_cv = 0.1
+    if (grepl("^MCV", file[lnb])) {
+        min_cv = as.numeric(gsub("^MCV ", "", file[lnb]))
+        lnb = lnb + 1
+    }
+    default_cv = 0.3
+    if (grepl("^DCV", file[lnb])) {
+        default_cv = as.numeric(gsub("^DCV ", "", file[lnb]))
         lnb = lnb + 1
     }
 
@@ -345,7 +360,7 @@ importModel <- function(file_name) {
     cv = cv_values
 # TODO import the data, and calculate the base fit
 
-    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts)
+    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv)
     model_description$bestfitscore = bestfitscore
     meas_nodes = getMeasuredNodesNames(model_description)
     if ( length(Rscores) == length(meas_nodes) ) { names(Rscores) = meas_nodes }
@@ -369,7 +384,7 @@ readMIDAS <- function(fname) {
     rownames(measures)[rownames(measures)==""] = as.character(data_file[,"ID.type"])[rownames(measures)==""]
     colnames(measures) = gsub("DV.", "", colnames(measures))
 
-    return(measures)
+    return(measures[order(rownames(measures)),])
 }
 checkMIDAS <- function(data_file) {
     if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'DV' field is missing") }

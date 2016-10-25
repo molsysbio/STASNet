@@ -6,12 +6,19 @@
 One plot per measured node
 Plot with error bars if available, and give absolute value}
 \usage{
-plotSimulation(prediction, log_axis = F)
+plotSimulation(prediction, log_axis = FALSE, with_data = TRUE,
+  data_color = "#559955", sim_color = "#AAAAFF")
 }
 \arguments{
 \item{prediction}{A list of the model predictions as produced by \link{simulateModel}}
 
 \item{log_axis}{Boolean, whether the ordinate axis should be in log scale}
+
+\item{with_data}{Display 2 bars per condition, one for the simulation and one for the data}
+
+\item{data_color}{Color of the bars corresponding to the data}
+
+\item{sim_color}{Color of the bars corresponding to the simulation}
 }
 \value{
 Invisibly, the matrix of the results of the simulation

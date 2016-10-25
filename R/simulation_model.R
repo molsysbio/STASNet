@@ -17,15 +17,16 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   nodes = model_description$structure$names
   
   # Get the experimental design constraints on the prediction capacity (index + 1 for the C++)
+  # Only combinations of effectively applied perturbations can be simulated
   if (length(design$inhib_nodes)>0){
     inhibables = nodes[ 1 + unique(c(design$inhib_nodes)) ]
-  }else{ 
-    inhibables = c() 
+  } else { 
+    inhibables = character() 
   }
   if (length(design$stim_nodes)>0){
     stimulables = nodes[ 1 + unique(c(design$stim_nodes)) ]
-  }else{
-    stimulables = c()
+  } else {
+    stimulables = character()
   }
   measurables = nodes[ 1 + unique(c(design$measured_nodes)) ]
   measID = 1 + unique(c(design$measured_nodes))
@@ -57,40 +58,73 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
       line = 1; # TODO
     }
   }
+  if (ncol(target_matrix) > 0) {
+      target_matrix = as.matrix(aggregate(target_matrix, by=as.data.frame(target_matrix), FUN=mean)[,1:ncol(target_matrix), drop=FALSE])
+  }
   
   # Set the new experimental design that will be used for the simulation
+  # Look for non existing perturbations and remove the correspoding lines and columns
+
+  if ((length(inhibitors) == 0 || sum(!is.na(match(inhibitors, inhibables))) == 0) && (length(stimulators) == 0 || sum(!is.na(match(stimulators, stimulables))) == 0)) {
+      stop("No valid perturbations to simulate")
+  }
   ## Set the inhibition matrices
-  if (length(inhibitors) > 0 && length(match(inhibitors, inhibables))>0){
+  if (length(inhibitors) > 0) {
     present_inh = inhibitors %in% inhibables
     if (any(!present_inh)){
       message(paste0(ifelse(sum(!present_inh)==1,"Node ","Nodes "), paste(inhibitors[!present_inh], collapse=" , "), " not inhibited in the network and won't be used\n"))
+      drop_inhib = unique(unlist( lapply(paste0(inhibitors[!present_inh], "i"), function(cc){ which(target_matrix[,cc]==1) }) ))
+      if (length(drop_inhib) > 0) {
+        target_matrix = target_matrix[-drop_inhib,, drop=FALSE]
+      }
     }
     inhib_nodes = inhibitors[present_inh]
-    inhibitions = as.matrix(target_matrix[, paste0(inhibitors[present_inh], "i")])
-  }else{
-    inhib_nodes = c()
-    inhibitions = matrix(nrow=0, ncol=0)  
+    if (any(present_inh)) {
+      inhibitions = target_matrix[, paste0(inhibitors[present_inh], "i"), drop=FALSE]
+    } else {
+      inhibitions = target_matrix[, c(), drop=FALSE]
+    }
   }
   ## Set the stimuli matrices
-  if (length(stimulators) > 0 && length(match(stimulators, stimulables))>0){
+  if (length(stimulators) > 0) {
     present_stim = stimulators %in% stimulables
     if (any(!present_stim)){
       message(paste0(ifelse(sum(!present_stim)==1,"Node ","Nodes "), paste(stimulators[!present_stim], collapse=" , "), " not stimulated in the network and won't be used"))
+      drop_stim = unique(unlist( lapply(stimulators[!present_stim], function(cc){ which(target_matrix[,cc]==1) }) ))
+      if (length(drop_stim) > 0) {
+        target_matrix = target_matrix[-drop_stim,, drop=FALSE]
+      }
     }
     stim_nodes = stimulators[present_stim]
-    stimulations = as.matrix(target_matrix[, stimulators[present_stim]])
-  }else{
-    stim_nodes = c()
-    stimulations = matrix(nrow=0, ncol=0)
+    if (any(present_stim)) {
+      stimulations = target_matrix[, stimulators[present_stim], drop=FALSE]
+    } else {
+      stimulations = target_matrix[, c(), drop=FALSE]
+    }
+  } else {
+    stim_nodes = character()
+    stimulations = matrix(nrow=nrow(inhibitions), ncol=0)
   }
-  
+  if (length(inhibitors) == 0) {
+    inhib_nodes = character()
+    inhibitions = matrix(nrow=nrow(stimulations), ncol=0)  
+  } else {
+      if (exists("drop_stim")) {
+          inhibitions = inhibitions[-drop_stim,, drop=FALSE] # Remove the lines with unused stimulations from the inhibitions matrix
+      }
+  }
+
   if(length(stim_nodes)==0 && length(inhib_nodes)==0){
-    stop("None of the perturbations provided correspond to nodes inhibited or stimulated in this network. Aborting...")
+    stop("None of the perturbations provided correspond to nodes inhibited or stimulated in this network.")
   }
+  # Generate the reduced target_matrix
+  target_matrix = cbind(stimulations, inhibitions)
+  target_matrix = aggregate(target_matrix, by=as.data.frame(target_matrix), FUN=mean)[,1:ncol(target_matrix), drop=FALSE]
+
   ## Set the nodes to be measured
-  measured_nodes = c()
-  if (readouts == "all") {
-    measured_nodes = measurables
+  simulated_nodes = character()
+  if (all(readouts == "all")) {
+    simulated_nodes = measurables
   } else {
     for (node in readouts) {
       if (is.character(readouts)) {
@@ -99,7 +133,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
         } else if (!(node %in% measurables)) {
           message(paste0("The node ", node, " cannot be measured with this model."))
         } else {
-          measured_nodes = c(measured_nodes, which(nodes == node)-1)
+          simulated_nodes = c(simulated_nodes, which(nodes == node))
         }
       } else if (is.numeric(readouts)) { # Consider the R style numeration
         if (!(node %in% 1:length(nodes))) {
@@ -107,24 +141,37 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
         } else if (!(node %in% measID)) {
           message(paste0("The node ", node, " (", nodes[node], ") cannot be measured with this model."))
         } else {
-          measured_nodes = c(measured_nodes, node)
+          simulated_nodes = c(simulated_nodes, node)
         }
       }
     }
   }
-  if (length(measured_nodes) == 0) {
-    stop("None of the simulations required correspond to nodes measured in the network. Aborting...")
+  simulated_nodes = unique(simulated_nodes)
+  node_index = suppressWarnings(!is.na(as.numeric(simulated_nodes)))
+  simulated_nodes[node_index] = model_description$structure$names[as.numeric(simulated_nodes[node_index])]
+  if (length(simulated_nodes) == 0) {
+    stop("None of the simulations required correspond to nodes measured in the network.")
   }
-  new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, measured_nodes, stimulations, inhibitions, model_description$basal)
+  simulated_index = sapply(simulated_nodes, function(nn) { which(model_description$structure$names==nn)-1 } ) # C++ index of the simulated_nodes
+  simulated_cols = sapply(simulated_index, function(idx) { which(design$measured_nodes==idx) } ) # Index in result matrix column, ordered like simulated_nodes
+  new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, simulated_nodes, stimulations, inhibitions, model_description$basal)
   
   # Set up the model and the data for the simulation
   model = new(STASNet:::Model)
   model$setModel( new_design, model_description$structure )
   new_data = new(STASNet:::Data)
-  new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
+  new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
   
   # Compute the predictions
   prediction = list()
+  # Reset the target matrix to match the layout in new_design
+  target_matrix = cbind(new_design$stimuli, new_design$inhibitor)
+  if (length(inhib_nodes)>0) {
+      i_inhib_nodes = paste0(inhib_nodes, "i")
+  } else {
+      i_inhib_nodes = c()
+  }
+  colnames(target_matrix) = c( stim_nodes, i_inhib_nodes )
   prediction$conditions = target_matrix
   
   ## Use the optimal fit
@@ -137,8 +184,9 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     inhib_values = -1
   }
   
-  prediction$bestfit = model$simulate(new_data, getParametersForNewDesign(model, model_description$model, model_description$parameters, old_inhib_nodes, inhib_nodes, inhib_values, use_fitted))$prediction
-  colnames(prediction$bestfit) = measured_nodes
+  new_params = getParametersForNewDesign(model, model_description$model, model_description$parameters, old_inhib_nodes, inhib_nodes, inhib_values, use_fitted)
+  prediction$bestfit = model$simulate(new_data, new_params)$prediction
+  colnames(prediction$bestfit) = simulated_nodes
   
   ## Parameters sets provided by the profile likelihood
   params_sets = list()
@@ -160,8 +208,60 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   i=1
   for (params in params_sets) {
     prediction$variants = c(prediction$variants, list(model$simulate(new_data, params)$prediction))
-    colnames(prediction$variants[[i]]) = measured_nodes
+    colnames(prediction$variants[[i]]) = simulated_nodes
     i=i+1
+  }
+
+  prediction$data = list()
+  prediction$error = list()
+  # Extract the data that correspond to the simulation
+  # The code assumes that all perturbed nodes are perturbed in the data which should be guaranteed by the first part of the function
+  if (exists("data", model_description)) {
+#     sim_design = cbind(stimulations, inhibitions)
+#     if (length(inhib_nodes) > 0) {
+#         colnames(sim_design) = c( stim_nodes, paste0(inhib_nodes, "i"))
+#     } else {
+#         colnames(sim_design) = stim_nodes
+#     }
+      sim_design = target_matrix
+      data_design = cbind(design$stimuli, design$inhibitor)
+      colnames(data_design) = c( model_description$structure$names[1+design$stim_nodes], paste0(model_description$structure$names[1+design$inhib_nodes], "i") )
+      # Extract from the data the lines where that correspond to the perturbation of the simulation, where no other simulation than those is applied
+      common = colnames(data_design) %in% colnames(sim_design)
+      valid_lines = which(apply(data_design, 1, function(drow){ all(drow[!common]==0) }))
+      # Subset the columns in the data_design in the same order as the columns in the sim_design
+      common = names(unlist(sapply( colnames(data_design), function(cd) { ifelse(cd %in% colnames(sim_design), return(which(colnames(data_design)==cd)), return(NULL)) } )))
+      control_line = which(apply(sim_design, 1, function(srow){ all(srow==0) }))
+
+      match_data = numeric()
+      match_sim = numeric()
+      for (sr in 1:nrow(sim_design)) {
+        corresponding = sapply(valid_lines, function(dr){ all(data_design[dr, common] == sim_design[sr,common]) })
+        if (any(corresponding)) {
+          if (length(which(corresponding))>1) {
+            stop("More than one 'corresponding' line found between simulated and original design")
+          }
+          match_data = c(match_data, valid_lines[which(corresponding)])
+          match_sim = c(match_sim, sr)
+        }
+      }
+      # Default to NA if the data are not present
+      # Data field must exist, check for non emptiness for 'createSimulation' where data exist but are empty
+      prediction$data = matrix( NA, ncol=ncol(prediction$bestfit), nrow=nrow(prediction$bestfit), dimnames=list(NULL, colnames(prediction$bestfit)) )
+      prediction$error = prediction$data
+      if (exists("stim_data", model_description$data) && nrow(model_description$data$stim_data) > 0) {
+          prediction$data[match_sim,] = model_description$data$stim_data[match_data, simulated_cols]
+          if (length(control_line)>0) {
+              prediction$data[control_line,] = new_data$unstim_data[1,]
+          }
+      }
+      if (exists("error", model_description$data) && nrow(model_description$data$error) > 0) {
+          prediction$error[match_sim,] = model_description$data$error[match_data, simulated_cols]
+          if (length(control_line)>0) {
+              prediction$error[control_line,] = rep(0, ncol(prediction$error))
+          }
+      }
+      prediction$unstim_data = matrix(rep(new_data$unstim_data[1,], nrow(prediction$bestfit)), nrow=nrow(prediction$bestfit), byrow=TRUE)
   }
   
   rm(model) # Free the memory
@@ -173,7 +273,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
 getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_inhib, inhib_nodes, inhibition=-1, use_fitted_inhib=T) {
   # Get the adjacency matrix and the inhibitions values
   response = old_model$getLocalResponseFromParameter(old_parameters)
-  inhib_values = c()
+  inhib_values = numeric()
   for (inhibitor in inhib_nodes) {
     if (use_fitted_inhib && inhibitor %in% old_inhib) {
       inhib_values = c(inhib_values, response$inhibitors[which(old_inhib == inhibitor)])
@@ -207,6 +307,8 @@ getParametersForNewDesign <- function(new_model, old_model, old_parameters, old_
 #' @family simulation
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1, byStim=T) {
+  if (!is.numeric(inhib_combo)) { stop("'inhib_combo' must be numeric") }
+  if (!is.numeric(stim_combo)) { stop("'stim_combo' must be numeric") }
   stimulators = perturbations[!grepl("i$", perturbations)]
   if (length(stimulators) > 0 && length(stimulators) > 0 && stim_combo > length(stimulators) ) {
     stop ("Not enough stimulations to build the combinations")
@@ -229,6 +331,8 @@ getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1
       inhib_matrix[i, inhib_combos[i,]] = 1
     }
     colnames(inhib_matrix) = inhibitors
+    ## Put a line of 0 to get the stimulation alone
+    inhib_matrix = rbind(rep(0, ncol(inhib_matrix)), inhib_matrix)
   }  
 
   if (length(stimulators) > 0) {
@@ -241,6 +345,8 @@ getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1
       stim_matrix[i, stim_combos[i,]] = 1
     }
     colnames(stim_matrix) = stimulators
+    ## Put a line of 0 to get the inhibition alone
+    stim_matrix = rbind(rep(0, ncol(stim_matrix)), stim_matrix)
   } else {
     # Only use the inhibition/stimulation matrix if no stimulators/inhibitors are present
     rownames(inhib_matrix) = NULL
@@ -252,9 +358,6 @@ getCombinationMatrix <- function (perturbations, inhib_combo = 2, stim_combo = 1
   }
   
   # Merge the two matrices to get all the combinations
-  ## Put a line of 0 to get the inhibition or stimulation alone
-  stim_matrix = rbind(rep(0, ncol(stim_matrix)), stim_matrix)
-  inhib_matrix = rbind(rep(0, ncol(inhib_matrix)), inhib_matrix)
   ## Combination of perturbations and inhibitions, classified by inhibitions or by stimulations
   perturbation_matrix = c()
   if (byStim) {
@@ -315,6 +418,9 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #or log-fold change
 #' @param prediction A list of the model predictions as produced by \link{simulateModel}
 #' @param log_axis Boolean, whether the ordinate axis should be in log scale
+#' @param with_data Display 2 bars per condition, one for the simulation and one for the data
+#' @param data_color Color of the bars corresponding to the data
+#' @param sim_color Color of the bars corresponding to the simulation
 #' @return Invisibly, the matrix of the results of the simulation
 #' @export
 #' @seealso getCombinationMatrix, simulateModel
@@ -322,7 +428,17 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #' @family simulation
 # TODO , plotsPerFrame = 4
 # @param maxPlotsPerFrame Maximum number of perturbation per frame
-plotSimulation <- function(prediction, log_axis=F) {
+plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_color="#559955", sim_color="#AAAAFF") {
+  colors = sim_color
+  if (with_data && length(prediction$data) > 0) {
+      colors = c(data_color, sim_color)
+      if (length(prediction$error) > 0 && sum(!is.na(prediction$error)) > 0) {
+          with_variation = TRUE
+      }
+  } else {
+      with_data = FALSE
+      with_variation = FALSE
+  }
   if (log_axis) {
     ylog = "y"
   } else {
@@ -338,54 +454,70 @@ plotSimulation <- function(prediction, log_axis=F) {
   for (node in 1:ncol(prediction$bestfit)) {
     # Collects the positions of the bars
     par(mar = c(1, 6, 4, 4))
-    bars = barplot(prediction$bestfit[,node], plot=F)
-    limits = c(0, 2 * max(prediction$bestfit[,node]))
+    if (with_data) {
+        to_plot = rbind(prediction$data[,node], prediction$bestfit[,node])
+        bars = barplot(to_plot, plot=F, beside=TRUE)
+        sim_bars = bars[2,]
+        data_bars = bars[1,]
+        bars = colMeans(bars)
+        limits = c(ifelse(log_axis, 1, 0), 2 * max(c(prediction$bestfit[,node], prediction$data[,node]), na.rm=TRUE)) # Expect values > 1
+    } else {
+        to_plot = prediction$bestfit[,node]
+        bars = barplot(to_plot, plot=F, beside=TRUE)
+        sim_bars = bars
+        limits = c(ifelse(log_axis, 1, 0), 2 * max(prediction$bestfit[,node]), na.rm=TRUE) # Expect values > 1
+    }
     if (length(prediction$variants) > 0) {
-      low_var = c()
-      high_var = c()
+      low_var = numeric()
+      high_var = numeric()
       # Collect the extreme values for each condition, and the global extremes to be sure everything gets included in the plot
       for (perturbation in 1:nrow(prediction$bestfit)) {
-        variants = c()
+        variants = c(prediction$bestfit[perturbation, node])
+        if (with_data) { c(variants, prediction$data[perturbation, node]) }
         for (set in 1:length(prediction$variants)) {
           variants = c(variants, prediction$variants[[set]][perturbation, node])
         }
         low_var = c(low_var, sort(variants)[1])
-        limits[1] = min(limits[1], low_var)
+        limits[1] = min(limits[1], low_var, na.rm=TRUE)
         # If the inaccuracy yields negative activity, we correct if log scale is used
         if (low_var <= 0 && log_axis) { low_var = 0.000001 }
         high_var = c(high_var, sort(variants, decreasing=T)[1])
       }
       # Plot the bars with the errors
       entity = colnames(prediction$bestfit)[node]
-      barplot(prediction$bestfit[,node], ylim=limits, ylab=paste0(entity, " fluorescence intensity (AU)"), log=ylog, col="#008000", main=entity)
+      barplot(to_plot, ylim=limits, ylab=paste0(entity, " activity (AU)"), log=ylog, col=colors, main=entity, beside=TRUE)
       text_pos = limits[2] - 0.1 * limits[2]
-      segments( bars, low_var, bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
-      text( bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2],ifelse(X<100000,round(X),signif(X,1)), "") }), pos=2, srt=90,offset=0.2 )
-      space = abs(bars[2] - bars[1])/3
-      segments(bars - space, low_var, bars + space, low_var)
+      segments( sim_bars, low_var, sim_bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
+      text( sim_bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2],ifelse(X<100000,round(X),signif(X,1)), "") }), pos=2, srt=90,offset=0.2 )
+      space = abs(sim_bars[2] - sim_bars[1])/3
+      segments(sim_bars - space, low_var, sim_bars + space, low_var)
       in_lim=high_var<=limits[2]
-      segments(bars[in_lim] - space, high_var[in_lim], bars[in_lim] + space, high_var[in_lim])
+      segments(sim_bars[in_lim] - space, high_var[in_lim], sim_bars[in_lim] + space, high_var[in_lim])
     } else {
       entity = colnames(prediction$bestfit)[node]
-      barplot(prediction$bestfit[,node], ylab=paste0(entity, "fluorescence intensity (AU)"), log=ylog, main=entity)
+      barplot(to_plot, ylab=paste0(entity, " activity (AU)"), log=ylog, main=entity, beside=TRUE, col=colors)
       low_var=0;
+      limits[1] = 1.2 * max(prediction$bestfit[,node], na.rm=TRUE)
     }
     
     # Write the conditions used
     par(mar = c(0, 6, 0, 4), xpd=NA)
-    #eplot( xlim=c(0, max(bars)), ylim=c(0, ncol(prediction$conditions)) )
-    #barplot(prediction$bestfit[,node], plot=F)
+    pert_name_x = ifelse(length(bars)>1, bars[1]-(bars[2]-bars[1])/2, 0)
     for (pert in 1:ncol(prediction$conditions)) {
-      line = rep("-", nrow(prediction$conditions))
-      line[prediction$conditions[, pert] == 1] = "+"
-      #line = c(colnames(prediction$conditions)[pert], line)
-      text(bars, -pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), line)
-      text(-1 + 3/nrow(prediction$conditions), min(0, low_var)-pert * limits[2] * 0.9 * ratio / ncol(prediction$conditions), colnames(prediction$conditions)[pert], pos=2)
+      legend_line = rep("-", nrow(prediction$conditions))
+      legend_line[prediction$conditions[, pert] == 1] = "+"
+      #legend_line = c(colnames(prediction$conditions)[pert], legend_line)
+      y_coord = min(0, low_var, na.rm=TRUE)-pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
+      if (log_axis) {
+          y_coord = 1 / ( pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1) )
+      }
+      text(bars, y_coord, legend_line)
+      text(pert_name_x, y_coord, colnames(prediction$conditions)[pert], pos=2)
     }
     eplot( xlim=c(0, 1), ylim=c(0, 1) )
   }
   par(mar=old_mar, xpd=T)
-  
+  layout(1)
   
   # Invisibly returns the prediction
   return(invisible(prediction))

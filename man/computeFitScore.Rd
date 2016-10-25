@@ -9,7 +9,7 @@ computeFitScore(mra_model, refit_model = F)
 \arguments{
 \item{mra_model}{The MRAmodel object for which the score should be computed}
 
-\item{refit_model}{Whether the model should be refitted before computing the scores}
+\item{refit_model}{Whether the model should be refitted before computing the scores (using the 'mra_model$parameters' as the initial value)}
 }
 \value{
 A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
