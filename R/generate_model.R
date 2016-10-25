@@ -15,12 +15,12 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
   if ( sum(is.na(match(as.character(measured.nodes),model.structure$names))) > 0 ) {
     stop(paste0("problem matching measured.nodes names, could not match ", measured.nodes[!measured.nodes%in%model.structure$names], collapse="\n") );
   }
-  basal.activity = as.character(basal.activity[as.character(basal.activity) %in% model.structure$names])
   if ( sum(is.na(match(as.character(basal.activity),model.structure$names))) > 0 ) {
     message("Unmatched names :")
     message(basal.activity[is.na(match(as.character(basal.activity),model.structure$names))])
     stop("problem matching basal.activity names");
   }
+  basal.activity = as.character(basal.activity[as.character(basal.activity) %in% model.structure$names])
   if ( !is.null(dim(stimuli)) && !is.null(dim(inhibitor)) &&  dim(stimuli)[1]!=dim(inhibitor)[1] ) {
     stop("number of experiments does not match in stimuli / inhibitor");
   } else if ( !is.null(dim(stimuli)) && dim(stimuli)[2]!=length(c(stim.nodes))) {
