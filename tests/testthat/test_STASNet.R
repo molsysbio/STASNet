@@ -105,7 +105,7 @@ test_that("Noise free toy data is properly refited", {
 context("Model reduction")
 
 test_that("Model gets reduced correctly", {
-    expect_output(reduceModel(model), "")
+    expect_message(reduceModel(model))
     red_model = reduceModel(model)
 })
 
@@ -124,7 +124,7 @@ test_that("The reduced chi score is computed correctly", {
 context("Model extension")
 
 test_that("The extension function works withtout bugs", {
-    expect_output(suggestExtension(model, T, 8), "")
+    expect_message(suggestExtension(model, T, 8))
 })
 
 

@@ -878,10 +878,10 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   basal_activity = extractBasalActivity(basal_activity)
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
   data_file = extractMIDAS(data_filename)
-  data_values = data_file[,grepl("^DV.", colnames(data_file))]
+  data_values = data_file[,grepl("^DV.", colnames(data_file)),drop=F]
   colnames(data_values) = gsub("^[A-Z]{2}.", "", colnames(data_values))
   not_included = setdiff(colnames(data_values), model_structure$names)
-  perturbations = data_file[,grepl("^TR.", colnames(data_file))]
+  perturbations = data_file[,grepl("^TR.", colnames(data_file)),drop=F]
   if (ncol(perturbations) == 0) {
     stop("Perturbation informations are required")
   }
@@ -911,8 +911,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
       message(paste0(erm, " is not a valid perturbation name for this dataset"))
     }
   }
-  dont_perturb = dont_perturb[which(dont_perturb %in% vpert)]
-  not_perturbable = c(not_perturbable, dont_perturb)
+  dont_perturb = intersect(dont_perturb, vpert)
   rm_rows = c()
   if (length(not_perturbable) > 0 || length(dont_perturb) > 0) {
     if (length(not_perturbable) > 0) {
@@ -922,8 +921,14 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
       message(paste(dont_perturb, "perturbation will not be used for the fit\n"))
     }
     not_perturbable = c(not_perturbable, dont_perturb)
-    rm_rows = unique(unlist(sapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
+    rm_rows = unique(unlist(lapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
     perturbations = perturbations[,-which(colnames(perturbations) %in% not_perturbable), drop=F]
+    if (length(perturbations)==0){
+      stop("All perturbations have been removed can not continue modelling")
+    }
+    if (!any(perturbations[-rm_rows,]==1)){
+      stop("Remaining perturbations only occur in combination with removed perturbations, please reconsider perturbation scheme")
+    }
   }
   # Means of the blank fixation of the antibodies
   if (length(blanks) == 0) {
@@ -939,8 +944,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
   # Calculate statistics for variation data
   if (length(c(rm_rows,blanks))>0){
-    mean_stat = aggregate(data_values[-c(rm_rows,blanks),], by=perturbations[-c(rm_rows,blanks),], mean, na.rm=T)[,-(1:ncol(perturbations))]
-    sd_stat = aggregate(data_values[-c(rm_rows,blanks),], by=perturbations[-c(rm_rows,blanks),], sd, na.rm=T)[,-(1:ncol(perturbations))]
+    mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=F], by=perturbations[-c(rm_rows,blanks),,drop=F], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
+    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=F], by=perturbations[-c(rm_rows,blanks),,drop=F], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
   }else{
     mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
     sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=T)[,-(1:ncol(perturbations))]
@@ -950,7 +955,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   data_values = data_values[-rm_rows,,drop=F]
   perturbations = perturbations[-rm_rows,,drop=F]
   # Compute the mean and standard deviation of the data
-  mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
+  mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
   blank_values = matrix(rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values))
   unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
   colnames(unstim_values) <- colnames(mean_values)
@@ -995,7 +1000,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
     cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
-
+  
+  colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
   error = blank_values + cv_values * mean_values
@@ -1008,9 +1014,25 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   stim_nodes = as.character( stim_names[match(model_structure$names, stim_names, nomatch = 0)] )
   names = gsub("i$", "", names[grepl("i$", names)])
   inhib_nodes = as.character( names[match(model_structure$names, names, nomatch = 0 )] )
-
-  stimuli = as.matrix(perturbations[,stim_nodes])
-  inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep="")])
+  
+  no_stim=F
+  no_inh=F
+  if (length(stim_nodes)>0){
+    stimuli = as.matrix(perturbations[,stim_nodes,drop=F])
+  } else{
+    stimuli = perturbations[,0]
+    no_stim=T
+  }
+  
+  if (length(inhib_nodes)>0){  
+    inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep=""),drop=F])
+  }else if (no_stim){
+    stop("Neither a valid stimulation nor inhibition was given, at least one type is needed!")
+  }else{
+    inhibitor = perturbations[,0]
+    no_inh=T
+  }
+  
   measured_nodes = colnames(mean_values)[match(model_structure$names, colnames(mean_values), nomatch = 0 )]
   
   # Arrange data according to experimental design
@@ -1020,18 +1042,38 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   error_sort = error[0, measured_nodes]
   stim_data_sort = mean_values[0, measured_nodes]
   cv_sort = cv_values[0,measured_nodes]
-  stim_sort = stimuli[0, ]
-  inh_sort = inhibitor[0, ]
-  for (ii in 1:nrow(stim_motifs)){
-    stim_pos = apply(stimuli==matrix(rep(stim_motifs[ii,], each=nrow(stimuli)), nrow=nrow(stimuli)), 1, all)
-    for (jj in 1: nrow(inh_motifs)){
+  stim_sort = if (no_stim) {as.matrix(stimuli)} else{stimuli[0, ,drop=F]}
+  inh_sort = if (no_inh) {as.matrix(inhibitor)} else{inhibitor[0, ,drop=F]}
+  
+  if (!no_stim){
+    for (ii in 1:nrow(stim_motifs)){
+      stim_pos = apply(stimuli==matrix(rep(stim_motifs[ii,], each=nrow(stimuli)), nrow=nrow(stimuli)), 1, all)
+      if (!no_inh){
+        for (jj in 1:nrow(inh_motifs)){
+          inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
+          if (any(stim_pos & inh_pos)){
+            error_sort = rbind(error_sort, error[stim_pos & inh_pos, measured_nodes])
+            stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos & inh_pos, measured_nodes])
+            cv_sort = rbind(cv_sort, cv_values[stim_pos & inh_pos, measured_nodes])
+            stim_sort = rbind(stim_sort, stimuli[stim_pos & inh_pos, ])
+            inh_sort = rbind(inh_sort, inhibitor[stim_pos & inh_pos, ])
+          }
+        }
+      }else if (any(stim_pos)){
+        error_sort = rbind(error_sort, error[stim_pos, measured_nodes])
+        stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos, measured_nodes])
+        cv_sort = rbind(cv_sort, cv_values[stim_pos, measured_nodes])
+        stim_sort = rbind(stim_sort, stimuli[stim_pos, ])
+      }
+    }
+  }else{
+    for (jj in 1:nrow(inh_motifs)){
       inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
-      if (any(stim_pos & inh_pos)){
-        error_sort = rbind(error_sort, error[stim_pos & inh_pos, measured_nodes])
-        stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos & inh_pos, measured_nodes])
-        cv_sort = rbind(cv_sort, cv_values[stim_pos & inh_pos, measured_nodes])
-        stim_sort = rbind(stim_sort, stimuli[stim_pos & inh_pos, ])
-        inh_sort = rbind(inh_sort, inhibitor[stim_pos & inh_pos, ])
+      if (any(inh_pos)){
+        error_sort = rbind(error_sort, error[inh_pos, measured_nodes])
+        stim_data_sort = rbind(stim_data_sort, mean_values[inh_pos, measured_nodes])
+        cv_sort = rbind(cv_sort, cv_values[inh_pos, measured_nodes])
+        inh_sort = rbind(inh_sort, inhibitor[inh_pos, ])
       }
     }
   }

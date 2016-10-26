@@ -51,7 +51,7 @@ dumb_variation = dumb_midas
 dumb_variation[,c(5,6)] = 0.1
 test_that("createModel works with R objects", {
     expect_silent( suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, dumb_variation, inits=10)) ) # With error model
-    expect_silent( suppressMessages(createModel(dumb_structure, dumb_midas, dumb_variation, inits=10)) ) # Without error model
+    expect_silent( suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=10)) ) # Without error model
     expect_error(createModel(dumb_structure, dumb_activity, no_control_midas, inits=10)) # Missing control data
     expect_error(createModel(dumb_structure, dumb_activity, no_perturbations_midas, inits=10)) # Missing perturabtion
 })
