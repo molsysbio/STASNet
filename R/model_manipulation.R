@@ -234,62 +234,68 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' @param model_description MRAmodel object describing thze model and its best fit, containing the data
 #' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
 #' @param mc Number of cores that should be used for the computation
+#' @param sample_range Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))
 #' @param print Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"
-#' @param inits DEFUNCT Number of initialisation steps which should be performed (see method for the exact meaning of this value)
-#' @param method DEFUNCT Method to be used for the initialisation, available methods are :
-#'      random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
-#'      correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
-#'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
-#'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
-#' @return a data.frame sorting the links from most significant to least significant
 #' @export
 #' @seealso selectMinimalModel, createModel
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 #' @examples \dontrun{
 #' ext_list = suggestExtension(mramodel)
 #' }
-suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,inits = 1000,method = "geneticlhs"){
+suggestExtension <- function(model_description,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F){
   # Extra fitting informations from the model description
   model = model_description$model
-  init_params = model_description$parameters
-  initial_response = model$getLocalResponseFromParameter( init_params )
+  initial_response = model$getLocalResponseFromParameter( model_description$parameters )
   expdes = model_description$design
   model_structure = model_description$structure
   adj = model_structure$adjacencyMatrix
   data = model_description$data
-  if (is.na(model_description$bestfit)) {stop("Data are required to reduce the model")}
+  if (is.na(model_description$bestfit)) {
+    stop("A prior fit is required to reduce the model")
+  }
+  if (length(sample_range)==0){
+    stop("'sample_range' should have at least one numeric value") 
+  }
   
   message("Performing model extension...")
   init_residual = model_description$bestfit
   rank = model$modelRank()
   #determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)
   exclude=diag(1,nrow(adj),ncol(adj))
-  if (length(setdiff(expdes$stim_nodes,expdes$measured_nodes))>0)
-    exclude[setdiff(expdes$stim_nodes,expdes$measured_nodes)+1,]=1 
+  if (length(setdiff(expdes$stim_nodes,expdes$measured_nodes))>0){
+    exclude[setdiff(expdes$stim_nodes,expdes$measured_nodes)+1,]=1
+  }
   links_to_test=which( adj==0 & exclude==0)
   message(paste0(length(links_to_test)," links will be tested..."))
-  sample = c(10^c(2:-1),0,-10^c(-1:2))
   
   # Each link is added and compared to the previous model
   if (parallel == T){
-    extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,mc.cores=mc)  
+    extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,mc.cores=mc)  
     extension_mat=as.data.frame(do.call("rbind",extension_mat))
   }else{
     cnames=c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
     extension_mat=data.frame(matrix(NA,nrow=length(links_to_test),ncol=length(cnames),byrow=T))
     for (ii in 1:length(links_to_test))
-      extension_mat[ii,]=addLink(links_to_test[ii],adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=T)
+      extension_mat[ii,]=addLink(links_to_test[ii],adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,verbose=T)
+  colnames(extension_mat) <- cnames  
   } 
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
   extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method="BH"))
   
-  message("Extension trial completed!")
-  if (length(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)>0){
-    message("Significant link extensions:")
-    message(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,])
+  message("Extension tests completed!")
+  sig_res = sum(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)
+  if (sig_res > 0){
+    select=match(c("from","to","value","Res_delta","adj_pval"),colnames(extension_mat))
+    message(paste0(sig_res ," significant link extensions found"))
+    sig_res=min(sig_res,10)
+    message(paste0("printing the first ",sig_res," :\n"))
+    message(paste(colnames(extension_mat)[select],collapse="\t"))
+    for (ii in 1:sig_res){
+    message(paste(as.matrix(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,][ii,select]),collapse="\t"))
+    }
   }
   if(print)
-    write.table(extension_mat,"Additional_link_suggestion.txt",quote = F,row.names = F)
+    write.table(extension_mat,"Additional_link_suggestion.txt",quote = F,row.names = F,sep="\t")
   
   return(extension_mat)
   
@@ -298,23 +304,23 @@ suggestExtension <- function(model_description,parallel = F,mc = 1,print = F,ini
 
 #' add Link routine
 #'
-#' @param new_link integer link whose addition is to be tested
-#' @param adj integer matrix original adjacency matrix excluding the new_link 
+#' @param new_link Integer link whose addition is to be tested
+#' @param adj integer Matrix original adjacency matrix excluding the new_link 
 #' @param rank Rank of the input model
-#' @param init_residual numeric sum-squared error of original network
+#' @param init_residual Numeric sum-squared error of original network
 #' @param model MRAmodel object of original network
-#' @param initial_response list containing the local_response matrix and inhibitor strength of original network
-#' @param expdes design object of MRAmodel object 
-#' @param data data object of MRAmodel object
-#' @param model_structure structure object of MRAmodel object
-#' @param sample numeric vector containing all starting values for new_link
+#' @param initial_response List containing the local_response matrix and inhibitor strength of original network
+#' @param expdes Design object of MRAmodel object 
+#' @param data data Object of MRAmodel object
+#' @param model_structure Structure object of MRAmodel object
+#' @param sample_range Numeric vector containing all starting values for new_link
 #' @param verbose Whether the function should be verbose or not
-addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample,verbose=F){
+addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
   best_res = Inf
-  for (jj in sample){
+  for (jj in sample_range){
     initial_response$local_response[new_link]=jj
     paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
     tmp_result = model$fitmodel( data,paramstmp )
