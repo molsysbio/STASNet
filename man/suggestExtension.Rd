@@ -5,8 +5,8 @@
 \title{Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model
 This list can then be based and compared to literature knowledge and if considered suitable manually added to the starting network and rerun with the createModel function.}
 \usage{
-suggestExtension(model_description, parallel = F, mc = 1, print = F,
-  inits = 1000, method = "geneticlhs")
+suggestExtension(model_description, parallel = F, mc = 1,
+  sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F)
 }
 \arguments{
 \item{model_description}{MRAmodel object describing thze model and its best fit, containing the data}
@@ -15,18 +15,9 @@ suggestExtension(model_description, parallel = F, mc = 1, print = F,
 
 \item{mc}{Number of cores that should be used for the computation}
 
+\item{sample_range}{Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))}
+
 \item{print}{Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"}
-
-\item{inits}{DEFUNCT Number of initialisation steps which should be performed (see method for the exact meaning of this value)}
-
-\item{method}{DEFUNCT Method to be used for the initialisation, available methods are :
-random : Perform a Latin Hypercube Sampling to choose \emph{inits} starting points then perform a gradient descent to find the local optimum for each of those points.
-correlation : Deduce some parameters from the correlation between the measurements for the target node and all of its input nodes, then perform random to find the other parameters. Recommended, very efficient for small datasets.
-genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
-annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.}
-}
-\value{
-a data.frame sorting the links from most significant to least significant
 }
 \description{
 Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model

@@ -6,7 +6,7 @@
 \usage{
 createModelSet(model_links, basal_file, csv_files, var_files = c(),
   nb_cores = 1, inits = 1000, perform_plots = F, method = "geneticlhs",
-  unused_perturbations = "", unused_readouts = c(), MIN_CV = 0.1,
+  unused_perturbations = c(), unused_readouts = c(), MIN_CV = 0.1,
   DEFAULT_CV = 0.3, model_name = "default")
 }
 \arguments{

@@ -5,28 +5,28 @@
 \title{add Link routine}
 \usage{
 addLink(new_link, adj, rank, init_residual, model, initial_response, expdes,
-  data, model_structure, sample, verbose = F)
+  data, model_structure, sample_range, verbose = F)
 }
 \arguments{
-\item{new_link}{integer link whose addition is to be tested}
+\item{new_link}{Integer link whose addition is to be tested}
 
-\item{adj}{integer matrix original adjacency matrix excluding the new_link}
+\item{adj}{integer Matrix original adjacency matrix excluding the new_link}
 
 \item{rank}{Rank of the input model}
 
-\item{init_residual}{numeric sum-squared error of original network}
+\item{init_residual}{Numeric sum-squared error of original network}
 
 \item{model}{MRAmodel object of original network}
 
-\item{initial_response}{list containing the local_response matrix and inhibitor strength of original network}
+\item{initial_response}{List containing the local_response matrix and inhibitor strength of original network}
 
-\item{expdes}{design object of MRAmodel object}
+\item{expdes}{Design object of MRAmodel object}
 
-\item{data}{data object of MRAmodel object}
+\item{data}{data Object of MRAmodel object}
 
-\item{model_structure}{structure object of MRAmodel object}
+\item{model_structure}{Structure object of MRAmodel object}
 
-\item{sample}{numeric vector containing all starting values for new_link}
+\item{sample_range}{Numeric vector containing all starting values for new_link}
 
 \item{verbose}{Whether the function should be verbose or not}
 }
