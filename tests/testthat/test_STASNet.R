@@ -123,8 +123,13 @@ test_that("The reduced chi score is computed correctly", {
 
 context("Model extension")
 
-test_that("The extension function works withtout bugs", {
-    expect_message(suggestExtension(model, T, 8))
+test_that("The extension function works without bugs", {
+    expect_message(suggestExtension(model, T, 2))
+    expect_message(suggestExtension(model, F))
+})
+test_that("The extension function correctly handles sample range", {
+        expect_message(suggestExtension(model, T, 2, c(1,0,-1)))
+        expect_error(suggestExtension(model,T,2,c()))
 })
 
 
