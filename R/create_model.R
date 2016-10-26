@@ -878,10 +878,10 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   basal_activity = extractBasalActivity(basal_activity)
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
   data_file = extractMIDAS(data_filename)
-  data_values = data_file[,grepl("^DV.", colnames(data_file)),drop=F]
+  data_values = data_file[,grepl("^DV.", colnames(data_file)),drop=FALSE]
   colnames(data_values) = gsub("^[A-Z]{2}.", "", colnames(data_values))
   not_included = setdiff(colnames(data_values), model_structure$names)
-  perturbations = data_file[,grepl("^TR.", colnames(data_file)),drop=F]
+  perturbations = data_file[,grepl("^TR.", colnames(data_file)),drop=FALSE]
   if (ncol(perturbations) == 0) {
     stop("Perturbation informations are required")
   }
@@ -896,13 +896,13 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Warn for the measured nodes that have not been found in the network, and don't use them
   if (length(not_included) > 0) {
     message(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)\n"))
-    data_values = as.matrix(data_values[,-which(colnames(data_values) %in% not_included)])
+    data_values = data_values[,-which(colnames(data_values) %in% not_included), drop=FALSE]
   }
   # Remove extra readouts that should not be used
   for (ro in dont_read) {
     if (ro %in% colnames(data_values)) {
       message(paste(ro, "readout will not be used for the fit\n"))
-      data_values = as.matrix(data_values[,-which(colnames(data_values)==ro)])
+      data_values = data_values[,-which(colnames(data_values)==ro), drop=FALSE]
     }
   }
   # Remove the perturbations that cannot be simulated to get a correct fit
@@ -932,11 +932,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
   # Means of the blank fixation of the antibodies
   if (length(blanks) == 0) {
-    blank_values = rep(0, ncol(data_values))
+    blank_values = matrix( rep(0, ncol(data_values)), nrow=1, dimnames=list(NULL, colnames(data_values)) )
   } else {
     blank_values = colMeans(data_values[blanks,,drop=F], na.rm=T)
   }
-  blank_values[is.nan(blank_values)] = 0 # For perturbations without blank values 
+  blank_values[is.nan(blank_values)|is.na(blank_values)] = 0 # For perturbations without blank values 
   # Means of basal activity of antibodies
   unstim_values = colMeans(data_values[controls,,drop=F], na.rm=T)
   if (any(is.nan(unstim_values)|is.na(unstim_values))) {
@@ -944,11 +944,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
   # Calculate statistics for variation data
   if (length(c(rm_rows,blanks))>0){
-    mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=F], by=perturbations[-c(rm_rows,blanks),,drop=F], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
-    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=F], by=perturbations[-c(rm_rows,blanks),,drop=F], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
-  }else{
-    mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
-    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=T)[,-(1:ncol(perturbations))]
+    mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
+  } else {
+    mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
   }
   # Delete the perturbations that cannot be used, blank and controls from the dataset
   rm_rows = c(rm_rows, controls, blanks) 
@@ -989,10 +989,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     if (!all(data_file[,grepl("^TR.", colnames(data_file))]==variation_file[,grepl("^TR.", colnames(variation_file))])){
       stop("Order or type of experiments in the variation file is differen from the measurement file, please adapt them to be the same!") 
     }
-    # Gather the relevant cv values
-    cv_values = variation_file[, grepl("^DV", colnames(variation_file))]
-    colnames(cv_values) = gsub("^[A-Z]{2}.", "", colnames(cv_values))
-    cv_values = cv_values[-rm_rows,]
+    # Gather the cv values corresponding to the experimental design
+    pre_cv = variation_file[, grepl("^DV", colnames(variation_file))]
+    colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
+    cv_values = pre_cv[,colnames(pre_cv)%in%colnames(mean_values)]
+    cv_values = cv_values[-rm_rows,,drop=FALSE]
     cv_values = aggregate(cv_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
   } else {
     # remove measurements not different from blank
@@ -1001,8 +1002,6 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
   
-  print(cv_values)
-  print(mean_values)
   colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
