@@ -1001,6 +1001,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
   
+  print(cv_values)
+  print(mean_values)
   colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV

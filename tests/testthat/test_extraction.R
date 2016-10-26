@@ -55,15 +55,6 @@ test_that("createModel works with R objects", {
 test_that("createModel works without error model", {
     expect_silent( suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=10)) )
 })
-test_that("createModel raises an error when arguments are misordered", {
-    expect_error( createModel(dumb_structure, dumb_midas, dumb_variation, inits=10), "matching basal")
-})
-test_that("createModel raises an error when controls are missing", {
-    expect_error(createModel(dumb_structure, dumb_activity, no_control_midas, inits=10), "Control experiments are required")
-})
-test_that("createModel raises an error when perturbations informations are missing", {
-    expect_error(createModel(dumb_structure, dumb_activity, no_perturbations_midas, inits=10))
-})
 # Create a model for later use
 dumb_model = suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, dumb_variation, inits=10))
 
@@ -77,9 +68,20 @@ test_that("Limit cases number of initialisations behave as expected", {
     expect_error(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=0)), "Number of initialisations") # No initialisation
     #expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, dumb_midas, inits=1))) # Only one initialisation
 })
-test_that("Misused arguments raise error", {
-    expect_error(suppressMessages(createModel(dumb_activity, dumb_midas, inits=10))) # Argument forgotten
-    expect_error(suppressMessages(createModel(dumb_activity, dumb_structure, dumb_midas, inits=10))) # Arguments inverted
+test_that("Missing argument raise an error", {
+    expect_error(suppressMessages(createModel(dumb_activity, dumb_midas, inits=10)))
+})
+test_that("Misplaced arguments raise an error", {
+    expect_error(suppressMessages(createModel(dumb_activity, dumb_structure, dumb_midas, inits=10)))
+})
+test_that("createModel raises an error when arguments are misordered", {
+    expect_error( createModel(dumb_structure, dumb_midas, dumb_variation, inits=10), "matching basal")
+})
+test_that("createModel raises an error when controls are missing", {
+    expect_error(createModel(dumb_structure, dumb_activity, no_control_midas, inits=10), "Control experiments are required")
+})
+test_that("createModel raises an error when perturbations informations are missing", {
+    expect_error(createModel(dumb_structure, dumb_activity, no_perturbations_midas, inits=10))
 })
 
 context("No inhibition or simulations")
