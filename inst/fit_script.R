@@ -31,7 +31,7 @@ method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
 precorrelate=T
-extend=T
+extension=T
 
 if (!exists("cargs")) {
     cargs = commandArgs(trailingOnly=T)
@@ -252,7 +252,7 @@ if (reduction) {
 
 if (extension) {
     sug_ext = suggestExtension(model, T, cores)
-    write.table(sug_ext, paste0(folder, "extension_", conditions, ".csv"), row.names=FALSE)
+    write.table(sug_ext, paste0(folder, "extension_", conditions, ".csv"), row.names=FALSE, quote=FALSE, sep="\t")
 }
 
 print("Finished")

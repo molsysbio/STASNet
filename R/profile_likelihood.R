@@ -101,7 +101,7 @@ simplify_path_name <- function (path_name) {
 }
 
 # Print each path value with its error from the profile likelihood
-message_error_intervals <- function(profiles) {
+print_error_intervals <- function(profiles) {
     for (i in 1:length(profiles)) {
         lidx = profiles[[i]]$lower_error_index[1]
         hidx = profiles[[i]]$upper_error_index[1]
