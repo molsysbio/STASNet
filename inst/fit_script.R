@@ -180,7 +180,7 @@ if (recomputing) {
     #### Creates the model from network and basal files and fits a minimal model to the data
     init_time = proc.time()["elapsed"];
     pdf(paste0(folder, "distribution_", conditions, ".pdf"))
-    model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, MIN_CV=min_cv, DEFAULT_CV=default_cv);
+    model = createModel(network, basal_nodes, data, variation, inits=inits, nb_cores=cores, perform_plots=perf_plots, method=method, precorrelate=precorrelate, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, MIN_CV=min_cv, DEFAULT_CV=default_cv, rearrange="no");
     dev.off()
     get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 

@@ -60,12 +60,12 @@ get_running_time <- function(init_time, text="") {
 #' }
 #' @family Model initialisation
 # TODO completely remove examples or add datafile so they work (or use data matrices)
-createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default") {
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="no") {
   # Creation of the model structure object
   model_structure = extractStructure(model_links)
   basal_activity = extractBasalActivity(basal_file)
   
-  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts, MIN_CV, DEFAULT_CV)
+  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
   expdes = core$design
   data = core$data
 
@@ -154,7 +154,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   basal_activity = extractBasalActivity(basal_file)
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV)
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange="byinhib")
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
@@ -169,7 +169,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   data_ = new(STASNet:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
-    core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV)
+    core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange="byinhib")
     if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
@@ -871,8 +871,9 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 #' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicates in the data.
+#' @param rearrange Whether the rows should be rearranged. "no" for no rearrangement, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
 #' @seealso \code{\link{extractMIDAS}}
-extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
+extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3, rearrange="no") {
 
   model_structure = extractStructure(model_structure)
   basal_activity = extractBasalActivity(basal_activity)
@@ -987,7 +988,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     variation_file=variation_file[,colnames(data_file)]
     # Check whether the order and type of the perturbations is preserved
     if (!all(data_file[,grepl("^TR.", colnames(data_file))]==variation_file[,grepl("^TR.", colnames(variation_file))])){
-      stop("Order or type of experiments in the variation file is differen from the measurement file, please adapt them to be the same!") 
+      stop("Order or type of experiments in the variation file is different from the measurement file, please adapt them to be the same!") 
     }
     # Gather the cv values corresponding to the experimental design
     pre_cv = variation_file[, grepl("^DV", colnames(variation_file))]
@@ -1036,47 +1037,72 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   
   measured_nodes = colnames(mean_values)[match(model_structure$names, colnames(mean_values), nomatch = 0 )]
   
-  # Arrange data according to experimental design
-  stim_motifs = aggregate(stimuli,by=as.data.frame(stimuli),max,na.rm=T)[,-(1:ncol(stimuli)),drop=F] # sorts automatically
-  inh_motifs = aggregate(inhibitor,by=as.data.frame(inhibitor),max,na.rm=T)[,-(1:ncol(inhibitor)),drop=F] # sorts automatically
-  
-  error_sort = error[0, measured_nodes]
-  stim_data_sort = mean_values[0, measured_nodes]
-  cv_sort = cv_values[0,measured_nodes]
-  stim_sort = if (no_stim) {as.matrix(stimuli)} else{stimuli[0, ,drop=F]}
-  inh_sort = if (no_inh) {as.matrix(inhibitor)} else{inhibitor[0, ,drop=F]}
-  
-  if (!no_stim){
-    for (ii in 1:nrow(stim_motifs)){
-      stim_pos = apply(stimuli==matrix(rep(stim_motifs[ii,], each=nrow(stimuli)), nrow=nrow(stimuli)), 1, all)
-      if (!no_inh){
-        for (jj in 1:nrow(inh_motifs)){
-          inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
-          if (any(stim_pos & inh_pos)){
-            error_sort = rbind(error_sort, error[stim_pos & inh_pos, measured_nodes])
-            stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos & inh_pos, measured_nodes])
-            cv_sort = rbind(cv_sort, cv_values[stim_pos & inh_pos, measured_nodes])
-            stim_sort = rbind(stim_sort, stimuli[stim_pos & inh_pos, ])
-            inh_sort = rbind(inh_sort, inhibitor[stim_pos & inh_pos, ])
+  if (rearrange %in% c("bystim", "byinhib")) {
+    # Arrange data according to experimental design
+    stim_motifs = aggregate(stimuli,by=as.data.frame(stimuli),max,na.rm=T)[,-(1:ncol(stimuli)),drop=F] # sorts automatically
+    inh_motifs = aggregate(inhibitor,by=as.data.frame(inhibitor),max,na.rm=T)[,-(1:ncol(inhibitor)),drop=F] # sorts automatically
+    
+    error_sort = error[0, measured_nodes]
+    stim_data_sort = mean_values[0, measured_nodes]
+    cv_sort = cv_values[0,measured_nodes]
+    stim_sort = if (no_stim) {as.matrix(stimuli)} else{stimuli[0, ,drop=F]}
+    inh_sort = if (no_inh) {as.matrix(inhibitor)} else{inhibitor[0, ,drop=F]}
+    if (rearrange == "bystim") { # Invert variables
+      tmp = stim_sort
+      stim_sort = inh_sort
+      inh_sort = tmp
+      tmp = no_stim
+      no_stim = no_inh
+      no_inh = tmp
+    }
+    
+    if (!no_stim){
+      for (ii in 1:nrow(stim_motifs)){
+        stim_pos = apply(stimuli==matrix(rep(stim_motifs[ii,], each=nrow(stimuli)), nrow=nrow(stimuli)), 1, all)
+        if (!no_inh){
+          for (jj in 1:nrow(inh_motifs)){
+            inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
+            if (any(stim_pos & inh_pos)){
+              error_sort = rbind(error_sort, error[stim_pos & inh_pos, measured_nodes])
+              stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos & inh_pos, measured_nodes])
+              cv_sort = rbind(cv_sort, cv_values[stim_pos & inh_pos, measured_nodes])
+              stim_sort = rbind(stim_sort, stimuli[stim_pos & inh_pos, ])
+              inh_sort = rbind(inh_sort, inhibitor[stim_pos & inh_pos, ])
+            }
           }
+        }else if (any(stim_pos)){
+          error_sort = rbind(error_sort, error[stim_pos, measured_nodes])
+          stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos, measured_nodes])
+          cv_sort = rbind(cv_sort, cv_values[stim_pos, measured_nodes])
+          stim_sort = rbind(stim_sort, stimuli[stim_pos, ])
         }
-      }else if (any(stim_pos)){
-        error_sort = rbind(error_sort, error[stim_pos, measured_nodes])
-        stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos, measured_nodes])
-        cv_sort = rbind(cv_sort, cv_values[stim_pos, measured_nodes])
-        stim_sort = rbind(stim_sort, stimuli[stim_pos, ])
+      }
+    }else{
+      for (jj in 1:nrow(inh_motifs)){
+        inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
+        if (any(inh_pos)){
+          error_sort = rbind(error_sort, error[inh_pos, measured_nodes])
+          stim_data_sort = rbind(stim_data_sort, mean_values[inh_pos, measured_nodes])
+          cv_sort = rbind(cv_sort, cv_values[inh_pos, measured_nodes])
+          inh_sort = rbind(inh_sort, inhibitor[inh_pos, ])
+        }
       }
     }
-  }else{
-    for (jj in 1:nrow(inh_motifs)){
-      inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
-      if (any(inh_pos)){
-        error_sort = rbind(error_sort, error[inh_pos, measured_nodes])
-        stim_data_sort = rbind(stim_data_sort, mean_values[inh_pos, measured_nodes])
-        cv_sort = rbind(cv_sort, cv_values[inh_pos, measured_nodes])
-        inh_sort = rbind(inh_sort, inhibitor[inh_pos, ])
-      }
+
+    if (rearrange == "bystim") { # Re-invert the variables that are used later
+      tmp = stim_sort
+      stim_sort = inh_sort
+      inh_sort = tmp
     }
+  } else {
+    if (!rearrange %in% c("n", "no", "")) {
+        warning(paste0("Unknown option '", rearrange, "' for the arrangement of the perturbations, interpreted as 'no'"))
+    }
+    stim_sort = stimuli
+    inh_sort = inhibitor
+    stim_data_sort = mean_values[,measured_nodes]
+    cv_sort = cv_values[,measured_nodes]
+    error_sort = error[,measured_nodes]
   }
   
   if (verbose > 3) {
@@ -1120,13 +1146,13 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples \dontrun{
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
-rebuildModel <- function(model_file, data_file, var_file="") {
+rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   if (!grepl(".mra$", model_file)) {
     stop("The model file does not have the mra extension")
   }
   model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
   
   model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   

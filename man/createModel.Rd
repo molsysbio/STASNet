@@ -8,7 +8,7 @@ createModel(model_links, basal_file, data.stimulation, data.variation = "",
   nb_cores = 1, inits = 1000, perform_plots = F, precorrelate = T,
   method = "geneticlhs", unused_perturbations = c(),
   unused_readouts = c(), MIN_CV = 0.1, DEFAULT_CV = 0.3,
-  model_name = "default")
+  model_name = "default", rearrange = "no")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
