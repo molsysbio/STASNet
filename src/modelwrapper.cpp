@@ -116,7 +116,7 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data);
+        ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
@@ -133,6 +133,7 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters) {
     return( fitmodel_wrapper(data, parameters, std::vector<size_t>()) );
 }
 SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+    for (size_t ii=0; ii<keep_constant.size(); ii++) { keep_constant[ii]--; }
     return( fitmodel_wrapper(data, parameters, keep_constant) );
 }
 
