@@ -7,7 +7,7 @@
 createModelSet(model_links, basal_file, csv_files, var_files = c(),
   nb_cores = 1, inits = 1000, perform_plots = F, method = "geneticlhs",
   unused_perturbations = c(), unused_readouts = c(), MIN_CV = 0.1,
-  DEFAULT_CV = 0.3, model_name = "default")
+  DEFAULT_CV = 0.3, model_name = "default", rearrange = "bystim")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
@@ -35,6 +35,8 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 \item{DEFAULT_CV}{Default coefficient of variation to use when none is provided and there are no replicated in the data.}
 
 \item{model_name}{The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.}
+
+\item{rearrange}{Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.}
 }
 \description{
 Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models

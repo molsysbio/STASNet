@@ -62,6 +62,15 @@ test_that("createModelSet works with R objects", {
     expect_silent( suppressMessages(createModelSet(dumb_structure, dumb_activity, list(m1=dumb_midas, m2=dumb_midas), list(m1=dumb_variation, m2=dumb_variation), model_name=c("m1", "m2"), inits=10)) )
 })
 
+context("Model core data extraction")
+
+test_that("extractModelCore works as expected", {
+    expect_silent(suppressMessages(extractModelCore(dumb_structure, dumb_activity, dumb_midas)))
+})
+test_that("extractModelCore error when perturbations are missing", {
+    expect_error(suppressMessages(extractModelCore(dumb_structure, dumb_activity, no_perturbations_midas)))
+})
+
 context("Limit cases for createModel")
 
 test_that("Limit cases number of initialisations behave as expected", {
@@ -91,13 +100,19 @@ context("No inhibition or simulations")
 
 only_stim = dumb_midas[, -3]
 only_inhib = dumb_midas[, -2]
-test_that("Only inhibitions works", {
-    expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_inhib, inits=1)))
-})
-test_that("Only inhibitions works in extractModelCore", {
+test_that("Only inhibitions works in extractModelCore (no sorting)", {
     expect_silent(extractModelCore(dumb_structure, dumb_activity, only_inhib))
 })
-test_that("Only stimulations works", {
+test_that("Only inhibitions works in extractModelCore with inhibitions sorting", {
+    expect_silent(extractModelCore(dumb_structure, dumb_activity, only_inhib, rearrange="byinhib"))
+})
+test_that("Only inhibitions works in extractModelCore with stimulations sorting", {
+    expect_silent(extractModelCore(dumb_structure, dumb_activity, only_inhib, rearrange="bystim"))
+})
+test_that("Only inhibitions createModel works", {
+    expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_inhib, inits=1)))
+})
+test_that("Only stimulations createModel works", {
     expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_stim, inits=1)))
 })
 test_that("Deleting all inhibitions work", {
@@ -105,15 +120,6 @@ test_that("Deleting all inhibitions work", {
 })
 test_that("Deleting all stimulations work", {
     expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N1")) ))
-})
-
-context("Model core data extraction")
-
-test_that("extractModelCore works as expected", {
-    expect_silent(suppressMessages(extractModelCore(dumb_structure, dumb_activity, dumb_midas)))
-})
-test_that("extractModelCore error when perturbations are missing", {
-    expect_error(suppressMessages(extractModelCore(dumb_structure, dumb_activity, no_perturbations_midas)))
 })
 
 context("Helper functions")

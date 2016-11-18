@@ -21,7 +21,7 @@ extractModelCore(model_structure, basal_activity, data_filename,
 
 \item{DEFAULT_CV}{Default coefficient of variation to use when none is provided and there are no replicates in the data.}
 
-\item{rearrange}{Whether the rows should be rearranged. "no" for no rearrangement, "bystim" to group by stimulations, "byinhib" to group by inhibitions.}
+\item{rearrange}{Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.}
 
 \item{datas}{Experimental data under the MIDAS format. See extractMIDAS.}
 

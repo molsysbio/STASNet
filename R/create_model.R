@@ -48,6 +48,7 @@ get_running_time <- function(init_time, text="") {
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
 #' @param model_name The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.
+#' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -142,7 +143,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' @inheritParams createModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default") {
+createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim") {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -150,11 +151,12 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
       stop("'var_files' must have the same length as 'csv_files' or be of length 0")
     }
   }
+  if (!rearrange %in% c("bystim", "byinhib")) { stop("Invalid 'rearrange' for createModelSet, must be 'byinhib' or 'bystim'") }
   model_structure = extractStructure(model_links)
   basal_activity = extractBasalActivity(basal_file)
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange="byinhib")
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
@@ -871,7 +873,7 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 #' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicates in the data.
-#' @param rearrange Whether the rows should be rearranged. "no" for no rearrangement, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
+#' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
 #' @seealso \code{\link{extractMIDAS}}
 extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3, rearrange="no") {
 
@@ -1035,7 +1037,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     no_inh=T
   }
   
-  measured_nodes = colnames(mean_values)[match(model_structure$names, colnames(mean_values), nomatch = 0 )]
+  measured_nodes = colnames(mean_values)
+  measured_nodes = measured_nodes[measured_nodes %in% model_structure$names] # Preserve the order in the file, allowing to specify the order of the readouts in the input
   
   if (rearrange %in% c("bystim", "byinhib")) {
     # Arrange data according to experimental design
@@ -1047,13 +1050,19 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     cv_sort = cv_values[0,measured_nodes]
     stim_sort = if (no_stim) {as.matrix(stimuli)} else{stimuli[0, ,drop=F]}
     inh_sort = if (no_inh) {as.matrix(inhibitor)} else{inhibitor[0, ,drop=F]}
-    if (rearrange == "bystim") { # Invert variables
+    if (rearrange == "byinhib") { # Invert variables
       tmp = stim_sort
       stim_sort = inh_sort
       inh_sort = tmp
       tmp = no_stim
       no_stim = no_inh
       no_inh = tmp
+      tmp = stim_motifs
+      stim_motifs = inh_motifs
+      inh_motifs = tmp
+      tmp = stimuli
+      stimuli = inhibitor
+      inhibitor = tmp
     }
     
     if (!no_stim){
@@ -1089,7 +1098,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
       }
     }
 
-    if (rearrange == "bystim") { # Re-invert the variables that are used later
+    if (rearrange == "byinhib") { # Re-invert the variables that are used later
       tmp = stim_sort
       stim_sort = inh_sort
       inh_sort = tmp
@@ -1098,8 +1107,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     if (!rearrange %in% c("n", "no", "")) {
         warning(paste0("Unknown option '", rearrange, "' for the arrangement of the perturbations, interpreted as 'no'"))
     }
-    stim_sort = stimuli
-    inh_sort = inhibitor
+    stim_sort = as.matrix(stimuli)
+    inh_sort = as.matrix(inhibitor)
     stim_data_sort = mean_values[,measured_nodes]
     cv_sort = cv_values[,measured_nodes]
     error_sort = error[,measured_nodes]
