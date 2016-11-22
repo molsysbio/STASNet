@@ -14,11 +14,6 @@
 verbose = FALSE
 debug = TRUE
 
-# Generates a random number between 0 and 1
-rand <- function(decimals=4) {
-  return(sample(1:10^decimals, size=1) / 10^decimals)
-}
-
 get_running_time <- function(init_time, text="") {
   run_time = proc.time()["elapsed"]-init_time
   run_hours = run_time %/% 3600;
@@ -290,7 +285,6 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   
   return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
 }
-
 
 #' Perform an initialisation of the model 
 #'
