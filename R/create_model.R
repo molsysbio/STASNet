@@ -343,6 +343,10 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
 #' @return A matrix with the random samples
 #' @author Bertram Klinger \email{klinger@@charite.de}
 getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) {
+  if (nb_samples > 10^8){
+    warning("Number of samples is too high, restricting sample size to 10^8 samples!")
+    nb_samples = 10^8
+  }
   valid_methods=data.frame(methods=c("randomlhs",
                                      "geneticlhs",
                                      "improvedlhs",
@@ -510,12 +514,8 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 # @family Model initialisation
 parallel_initialisation <- function(model, data, samples, NB_CORES) {
   # Put the samples under list format, as mclapply only take "one dimension" objects
-  parallel_sampling = list()
-  nb_samples = dim(samples)[1]
-  length(parallel_sampling) = nb_samples # Prevents the resizing of the list
-  for (i in 1:nb_samples) {
-    parallel_sampling[[i]] = samples[i,]
-  }
+  nb_samples = nrow(samples)
+  parallel_sampling = lapply(1:nb_samples,function(x) samples[x,])
   # Parallel initialisations
   # The number of cores used depends on the ability of the detectCores function to detect them
   fitmodel_wrapper <- function(params, data, model) {
@@ -560,33 +560,25 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
   }
   # Since the aggregation in the end of the parallel calculations takes a lot of time for a big list, we calculate by block and take the best result of each block
   if (nb_samples > 10000) {
-    message("Using the block version for the parallel initialisation")
-    best_results = list()
-    best_results$residuals = c()
-    best_results$params = c()
-    for (i in 1:(nb_samples %/% 10000)) {
-      results = get_parallel_results(model, data, parallel_sampling[ (10000*(i-1)+1):(10000*i) ], NB_CORES)
+    
+    # chop the data into optimal number of pieces
+    nb_blocks = nb_samples %/% 10000
+    block_size = NB_CORES * ((nb_samples %/% nb_blocks) %/% NB_CORES)
+    best_keep = 10000 %/% nb_blocks
+    best_results = list( residuals=c(), params=c() )
+    message(paste0("Parallel initialization using block sizes of ", block_size, " samples"))
+    
+    for (i in 1:nb_blocks) {
+      seq = (block_size*(i-1)+1) : ifelse(block_size*(i+1) <= nb_samples, block_size*i, nb_samples)
+      results = get_parallel_results(model, data, parallel_sampling[seq], NB_CORES)
       
       # Only keep the best fits
-      best = order(results$residuals)[1:20]
+      best = order(results$residuals)[1:best_keep]
       write(paste(sum(is.na(results$residuals)), "NAs"), stderr())
       best_results$residuals = c(best_results$residuals, results$residuals[best])
       best_results$params = rbind(best_results$params, results$params[best,])
-      # We make it so that the size of best_results never execeeds 10000
-      if (i %% 500 == 0) {
-        best = order(best_results$residuals)[1:20]
-        best_results$residuals = best_results$residuals[best]
-        best_results$params = best_results$params[best,]
-      }
     }
-    # The last block is smaller
-    if (nb_samples %% 10000 != 0) {
-      results = get_parallel_results(model, data, parallel_sampling[(10000 * nb_samples %/% 10000):nb_samples], NB_CORES)
-      
-      best = order(results$residuals)[1:20]
-      best_results$residuals = c(best_results$residuals, results$residuals[best])
-      best_results$params = rbind(best_results$params, results$params[best,])
-    }
+    
   } else {
     best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES)
   }
