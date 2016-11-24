@@ -2,14 +2,14 @@
 % Please edit documentation in R/model_manipulation.R
 \name{suggestExtension}
 \alias{suggestExtension}
-\title{Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model
-This list can then be based and compared to literature knowledge and if considered suitable manually added to the starting network and rerun with the createModel function.}
+\title{Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
+A new link found to be suitable by the modeller can then added by rerunning the createModel function with the altered adjecency information.}
 \usage{
 suggestExtension(model_description, parallel = F, mc = 1,
   sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F)
 }
 \arguments{
-\item{model_description}{MRAmodel object describing thze model and its best fit, containing the data}
+\item{model_description}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}
 
 \item{parallel}{Boolean number indicating whether addition is executed in a parallel fashion}
 
@@ -20,8 +20,8 @@ suggestExtension(model_description, parallel = F, mc = 1,
 \item{print}{Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"}
 }
 \description{
-Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model
-This list can then be based and compared to literature knowledge and if considered suitable manually added to the starting network and rerun with the createModel function.
+Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
+A new link found to be suitable by the modeller can then added by rerunning the createModel function with the altered adjecency information.
 }
 \examples{
 \dontrun{

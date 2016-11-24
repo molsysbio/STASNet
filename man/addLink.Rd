@@ -16,7 +16,7 @@ addLink(new_link, adj, rank, init_residual, model, initial_response, expdes,
 
 \item{init_residual}{Numeric sum-squared error of original network}
 
-\item{model}{MRAmodel object of original network}
+\item{model}{MRAmodel or MRAmodelSet object of original network}
 
 \item{initial_response}{List containing the local_response matrix and inhibitor strength of original network}
 
@@ -32,5 +32,8 @@ addLink(new_link, adj, rank, init_residual, model, initial_response, expdes,
 }
 \description{
 add Link routine
+}
+\author{
+Bertram Klinger \email{bertram.klinger@charite.de}
 }
 
