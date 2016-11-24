@@ -229,9 +229,9 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   return(computeFitScore(model_description))
 }
 
-#' Tries to add one link each and returns a list of links ordered by their chi-squared differences to the original model
-#' This list can then be based and compared to literature knowledge and if considered suitable manually added to the starting network and rerun with the createModel function.
-#' @param model_description MRAmodel object describing thze model and its best fit, containing the data
+#' Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
+#' A new link found to be suitable by the modeller can then added by rerunning the createModel function with the altered adjecency information.
+#' @param model_description MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data
 #' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
 #' @param mc Number of cores that should be used for the computation
 #' @param sample_range Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))
@@ -243,9 +243,15 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' ext_list = suggestExtension(mramodel)
 #' }
 suggestExtension <- function(model_description,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F){
-  # Extra fitting informations from the model description
-  model = model_description$model
-  initial_response = model$getLocalResponseFromParameter( model_description$parameters )
+  model = model_description$model 
+  if ("MRAmodelSet" %in% class(model_description)) {
+    modelgroup=extractSubmodels(modelset)
+    models = modelgroup$models
+    n_par=model$nr_of_parameters()/model_description$nb_models
+    initial_response = lapply(1:length(models), function(x) models[[x]]$model$getLocalResponseFromParameter( model_description$parameters[(1+(x-1)*n_par):(x*n_par)] ))
+  } else {
+    initial_response = model$getLocalResponseFromParameter( model_description$parameters )
+  }
   expdes = model_description$design
   model_structure = model_description$structure
   adj = model_structure$adjacencyMatrix
@@ -260,6 +266,7 @@ suggestExtension <- function(model_description,parallel = F, mc = 1, sample_rang
   message("Performing model extension...")
   init_residual = model_description$bestfit
   rank = model$modelRank()
+  
   #determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)
   exclude=diag(1,nrow(adj),ncol(adj))
   if (length(setdiff(expdes$stim_nodes,expdes$measured_nodes))>0){
@@ -268,7 +275,7 @@ suggestExtension <- function(model_description,parallel = F, mc = 1, sample_rang
   links_to_test=which( adj==0 & exclude==0)
   message(paste0(length(links_to_test)," links will be tested..."))
   
-  # Each link is added and compared to the previous model
+  # Each link is added and compared to the previous model # ADJUST TO ALSO ACCEPT modelSet!!!
   if (parallel == T){
     extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,mc.cores=mc)  
     extension_mat=as.data.frame(do.call("rbind",extension_mat))
@@ -308,22 +315,32 @@ suggestExtension <- function(model_description,parallel = F, mc = 1, sample_rang
 #' @param adj integer Matrix original adjacency matrix excluding the new_link 
 #' @param rank Rank of the input model
 #' @param init_residual Numeric sum-squared error of original network
-#' @param model MRAmodel object of original network
+#' @param model MRAmodel or MRAmodelSet object of original network
 #' @param initial_response List containing the local_response matrix and inhibitor strength of original network
 #' @param expdes Design object of MRAmodel object 
 #' @param data data Object of MRAmodel object
 #' @param model_structure Structure object of MRAmodel object
 #' @param sample_range Numeric vector containing all starting values for new_link
 #' @param verbose Whether the function should be verbose or not
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
   best_res = Inf
   for (jj in sample_range){
+    if (class(model)== "Rcpp_ModelSet"){
+      paramstmp = c()
+      for (ii in 1:length(initial_response)){
+      initial_response[[ii]]$local_response[new_link]=jj
+      paramstmp = c(paramstmp, model$getParameterFromLocalResponse(initial_response[[ii]]$local_response, initial_response[[ii]]$inhibitors)) 
+      }
+      tmp_result = model$fitmodelset( data,paramstmp )  
+    }else{
     initial_response$local_response[new_link]=jj
-    paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+    paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
     tmp_result = model$fitmodel( data,paramstmp )
+    }
     if ( verbose == T )
     message( paste0( "for ", jj ," : ",tmp_result$residuals ) )
     if ( tmp_result$residuals < best_res ){
@@ -351,6 +368,13 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   adj[new_link] = 0
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
+  if (class(model)== "Rcpp_ModelSet"){
+    for (ii in 1:length(initial_response)){
+      initial_response[[ii]]$local_response[new_link]=0
+    }
+  }else{
+    initial_response$local_response[new_link]=0
+  }
     if ( verbose == T ){
     message(paste("[",extension_mat[1], "]" ,
                      ", new : ", new_rank,
@@ -385,4 +409,3 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
 
     return(tmp_model)
 }
-
