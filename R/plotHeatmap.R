@@ -1,6 +1,10 @@
 ########################### plotHeatmap.R ###########################
 # function to generate heatmap with cutoff and colormap scale function
 
+# A color blind palette
+#                Green      Orange    Sky Blue    Blue      Vermillion  Purple    Yellow      Black
+cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7", "#F0E442", "#000000")
+
 #' Plot a customized heatmap with a symmetrical scale that is not stretched by extreme values
 #' @param mat a numeric matrix that should be plotted
 #' @param lim a single number indicating the maximal range [-lim lim] for the color map
