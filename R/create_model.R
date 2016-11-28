@@ -104,7 +104,9 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     message("Best residuals :")
     message(paste0(sort(residuals)[1:20], collapse=" "))
   }
-  if (perform_plots) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
+  if (perform_plots) {
+    plot(1:length(order_resid), residuals[order_resid], main="Best residuals", ylab="Likelihood", xlab="rank")
+  }
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)
   best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
