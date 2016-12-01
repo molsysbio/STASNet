@@ -46,3 +46,87 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
 
 }
 
+#' Clone an MRAmodel or MRAmodelSet object 
+#'
+#' Copy a MRAmodel or MRAmodelSet object into a new independent variable
+#' @param old_model A MRAmodel/MRAmodelSet object.
+#' @return An MRAmodel/MRAmodelSet object with the same properties as old_model
+#' @author Bertram Klinger \email{bertram.klinger@charite.de}
+cloneModel <- function(old_model){
+  
+  type = class(old_model)
+  if ("MRAmodelSet" %in% type ){
+    model = new(STASNet:::ModelSet)
+    
+    links = old_model$model$getParametersLinks()
+    links_list = do.call("rbind",strsplit(gsub("^r_","",links[grep("^r_",links)]),"_"))[,c(2,1)]
+    structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
+    design = STASNet:::getExperimentalDesign(model.structure = structure,
+                                             stim.nodes = structure$names[old_model$design$stim_nodes+1],
+                                             inhib.nodes = structure$names[old_model$design$inhib_nodes+1],
+                                             measured.nodes = structure$names[old_model$design$measured_nodes+1],
+                                             stimuli = old_model$design$stimuli,
+                                             inhibitor = old_model$design$inhibitor,
+                                             basal.activity = old_model$basal)
+    model$setModel(design = design, structure = structure)
+    model$setNbModels(old_model$nb_models)
+    
+    new_model = STASNet:::MRAmodelSet(nb_models = old_model$nb_models,
+                                      model = model,
+                                      design = design,
+                                      structure = structure,
+                                      basal = old_model$basal,
+                                      data = old_model$data,
+                                      cv = old_model$cv,
+                                      parameters = old_model$parameters,
+                                      bestfit = old_model$bestfit,
+                                      name = old_model$name,
+                                      infos = old_model$infos,
+                                      param_range = old_model$param_range,
+                                      lower_values = old_model$lower_values,
+                                      upper_values = old_model$upper_values,
+                                      unused_perturbations = old_model$unused_perturbations,
+                                      unused_readouts = old_model$unused_readouts,
+                                      min_cv = old_model$min_cv,
+                                      default_cv = old_model$default_cv)
+    
+    if ( length(old_model$variable_parameters) > 0 ){ 
+      new_model$model$setVariableParameters(old_model$variable_parameters) 
+    }
+  }else if ("MRAmodel" %in% type ){
+    model = new(STASNet:::Model)
+    
+    links = old_model$model$getParametersLinks()
+    links_list = do.call("rbind",strsplit(gsub("^r_","",links[grep("^r_",links)]),"_"))[,c(2,1)]
+    structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
+    design = STASNet:::getExperimentalDesign(model.structure = structure,
+                                             stim.nodes = structure$names[old_model$design$stim_nodes+1],
+                                             inhib.nodes = structure$names[old_model$design$inhib_nodes+1],
+                                             measured.nodes = structure$names[old_model$design$measured_nodes+1],
+                                             stimuli = old_model$design$stimuli,
+                                             inhibitor = old_model$design$inhibitor,
+                                             basal.activity = old_model$basal)
+    
+    model$setModel(design = design, structure = structure)
+    new_model = STASNet:::MRAmodel(model = model,
+                                   design = design,
+                                   structure = structure,
+                                   basal = old_model$basal,
+                                   data = old_model$data,
+                                   cv = old_model$cv,
+                                   parameters = old_model$parameters,
+                                   bestfit = old_model$bestfit,
+                                   name = old_model$name,
+                                   infos = old_model$infos,
+                                   param_range = old_model$param_range,
+                                   lower_values = old_model$lower_values,
+                                   upper_values = old_model$upper_values,
+                                   unused_perturbations = old_model$unused_perturbations,
+                                   unused_readouts = old_model$unused_readouts,
+                                   min_cv = old_model$min_cv,
+                                   default_cv = old_model$default_cv)
+  }else{
+    stop(paste0("Wrong input class '",type,",' must be of class 'MRAmodel' or 'MRAmodelSet'!")) 
+  }
+  return(new_model)
+}
