@@ -22,6 +22,20 @@ get_running_time <- function(init_time, text="") {
   return(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
 }
 
+trim_num <- function(x, non_zeros=2, behind_comma = 2){
+if (is.na(x)){ return(x) }
+
+if (!is.numeric(x)){ oldx =x; x = as.numeric(as.character(x)) } 
+
+if (is.na(x)){ stop(paste("Number or NA expected '", oldx ,"' received as input!")) } 
+  
+if (abs(x >= 1)){ 
+  return(round(x*10^behind_comma)/10^behind_comma)
+} else{
+  return(signif(x,non_zeros))  
+}  
+}
+
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
@@ -205,7 +219,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #'
 #' See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
 #'
-#' @param modelset An MRAmodelSet object
+#' @param original_modelset An MRAmodelSet object
 #' @param nb_cores Number of cores to use for the refitting with the new variable parameters
 #' @param max_iterations Maximum number of variable parameters to add (if 0 takes as many as possible)
 #' @param nb_samples Number of samples to generate to fit the new variable parameters
@@ -214,7 +228,10 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #' @return An updated MRAmodelSet with the new parameter sets
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+  # clone MRAmodelSet object to have seperate objects at hand
+  modelset = cloneModel(original_modelset)
+  
   init_time = proc.time()["elapsed"];
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   model = modelset$model
@@ -244,9 +261,9 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
       par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
       new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
       
-      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pf(f_score, df1, df2),2) ))
-      writeLines(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
-      writeLines(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
+      message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pf(f_score, df1, df2),2) ))
+      message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
+      message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
        
       var_pars = c( modelset$variable_parameters, par_id )
       modelset = setVariableParameters(modelset, var_pars)
@@ -344,7 +361,7 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
 #' @author Bertram Klinger \email{klinger@@charite.de}
 getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) {
   if (nb_samples > 10^8){
-    warning("Number of samples is too high, restricting sample size to 10^8 samples!")
+    warning("Number of samples is too high, restricting sample size to 10^8 !")
     nb_samples = 10^8
   }
   valid_methods=data.frame(methods=c("randomlhs",
@@ -365,9 +382,7 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
     max_proc=ceiling(nb_samples/max_sample_stack_size)
     if (nb_cores>1){
       samples=qnorm(do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc))), sd=2)
-      #samples=do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc)))
     } else {
-      #samples=do.call(rbind,lapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx]))))
       samples=qnorm(do.call(rbind,lapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])))), sd=2)  
     }
   } else {

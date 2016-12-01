@@ -125,52 +125,88 @@ plotModelScores.MRAmodel <- function(mra_model, ...) {
 }
 
 #' @rdname selectMinimalModel
-reduceModel <- function(model_description, accuracy=0.95) {
-    selectMinimalModel(model_description, accuracy)
+reduceModel <- function(original_model, accuracy=0.95) {
+    selectMinimalModel(original_model, accuracy)
 }
 
 #' Selection of a minimal model by the removal of non significant links with an F-test
-#' @param model_description An MRAmodel object, as the one produced by createModel or importModel
+#' @param original_model An MRAmodel object, as the one produced by createModel or importModel
 #' @param accuracy Probability threshold, the type I error for each link will be 1-accuracy. Multiple testing is not taken into account.
 #' @return An MRAmodel object of the reduced model with the data
 #' @export
-#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-selectMinimalModel <- function(model_description, accuracy=0.95) {
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr} 
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
+selectMinimalModel <- function(original_model, accuracy=0.95) {
+  # Clone model object to not change original model specifications
+  model_description = cloneModel(original_model)
+  
   # Extra fitting informations from the model description
   model = model_description$model
   init_params = model_description$parameters
-  initial_response = model$getLocalResponseFromParameter( init_params )
   expdes = model_description$design
   model_structure = model_description$structure
   adj = model_structure$adjacencyMatrix
   data = model_description$data
-  if (is.na(model_description$bestfit)) {stop("Data are recquired to reduce the model")}
+  
+  if ("MRAmodelSet" %in% class(model_description)) {
+    modelgroup=extractSubmodels(model_description)
+    models = modelgroup$models
+    n_par=model$nr_of_parameters()/model_description$nb_models
+    initial_response = lapply(1:length(models), function(x) models[[x]]$model$getLocalResponseFromParameter( init_params[(1+(x-1)*n_par):(x*n_par)] ))
+    rank = model$modelRank()/model_description$nb_models + length(model_description$variable_parameters)*(model_description$nb_models-1)
+    if (length(model_description$variable_parameters)>0){
+      variable_links = model$getParametersLinks()[model_description$variable_parameters]
+    }else{
+      variable_links=c()
+    }
+  } else {
+    initial_response = model$getLocalResponseFromParameter( init_params )
+    rank = model$modelRank()
+  }
+  
+  if (is.na(model_description$bestfit)) {stop("A prior best fitting step is required to reduce the model from")}
   real_data = model_description$data$stim_data
   data_count = sum(!is.na(real_data) & !is.nan(real_data))
   
   message("Performing model reduction...")
   init_residual = model_description$bestfit
-  rank = model$modelRank()
   reduce=TRUE
   while (reduce) {
     links.to.test=which(adj==1)
-    params=c()
+    params=vector("list",length(links.to.test))
     residuals=c()
     ranks=c()
     newadj=adj
+    c=0
     
     # Each link is removed and the best of those networks is compared to the previous model
-    newadj=adj
-    for (i in links.to.test) {
-      newadj[i]=0
+    for (ii in links.to.test) {
+      c=c+1
+      newadj[ii]=0
       model_structure$setAdjacencyMatrix( newadj )
       model$setModel ( expdes, model_structure )
-      paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
-      result = model$fitmodel(data, paramstmp)
-      response.matrix = model$getLocalResponseFromParameter( result$parameter )
-      residuals = c(residuals, result$residuals);   
-      params = cbind(params, c(response.matrix))
-      new_rank = model$modelRank()
+      
+      if (class(model)== "Rcpp_ModelSet"){
+        model$setNbModels(model_description$nb_models)
+        if (length(variable_links)>0 & any(model$getParametersLinks() %in% variable_links)){
+          leftVar=match(variable_links, model$getParametersLinks())
+          model$setVariableParameters(leftVar[!is.na(leftVar)]) 
+        }
+        paramstmp = unlist(lapply(1:length(models), function(x) model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
+        result = model$fitmodelset(data, paramstmp) 
+        n_par=model$nr_of_parameters()/model_description$nb_models
+        response.matrix = lapply(1:model_description$nb_models, function(x) model$getLocalResponseFromParameter( rep(result$parameter[(1+(x-1)*n_par):(x*n_par)], model_description$nb_models) ))
+        params[[c]] = c(response.matrix)
+        new_rank = model$modelRank()/model_description$nb_models + length(model_description$variable_parameters)*(model_description$nb_models-1)
+      }else{
+        paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
+        result = model$fitmodel(data, paramstmp)
+        response.matrix = model$getLocalResponseFromParameter( result$parameter )
+        params[[c]] = c(response.matrix)
+        new_rank = model$modelRank()
+      }
+      
+      residuals = c(residuals, result$residuals)   
       ranks = c(ranks, new_rank)
       
       if (verbose) {
@@ -180,10 +216,10 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
         dfreedom = data_count - rank
         deltares = new_residual - init_residual
         f_score = ((new_residual - init_residual) / dr) / (init_residual/dfreedom)
-        message(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", deltares, "; Delta rank = ", dr, ", p-value = ", pf(f_score, dr, dfreedom) ))
+        message(paste(model_structure$names[(ii-1) %/% dim(adj)[1]+1], "->", model_structure$names[(ii-1) %% dim(adj)[1]+1], ": Delta residual = ", trim_num(deltares), "; Delta rank = ", dr, ", p-value = ", trim_num(pf(f_score, dr, dfreedom)) )) 
       }
       
-      newadj[i]=1; ## Slightly accelerate the computation
+      newadj[ii]=1 ## Slightly accelerate the computation
     }
     
     order.res=order(residuals)
@@ -199,14 +235,14 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
     if (f_score < qf(accuracy, df1=dr, df2=dfreedom)) {
       adj[links.to.test[order.res[1]]]=0
       rank = new_rank
-      initial_response=params[,order.res[1]]
+      initial_response=params[[order.res[1]]]
       init_residual = residuals[order.res[1]]
       #message(initial_response)
       message(paste0("Remove ",
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                    model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
       
-      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", deltares, ",  p-value = ", pf(f_score, df1=dr, df2=dfreedom) ))
+      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=dr, df2=dfreedom)) ))
       message("------------------------------------------------------------------------------------------------------")
       
       model_description$bestfit = sort(residuals)[1]
@@ -219,18 +255,31 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
   ## Basal activity and data do not change
   model_description$structure$setAdjacencyMatrix(adj)
   model_description$model$setModel(expdes, model_description$structure)
-  model_description$parameters = model_description$model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+  if ("MRAmodelSet" %in% class(model_description)) {
+    model_description$model$setNbModels(model_description$nb_models)
+    if (length(variable_links)>0 & any(model_description$model$getParametersLinks() %in% variable_links)){
+      leftVar=match(variable_links, model_description$model$getParametersLinks())
+      model_description$model$setVariableParameters(leftVar[!is.na(leftVar)]) 
+    }
+    model_description$parameters = unlist(lapply(1:length(models), function(x) model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
+  } else {
+    model_description$parameters = model_description$model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
+  }
   model_description$infos = c(model_description$infos, "Reduced model")
   model_description$param_range = list()
   model_description$lower_values = c()
   model_description$upper_values = c()
-# TODO either create another model or update the statistics
-  
+
+  if ("MRAmodelSet" %in% class(model_description)){
+    return(model_description)
+  } else{
   return(computeFitScore(model_description))
+  }
 }
 
 #' Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
-#' A new link found to be suitable by the modeller can then added by rerunning the createModel function with the altered adjecency information.
+#' A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
+#' Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
 #' @param model_description MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data
 #' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
 #' @param mc Number of cores that should be used for the computation
@@ -243,19 +292,29 @@ selectMinimalModel <- function(model_description, accuracy=0.95) {
 #' ext_list = suggestExtension(mramodel)
 #' }
 suggestExtension <- function(model_description,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F){
-  model = model_description$model 
-  if ("MRAmodelSet" %in% class(model_description)) {
-    modelgroup=extractSubmodels(modelset)
-    models = modelgroup$models
-    n_par=model$nr_of_parameters()/model_description$nb_models
-    initial_response = lapply(1:length(models), function(x) models[[x]]$model$getLocalResponseFromParameter( model_description$parameters[(1+(x-1)*n_par):(x*n_par)] ))
-  } else {
-    initial_response = model$getLocalResponseFromParameter( model_description$parameters )
-  }
+  
   expdes = model_description$design
   model_structure = model_description$structure
   adj = model_structure$adjacencyMatrix
   data = model_description$data
+  model = model_description$model
+  
+  if ("MRAmodelSet" %in% class(model_description)) {
+    modelgroup=extractSubmodels(model_description)
+    models = modelgroup$models
+    n_par=model$nr_of_parameters()/model_description$nb_models
+    initial_response = lapply(1:length(models), function(x) models[[x]]$model$getLocalResponseFromParameter( model_description$parameters[(1+(x-1)*n_par):(x*n_par)] ))
+    rank = model$modelRank()/model_description$nb_models + length(model_description$variable_parameters)*(model_description$nb_models-1)
+    variable_links = model_description$variable_parameters
+    if (length(variable_links)>0){
+      variable_links = model$getParametersLinks()[variable_links]
+    }
+  } else {
+    initial_response = model$getLocalResponseFromParameter( model_description$parameters )
+    rank = model$modelRank()
+    variable_links = c()
+  }
+
   if (is.na(model_description$bestfit)) {
     stop("A prior fit is required to reduce the model")
   }
@@ -265,9 +324,8 @@ suggestExtension <- function(model_description,parallel = F, mc = 1, sample_rang
   
   message("Performing model extension...")
   init_residual = model_description$bestfit
-  rank = model$modelRank()
   
-  #determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)
+  # determine the links that should be added, exclude self links and links acting on a stimulus (if not measured)
   exclude=diag(1,nrow(adj),ncol(adj))
   if (length(setdiff(expdes$stim_nodes,expdes$measured_nodes))>0){
     exclude[setdiff(expdes$stim_nodes,expdes$measured_nodes)+1,]=1
@@ -275,15 +333,15 @@ suggestExtension <- function(model_description,parallel = F, mc = 1, sample_rang
   links_to_test=which( adj==0 & exclude==0)
   message(paste0(length(links_to_test)," links will be tested..."))
   
-  # Each link is added and compared to the previous model # ADJUST TO ALSO ACCEPT modelSet!!!
+  # Each link is added and compared to the previous model
   if (parallel == T){
-    extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,mc.cores=mc)  
+    extension_mat=mclapply(links_to_test,addLink,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,variable_links,mc.cores=mc)  
     extension_mat=as.data.frame(do.call("rbind",extension_mat))
   }else{
     cnames=c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
     extension_mat=data.frame(matrix(NA,nrow=length(links_to_test),ncol=length(cnames),byrow=T))
     for (ii in 1:length(links_to_test))
-      extension_mat[ii,]=addLink(links_to_test[ii],adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,verbose=T)
+      extension_mat[ii,]=addLink(links_to_test[ii],adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,variable_links,verbose=T)
   colnames(extension_mat) <- cnames  
   } 
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
@@ -323,10 +381,14 @@ suggestExtension <- function(model_description,parallel = F, mc = 1, sample_rang
 #' @param sample_range Numeric vector containing all starting values for new_link
 #' @param verbose Whether the function should be verbose or not
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,verbose=F){
+addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,variable_links=c(),verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
+  if (class(model) == "Rcpp_ModelSet"){
+    model$setNbModels(length(initial_response))
+    if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersLinks())) }
+    }
   best_res = Inf
   for (jj in sample_range){
     if (class(model)== "Rcpp_ModelSet"){
@@ -349,7 +411,11 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
     }
   }
   response_matrix = model$getLocalResponseFromParameter( result$parameter )
+  if (class(model) == "Rcpp_ModelSet"){
+    new_rank = model$modelRank()/length(initial_response)+length(variable_links)*(length(initial_response)-1)
+  }else{
   new_rank = model$modelRank()
+  }
   dr = new_rank-rank
   deltares = init_residual-result$residuals
   data_count = sum(!is.na(data$stim_data) & !is.nan(data$stim_data))
@@ -369,6 +435,8 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   model_structure$setAdjacencyMatrix( adj )
   model$setModel ( expdes, model_structure )
   if (class(model)== "Rcpp_ModelSet"){
+    model$setNbModels(length(initial_response))
+    if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersLinks())) }
     for (ii in 1:length(initial_response)){
       initial_response[[ii]]$local_response[new_link]=0
     }
@@ -381,11 +449,11 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                      extension_mat[2],"->",
                      extension_mat[3],
                      ": Delta residual = ",
-                     ifelse(as.numeric(extension_mat[7])>1,round(as.numeric(extension_mat[7]),2),signif(as.numeric(extension_mat[7]),2)),
+                     trim_num(extension_mat[7]),
                      "; Delta rank = ",
                      extension_mat[8],
                      ", p-value = ",
-                     signif(as.numeric(extension_mat[9]),2) ))  
+                     trim_num(extension_mat[9]) ))  
   }
   return(extension_mat)
 }

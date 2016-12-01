@@ -3,7 +3,8 @@
 \name{suggestExtension}
 \alias{suggestExtension}
 \title{Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
-A new link found to be suitable by the modeller can then added by rerunning the createModel function with the altered adjecency information.}
+A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
+Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!}
 \usage{
 suggestExtension(model_description, parallel = F, mc = 1,
   sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F)
@@ -21,7 +22,8 @@ suggestExtension(model_description, parallel = F, mc = 1,
 }
 \description{
 Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
-A new link found to be suitable by the modeller can then added by rerunning the createModel function with the altered adjecency information.
+A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
+Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
 }
 \examples{
 \dontrun{
