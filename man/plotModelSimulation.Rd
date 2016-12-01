@@ -5,7 +5,7 @@
 \title{Plot the predictions by the model}
 \usage{
 plotModelSimulation(model_description, targets = "all", readouts = "all",
-  inhibition_effect = NA, log_axis = F, with_data = FALSE,
+  inhibition_effect = NA, log_axis = TRUE, with_data = FALSE,
   compare = list())
 }
 \arguments{

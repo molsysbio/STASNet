@@ -4,7 +4,7 @@
 \alias{computeFitScore}
 \title{Compute the fitting scores of a model}
 \usage{
-computeFitScore(mra_model, refit_model = F)
+computeFitScore(mra_model, refit_model = FALSE)
 }
 \arguments{
 \item{mra_model}{The MRAmodel object for which the score should be computed}

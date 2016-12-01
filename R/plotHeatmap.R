@@ -16,7 +16,7 @@ cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7"
 #' @param sig_numbers number of significant parameters to display in the heatmap
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2){
+plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
   # cutoff and transformation of colour

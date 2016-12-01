@@ -105,7 +105,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     message(paste0(sort(residuals)[1:20], collapse=" "))
   }
   if (perform_plots) {
-    plot(1:length(order_resid), residuals[order_resid], main="Best residuals", ylab="Likelihood", xlab="rank")
+    plot(1:length(order_resid), residuals[order_resid], main="Best residuals", ylab="Likelihood", xlab="rank", log="y")
   }
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)
@@ -518,7 +518,10 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 
 # Parallel initialisation of the parameters
 # @family Model initialisation
-parallel_initialisation <- function(model, data, samples, NB_CORES) {
+parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c()) {
+  if (NB_CORES == 0) {
+    NB_CORES = detectCores()-1
+  }
   # Put the samples under list format, as mclapply only take "one dimension" objects
   parallel_sampling = list()
   nb_samples = dim(samples)[1]
@@ -528,11 +531,15 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
   }
   # Parallel initialisations
   # The number of cores used depends on the ability of the detectCores function to detect them
-  fitmodel_wrapper <- function(params, data, model) {
+  fitmodel_wrapper <- function(params, data, model, keep_constant=c()) {
     init = proc.time()[3]
-    result = model$fitmodel(data, params)
+    if (length(keep_constant) > 0) {
+      result = model$fitmodelWithConstants(data, params, keep_constant)
+    } else {
+      result = model$fitmodel(data, params)
+    }
     if (verbose) {
-      write(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals), stderr())
+      message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
   }
@@ -543,16 +550,16 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
     init = proc.time()[3]
     result = model$fitmodelset(data, params)
     if (verbose) {
-      write(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals), stderr())
+      message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
   }
   
-  get_parallel_results <- function(model, data, samplings, NB_CORES) {
+  get_parallel_results <- function(model, data, samplings, NB_CORES, keep_constant=c()) {
     if (class(model) == "Rcpp_ModelSet") {
       parallel_results = mclapply(samplings, fitmodelset_wrapper, data, model, mc.cores=NB_CORES)
     } else {
-      parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+      parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES, keep_constant)
     }
     
     # Reorder the results to get the same output as the non parallel function
@@ -575,7 +582,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
     best_results$residuals = c()
     best_results$params = c()
     for (i in 1:(nb_samples %/% 10000)) {
-      results = get_parallel_results(model, data, parallel_sampling[ (10000*(i-1)+1):(10000*i) ], NB_CORES)
+      results = get_parallel_results(model, data, parallel_sampling[ (10000*(i-1)+1):(10000*i) ], NB_CORES, keep_constant)
       
       # Only keep the best fits
       best = order(results$residuals)[1:20]
@@ -591,14 +598,14 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
     }
     # The last block is smaller
     if (nb_samples %% 10000 != 0) {
-      results = get_parallel_results(model, data, parallel_sampling[(10000 * nb_samples %/% 10000):nb_samples], NB_CORES)
+      results = get_parallel_results(model, data, parallel_sampling[(10000 * nb_samples %/% 10000):nb_samples], NB_CORES, keep_constant)
       
       best = order(results$residuals)[1:20]
       best_results$residuals = c(best_results$residuals, results$residuals[best])
       best_results$params = rbind(best_results$params, results$params[best,])
     }
   } else {
-    best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES)
+    best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant)
   }
   
   return(best_results)

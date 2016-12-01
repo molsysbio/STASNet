@@ -386,3 +386,71 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
     return(tmp_model)
 }
 
+#' Refit the model
+#'
+#' Refit the model with a specified parameter set while keeping parameters constant
+#' @param mra_model A MRAmodel object
+#' @param parameter_set A vector of values used as parameters for the model. There must be a many values as there are parameters, or one that will be used for all parameters.
+#' @param vary_param A vector of index or name of the parameters to refit, the others will be kept constant. Repetitions or redundant information (index and name designating the same parameter) are removed.
+#' @param inits Number of random initialisations for the variable parameters
+#' @param nb_cores Number of processes to use for the refitting. 0 to use all cores of the machines but one.
+#' @param method Method to use for the sample generation for the random initialisations
+#' @return The refitted model as an MRAmodel object.
+#' @seealso printParametersNames
+#' @name refit
+#' @export
+refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, nb_cores=1, method="randomlhs") {
+    if (length(parameter_set) == 0) {
+        stop("No 'parameter_set' provided in 'refitModel'")
+    } else if (length(parameter_set) == 1) {
+        parameter_set = rep(parameter_set, length(mra_model$parameters))
+    } else if (length(parameter_set) != length(mra_model$parameters)) {
+        stop("Incompatible 'parameter_set', wrong number of parameters in 'refitModel'")
+    }
+    if (length(vary_param) == 0) {
+        return(computeFitScore(mra_model, TRUE))
+    }
+    if (nb_cores == 0) {
+        nb_cores = detectCores()-1
+    }
+
+    pnames = getParametersNames(mra_model)
+    keep_constant = 1:length(mra_model$parameters)
+    for (ii in 1:length(vary_param)) {
+        if (!is.numeric(suppressWarnings(as.numeric(vary_param[ii])))) {
+            if (!vary_param[ii] %in% pnames) {
+                stop(paste0(vary_param[ii], " is not a valid parameter name"))
+            }
+            vary_param[ii] = which(pnames==vary_param[ii])
+        } else if (!vary_param[ii] %in% keep_constant) {
+            stop(paste0(vary_param[ii], " is not a valid index for the model"))
+        }
+    }
+    vary_param = unique(as.numeric(vary_param))
+    samples = getSamples(length(vary_param), inits-1, method, nb_cores)
+    init_pset = matrix(rep(parameter_set, inits), byrow=TRUE, nrow=inits)
+    for (ii in 1:length(vary_param)) {
+        init_pset[2:inits,vary_param[ii]] = samples[,ii]
+        keep_constant = keep_constant[-which( keep_constant==vary_param[ii] )]
+    }
+    results = parallel_initialisation(mra_model$model, mra_model$data, init_pset, nb_cores, keep_constant)
+    order_id = order(results$residuals)
+    plot(order_id, results$residuals[order_id], ylab="Likelihood", xlab="rank", main="Residuals", log="y")
+
+    new_model = mra_model # TODO add a clean copyModel function that deals with the pointers
+    new_model$parameters = results$params[order_id[1],]
+    new_model$infos = c(new_model$infos, paste0("Refitted with variable parameters c(", pastecoma(vary_param), ")") )
+    return( computeFitScore(new_model, FALSE) )
+}
+
+#' Fit a model using the parameter set from another model
+#' @rdname refit
+#' @export
+fitFromModel <- function(mra_model, parameters_model, vary_param=c(), inits=100, nb_cores=1, method="randomlhs") {
+# Add controls
+    plp = parameters_model$model$getLocalResponseFromParameter(parameters_model$parameters)
+    new_pset = mra_model$model$getParameterFromLocalResponse(plp$local_response, plp$inhibitors)
+
+    return( refitModel(mra_model, new_pset, vary_param, inits, nb_cores, method) )
+}
+

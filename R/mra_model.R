@@ -63,7 +63,7 @@ MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv
 #' @param mra_model The MRAmodel object for which the score should be computed
 #' @param refit_model Whether the model should be refitted before computing the scores (using the 'mra_model$parameters' as the initial value)
 #' @return A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
-computeFitScore <- function(mra_model, refit_model=F) {
+computeFitScore <- function(mra_model, refit_model=FALSE) {
     data = mra_model$data
 # The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason
 # Couldn't find the bug so we do not compute the score for the MRAmodelSet objects
@@ -76,6 +76,9 @@ computeFitScore <- function(mra_model, refit_model=F) {
         refit = parallel_initialisation(mra_model$model, mra_model$data, matrix(mra_model$parameters, nrow=1), NB_CORES=1)
         mra_model$bestfit = refit$residual[1]
         mra_model$parameters = refit$params[1,]
+    } else {
+        simulation = simulateModel(mra_model)
+        mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/simulation$error^2 )
     }
     prediction = getSimulation(mra_model)
     Rscores = c()
@@ -86,7 +89,6 @@ computeFitScore <- function(mra_model, refit_model=F) {
         Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2, na.rm=T)
         Rscores[colnames(prediction)[abc]] = 1 - Sfit/Sbase
     }
-
 
     mra_model$Rscores = Rscores
     mra_model$bestfitscore = mean(Rscores)
