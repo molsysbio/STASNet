@@ -1,4 +1,5 @@
 #context("General testing of STASNet")
+#### model tests ####
 DATA_FILE = "test_model_no_error_midas.csv"
 VAR_FILE = ""
 
@@ -196,4 +197,86 @@ test_that("Requested readouts are duplicated", {
 })
 test_that("Prediction of new conditions", {
     expect_silent( simulateModel(refit, getCombinationMatrix(c("N1", "N2i", "N3i"))) )
+})
+
+#### modelset tests ####
+
+context("ModelSet")
+
+DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv") 
+VAR_FILES = c()
+
+modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
+
+context("ModelSet fitting accuracy")
+
+test_that("Additional modelSet default fields are present" ,{
+  expect_equal(exists("names", modelset), TRUE)
+  expect_equal(exists("nb_models", modelset), TRUE)
+})
+
+test_that("The modelSet fit is completed", {
+  # Check that we get the fit we expect
+  expect_equal_to_reference(modelset$bestfit, "ms_bestfit.rds")
+})
+
+test_that("The modelSet information is loaded correctly", {
+  expect_equal(modelset$nb_models, 2)
+})
+
+test_that("The modelSet structure is loaded correctly", {
+  expect_equal_to_reference(modelset$structure$names, "ms_structure_names.rds")
+  expect_equal_to_reference(modelset$structure$adjacencyMatrix, "ms_structure_adjacencyMatrix.rds")
+})
+
+test_that("The data are loaded correctly", {
+  expect_equal_to_reference(modelset$data$stim_data, "ms_data_stim_data.rds")
+  expect_equal_to_reference(modelset$data$unstim_data, "ms_data_unstim_data.rds")
+  expect_equal_to_reference(modelset$data$error, "ms_data_error.rds")
+})
+
+test_that("The computation is consistent", {
+  expect_equal( sum( ((modelset$model$simulate(modelset$data, modelset$parameters)$prediction - modelset$data$stim_data) / modelset$data$error)^2, na.rm=T ), modelset$bestfit )
+})
+
+test_that("ModelSet breakup works", {
+  expect_silent(extractSubmodels(modelset))
+})
+
+context("ModelSet relaxation")
+test_that("parameters can be relaxed",{
+        expect_message(addVariableParameters(modelset, 1, 0, 10))
+        relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
+        expect_equal(relax_modelset$variable_parameters, 5)
+        expect_equal(sum( ((relax_modelset$model$simulate(relax_modelset$data, relax_modelset$parameters)$prediction - relax_modelset$data$stim_data) / relax_modelset$data$error)^2, na.rm=T ), relax_modelset$bestfit)
+})
+
+relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
+
+context("ModelSet extension")
+
+test_that("modelSet with fixed parameters is extended correctly", {
+    expect_message(suggestExtension(modelset,T))
+    exprmat = suppressMessages(suggestExtension(modelset,T))
+    expect_equal(all(as.numeric(as.character(exprmat$Res_delta))>=10^-5),T)
+})
+
+test_that("modelSet with variable parameters is extended correctly", {
+  expect_message(suggestExtension(relax_modelset,T))
+  exprmat = suppressMessages(suggestExtension(relax_modelset,T))
+  expect_equal(all(as.numeric(as.character(exprmat$Res_delta))>=10^-5),T)
+  })
+
+# TODO test for nonidentifiable link that erroniously produces worse fit; add after fix!!!
+
+context("ModelSet reduction")
+
+test_that("modelSet with fixed parameters is reduced correctly", {
+  expect_message(selectMinimalModel(modelset))
+  red_modelset = selectMinimalModel(modelset)
+})
+
+test_that("modelSet with variable parameters is reduced correctly", {
+  expect_message(selectMinimalModel(relax_modelset))
+  red_modelset = selectMinimalModel(relax_modelset)
 })

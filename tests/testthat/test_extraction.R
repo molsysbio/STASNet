@@ -91,19 +91,19 @@ context("No inhibition or simulations")
 
 only_stim = dumb_midas[, -3]
 only_inhib = dumb_midas[, -2]
-test_that("Only inhibitions works", {
+test_that("Only inhibition works", {
     expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_inhib, inits=1)))
 })
-test_that("Only inhibitions works in extractModelCore", {
+test_that("Only inhibition works in extractModelCore", {
     expect_silent(extractModelCore(dumb_structure, dumb_activity, only_inhib))
 })
-test_that("Only stimulations works", {
+test_that("Only stimulation works", {
     expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_stim, inits=1)))
 })
-test_that("Deleting all inhibitions work", {
+test_that("Deleting all inhibition work", {
     expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N2i")) ))
 })
-test_that("Deleting all stimulations work", {
+test_that("Deleting all stimulation work", {
     expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N1")) ))
 })
 
@@ -114,32 +114,4 @@ test_that("extractModelCore works as expected", {
 })
 test_that("extractModelCore error when perturbations are missing", {
     expect_error(suppressMessages(extractModelCore(dumb_structure, dumb_activity, no_perturbations_midas)))
-})
-
-context("Helper functions")
-
-alph=c("a", "b", "c", "d")
-num = 1:4
-combine = paste0(alph, num)
-test_df = data.frame(list(a=num, b=alph, c=alph), row.names=combine)
-
-test_that("Select one row using sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, 1), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
-#a=test_df$a[1], b=test_df$a[1], c=test_df$a[1] -> gives numbers
-#a=test_d[1,1], b=test_df[1,2], c=test_df[1,3] -> gives factors
-})
-test_that("Select one row by name with sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, "a1"), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
-})
-test_that("Select several rows with sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, c("a1", "c3")), test_df[c("a1", "c3"),] )
-})
-test_that("Select one colum using sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, cols=1), data.frame(a=num, row.names=combine) )
-})
-test_that("Select one colum by name with sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, cols="a"), data.frame(a=num, row.names=combine) )
-})
-test_that("Select several colum using sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, cols=c("a", "b")), test_df[, c("a", "b")] )
 })
