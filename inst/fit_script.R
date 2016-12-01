@@ -16,11 +16,6 @@ get_running_time <- function(init_time, text="") {
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
 
-reduction = FALSE
-extension = FALSE
-perform_pl = FALSE
-perf_plots = TRUE
-
 data = ""
 network = ""
 basal_nodes = ""
@@ -30,8 +25,11 @@ inits = 1000
 method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
-precorrelate=T
-extension=T
+precorrelate = TRUE
+reduction = FALSE
+perform_pl = FALSE
+perf_plots = TRUE
+extension = TRUE
 
 if (!exists("cargs")) {
     cargs = commandArgs(trailingOnly=T)
