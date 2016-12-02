@@ -269,7 +269,6 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
       modelset = setVariableParameters(modelset, var_pars)
       modelset$parameters = new_parameters
       modelset$bestfit = bestres
-      # modelset=computeFitScore(modelset) FUNCTION NOT READY FOR MODEL SET YET!!!!
       get_running_time(init_time, "elapsed");
     } else {
       break

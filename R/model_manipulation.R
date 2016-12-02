@@ -259,7 +259,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
     model_description$model$setNbModels(model_description$nb_models)
     if (length(variable_links)>0 & any(model_description$model$getParametersLinks() %in% variable_links)){
       leftVar=match(variable_links, model_description$model$getParametersLinks())
-      model_description$model$setVariableParameters(leftVar[!is.na(leftVar)]) 
+      model_description = setVariableParameters(model_description, leftVar[!is.na(leftVar)]) 
     }
     model_description$parameters = unlist(lapply(1:length(models), function(x) model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
   } else {
@@ -280,7 +280,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
 #' Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
 #' A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
 #' Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
-#' @param model_description MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data
+#' @param original_model MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data
 #' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
 #' @param mc Number of cores that should be used for the computation
 #' @param sample_range Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))
@@ -291,7 +291,9 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
 #' @examples \dontrun{
 #' ext_list = suggestExtension(mramodel)
 #' }
-suggestExtension <- function(model_description,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F){
+suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F){
+  # Clone model object to not change original model specifications
+  model_description = cloneModel(original_model)
   
   expdes = model_description$design
   model_structure = model_description$structure

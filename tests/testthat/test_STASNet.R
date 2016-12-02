@@ -102,6 +102,27 @@ test_that("Noise free toy data is properly refited", {
     expect_equal(refit$bestfit, 0)
 })
 
+context("Cloning model")
+
+test_that("Model is cloned correctly", {
+  expect_silent(STASNet:::cloneModel(model))
+  alt_model = STASNet:::cloneModel(model)
+  expect_false(capture.output(alt_model$model$.pointer) == capture.output(model$model$.pointer))
+  expect_false(capture.output(alt_model$design$.pointer) == capture.output(model$design$.pointer))
+  expect_false(capture.output(alt_model$structure$.pointer) == capture.output(model$structure$.pointer))
+  expect_false(capture.output(alt_model$data$.pointer) == capture.output(model$data$.pointer))
+  expect_equal(alt_model$model$modelRank(),model$model$modelRank())
+})
+
+alt_model = STASNet:::cloneModel(model)
+
+test_that("Cloned model is independent", {
+  tmp_adj = alt_model$structure$adjacencyMatrix
+  tmp_adj[4,3] = 0
+  alt_model$structure$setAdjacencyMatrix(tmp_adj)
+  alt_model$model$setModel(alt_model$design, alt_model$structure)
+  expect_gt(model$model$modelRank(), alt_model$model$modelRank()) 
+})
 
 context("Model reduction")
 
@@ -208,6 +229,31 @@ VAR_FILES = c()
 
 modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
 
+
+context("Cloning modelset")
+
+test_that("Modelset is cloned correctly", {
+  expect_silent(STASNet:::cloneModel(modelset))
+  alt_modelset = STASNet:::cloneModel(modelset)
+  expect_false(capture.output(alt_modelset$model$.pointer) == capture.output(modelset$model$.pointer))
+  expect_false(capture.output(alt_modelset$design$.pointer) == capture.output(modelset$design$.pointer))
+  expect_false(capture.output(alt_modelset$structure$.pointer) == capture.output(modelset$structure$.pointer))
+  expect_false(capture.output(alt_modelset$data$.pointer) == capture.output(modelset$data$.pointer))
+  expect_equal(alt_modelset$model$modelRank(),modelset$model$modelRank())
+})
+
+alt_modelset = cloneModel(modelset)
+
+test_that("Cloned modelset is independent", {
+  tmp_adj = alt_modelset$structure$adjacencyMatrix
+  tmp_adj[4,3] = 0
+  alt_modelset$structure$setAdjacencyMatrix(tmp_adj)
+  alt_modelset$model$setModel(alt_modelset$design, alt_modelset$structure)
+  alt_modelset$model$setNbModels(alt_modelset$nb_models)
+  expect_gt(modelset$model$modelRank(), alt_modelset$model$modelRank())
+})
+
+
 context("ModelSet fitting accuracy")
 
 test_that("Additional modelSet default fields are present" ,{
@@ -252,6 +298,14 @@ test_that("parameters can be relaxed",{
 })
 
 relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
+
+test_that("variable parameters are kept when cloned", {
+  expect_silent(cloneModel(relax_modelset))
+  tmp_modelset = cloneModel(relax_modelset)
+  expect_equal(tmp_modelset$variable_parameters,relax_modelset$variable_parameters)
+  expect_equal(tmp_modelset$parameters,relax_modelset$parameters)
+})
+
 
 context("ModelSet extension")
 

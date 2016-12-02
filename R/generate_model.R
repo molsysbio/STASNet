@@ -55,28 +55,46 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
 cloneModel <- function(old_model){
   
   type = class(old_model)
+  
   if ("MRAmodelSet" %in% type ){
     model = new(STASNet:::ModelSet)
-    
-    links = old_model$model$getParametersLinks()
-    links_list = do.call("rbind",strsplit(gsub("^r_","",links[grep("^r_",links)]),"_"))[,c(2,1)]
-    structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
-    design = STASNet:::getExperimentalDesign(model.structure = structure,
-                                             stim.nodes = structure$names[old_model$design$stim_nodes+1],
-                                             inhib.nodes = structure$names[old_model$design$inhib_nodes+1],
-                                             measured.nodes = structure$names[old_model$design$measured_nodes+1],
-                                             stimuli = old_model$design$stimuli,
-                                             inhibitor = old_model$design$inhibitor,
-                                             basal.activity = old_model$basal)
+    data = new(STASNet:::DataSet)
+    for (ii in 1:old_model$nb_models){
+      data$addData(old_model$data$datas_list[[ii]], FALSE)
+    }
+  }else if ("MRAmodel" %in% type ){
+    model = new(STASNet:::Model)
+    data=new(STASNet:::Data)
+  }else{
+    stop(paste0("Wrong input class '",type,",' must be of class 'MRAmodel' or 'MRAmodelSet'!")) 
+  }
+  
+  links = old_model$model$getParametersLinks()
+  links_list = do.call("rbind",strsplit(gsub("^r_","",links[grep("^r_",links)]),"_"))[,c(2,1)]
+  structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
+  design = STASNet:::getExperimentalDesign(model.structure = structure,
+                                           stim.nodes = structure$names[old_model$design$stim_nodes+1],
+                                           inhib.nodes = structure$names[old_model$design$inhib_nodes+1],
+                                           measured.nodes = structure$names[old_model$design$measured_nodes+1],
+                                           stimuli = old_model$design$stimuli,
+                                           inhibitor = old_model$design$inhibitor,
+                                           basal.activity = old_model$basal)
+
     model$setModel(design = design, structure = structure)
-    model$setNbModels(old_model$nb_models)
     
+    data$set_unstim_data ( old_model$data$unstim_data )
+    data$set_scale( old_model$data$unstim_data )
+    data$set_stim_data( old_model$data$stim_data )
+    data$set_error( old_model$data$error)
+    
+  if ("MRAmodelSet" %in% type ){
+    model$setNbModels(old_model$nb_models)
     new_model = STASNet:::MRAmodelSet(nb_models = old_model$nb_models,
                                       model = model,
                                       design = design,
                                       structure = structure,
                                       basal = old_model$basal,
-                                      data = old_model$data,
+                                      data = data,
                                       cv = old_model$cv,
                                       parameters = old_model$parameters,
                                       bestfit = old_model$bestfit,
@@ -89,30 +107,19 @@ cloneModel <- function(old_model){
                                       unused_readouts = old_model$unused_readouts,
                                       min_cv = old_model$min_cv,
                                       default_cv = old_model$default_cv)
-    
+      
     if ( length(old_model$variable_parameters) > 0 ){ 
-      new_model$model$setVariableParameters(old_model$variable_parameters) 
+      new_model = setVariableParameters(new_model, old_model$variable_parameters) 
     }
-  }else if ("MRAmodel" %in% type ){
-    model = new(STASNet:::Model)
+  }else{
+
+
     
-    links = old_model$model$getParametersLinks()
-    links_list = do.call("rbind",strsplit(gsub("^r_","",links[grep("^r_",links)]),"_"))[,c(2,1)]
-    structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
-    design = STASNet:::getExperimentalDesign(model.structure = structure,
-                                             stim.nodes = structure$names[old_model$design$stim_nodes+1],
-                                             inhib.nodes = structure$names[old_model$design$inhib_nodes+1],
-                                             measured.nodes = structure$names[old_model$design$measured_nodes+1],
-                                             stimuli = old_model$design$stimuli,
-                                             inhibitor = old_model$design$inhibitor,
-                                             basal.activity = old_model$basal)
-    
-    model$setModel(design = design, structure = structure)
-    new_model = STASNet:::MRAmodel(model = model,
+      new_model = STASNet:::MRAmodel(model = model,
                                    design = design,
                                    structure = structure,
                                    basal = old_model$basal,
-                                   data = old_model$data,
+                                   data = data,
                                    cv = old_model$cv,
                                    parameters = old_model$parameters,
                                    bestfit = old_model$bestfit,
@@ -125,8 +132,6 @@ cloneModel <- function(old_model){
                                    unused_readouts = old_model$unused_readouts,
                                    min_cv = old_model$min_cv,
                                    default_cv = old_model$default_cv)
-  }else{
-    stop(paste0("Wrong input class '",type,",' must be of class 'MRAmodel' or 'MRAmodelSet'!")) 
   }
   return(new_model)
 }
