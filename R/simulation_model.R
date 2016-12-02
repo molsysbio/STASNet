@@ -38,13 +38,15 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     inhibitors = gsub("i$", "", colnames(targets)[grep("i$", colnames(targets))] )
     stimulators = colnames(targets)[grep("i$", colnames(targets), invert=T)]
     target_matrix = targets
-    colnames(target_matrix)[grep("i$", colnames(targets))] = paste0(inhibitors, "i")
-    colnames(target_matrix)[grep("i$", colnames(targets), invert=T)] = stimulators
   } else if (targets == "all") {
     inhibitors = nodes[design$inhib_nodes + 1]
     stimulators = nodes[design$stim_nodes + 1]
     target_matrix = cbind(design$inhibitor, design$stimuli)
-    colnames(target_matrix) = c(paste0(inhibitors, "i"), stimulators)
+    if (length(inhibitors) > 0) {
+        colnames(target_matrix) = c(paste0(inhibitors, "i"), stimulators)
+    } else {
+        colnames(target_matrix) = stimulators
+    }
   } else if (is.list(targets)) { # TODO distinguish between numeric and character
     # List of perturbation giving nodes names in vectors, TODO
     stop("Providing a list of target is not an implemented method")
@@ -225,7 +227,11 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
 #     }
       sim_design = target_matrix
       data_design = cbind(design$stimuli, design$inhibitor)
-      colnames(data_design) = c( model_description$structure$names[1+design$stim_nodes], paste0(model_description$structure$names[1+design$inhib_nodes], "i") )
+      if (length(design$inhib_nodes) > 0) {
+          colnames(data_design) = c( model_description$structure$names[1+design$stim_nodes], paste0(model_description$structure$names[1+design$inhib_nodes], "i") )
+      } else {
+          colnames(data_design) = model_description$structure$names[1+design$stim_nodes]
+      }
       # Extract from the data the lines where that correspond to the perturbation of the simulation, where no other simulation than those is applied
       common = colnames(data_design) %in% colnames(sim_design)
       valid_lines = which(apply(data_design, 1, function(drow){ all(drow[!common]==0) }))
