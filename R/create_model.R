@@ -105,7 +105,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     message(paste0(sort(residuals)[1:20], collapse=" "))
   }
   if (perform_plots) {
-    plot(1:length(order_resid), residuals[order_resid], main="Best residuals", ylab="Likelihood", xlab="rank", log="y")
+    plot(1:length(order_resid), residuals[order_resid], main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y")
   }
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)

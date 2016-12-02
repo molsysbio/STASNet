@@ -7,10 +7,10 @@
 \title{Refit the model}
 \usage{
 refitModel(mra_model, parameter_set = c(), vary_param = c(), inits = 100,
-  nb_cores = 1, method = "randomlhs")
+  nb_cores = 1, method = "randomlhs", fit_name = "")
 
 fitFromModel(mra_model, parameters_model, vary_param = c(), inits = 100,
-  nb_cores = 1, method = "randomlhs")
+  nb_cores = 1, method = "randomlhs", fit_name = "")
 }
 \arguments{
 \item{mra_model}{A MRAmodel object}
@@ -24,6 +24,8 @@ fitFromModel(mra_model, parameters_model, vary_param = c(), inits = 100,
 \item{nb_cores}{Number of processes to use for the refitting. 0 to use all cores of the machines but one.}
 
 \item{method}{Method to use for the sample generation for the random initialisations}
+
+\item{fit_name}{Name of the refit for the title of the plotss}
 }
 \value{
 The refitted model as an MRAmodel object.

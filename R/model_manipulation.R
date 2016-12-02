@@ -395,11 +395,12 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
 #' @param inits Number of random initialisations for the variable parameters
 #' @param nb_cores Number of processes to use for the refitting. 0 to use all cores of the machines but one.
 #' @param method Method to use for the sample generation for the random initialisations
+#' @param fit_name Name of the refit for the title of the plotss
 #' @return The refitted model as an MRAmodel object.
 #' @seealso printParametersNames
 #' @name refit
 #' @export
-refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, nb_cores=1, method="randomlhs") {
+refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, nb_cores=1, method="randomlhs", fit_name="") {
     if (length(parameter_set) == 0) {
         stop("No 'parameter_set' provided in 'refitModel'")
     } else if (length(parameter_set) == 1) {
@@ -435,22 +436,23 @@ refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, 
     }
     results = parallel_initialisation(mra_model$model, mra_model$data, init_pset, nb_cores, keep_constant)
     order_id = order(results$residuals)
-    plot(order_id, results$residuals[order_id], ylab="Likelihood", xlab="rank", main="Residuals", log="y")
+    plot(1:length(order_id), results$residuals[order_id], ylab="Likelihood", xlab="rank", main=paste0("Residuals ", fit_name), log="y")
 
     new_model = mra_model # TODO add a clean copyModel function that deals with the pointers
     new_model$parameters = results$params[order_id[1],]
     new_model$infos = c(new_model$infos, paste0("Refitted with variable parameters c(", pastecoma(vary_param), ")") )
+    if (fit_name != "") { new_model$name = fit_name }
     return( computeFitScore(new_model, FALSE) )
 }
 
 #' Fit a model using the parameter set from another model
 #' @rdname refit
 #' @export
-fitFromModel <- function(mra_model, parameters_model, vary_param=c(), inits=100, nb_cores=1, method="randomlhs") {
+fitFromModel <- function(mra_model, parameters_model, vary_param=c(), inits=100, nb_cores=1, method="randomlhs", fit_name="") {
 # Add controls
     plp = parameters_model$model$getLocalResponseFromParameter(parameters_model$parameters)
     new_pset = mra_model$model$getParameterFromLocalResponse(plp$local_response, plp$inhibitors)
 
-    return( refitModel(mra_model, new_pset, vary_param, inits, nb_cores, method) )
+    return( refitModel(mra_model, new_pset, vary_param, inits, nb_cores, method, fit_name) )
 }
 
