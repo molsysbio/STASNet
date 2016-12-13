@@ -8,11 +8,12 @@
 #' A perturbation matrix is filled with 0 and 1, each row is a perturbation set and column names are used to determine the name of the perturbation.
 #' @param readouts List of nodes to simulate. If "all", all the nodes measured to fit the model will be used. Only nodes actually measured or inhibited for the model can be simulated.
 #' @param inhibition_effect A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.
+#' @param with_offset Whether the simulation should include the offset (fitted simulation) or not (real activity prediction)
 #' @return A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood
 # @seealso \code{\link{getCombinationMatrix}}
 #' @family simulation
 #' @export
-simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA) {
+simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, with_offset=FALSE) {
   design = model_description$design
   nodes = model_description$structure$names
   
@@ -187,7 +188,11 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   }
   
   new_params = getParametersForNewDesign(model, model_description$model, model_description$parameters, old_inhib_nodes, inhib_nodes, inhib_values, use_fitted)
-  prediction$bestfit = model$simulate(new_data, new_params)$prediction
+  if (with_offset) {
+      prediction$bestfit = model$simulateWithOffset(new_data, new_params)$prediction
+  } else {
+      prediction$bestfit = model$simulate(new_data, new_params)$prediction
+  }
   colnames(prediction$bestfit) = simulated_nodes
   
   ## Parameters sets provided by the profile likelihood
@@ -209,7 +214,11 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   prediction$variants = list()
   i=1
   for (params in params_sets) {
-    prediction$variants = c(prediction$variants, list(model$simulate(new_data, params)$prediction))
+    if (with_offset) {
+        prediction$variants = c(prediction$variants, list(model$simulateWithOffset(new_data, params)$prediction))
+    } else {
+        prediction$variants = c(prediction$variants, list(model$simulate(new_data, params)$prediction))
+    }
     colnames(prediction$variants[[i]]) = simulated_nodes
     i=i+1
   }

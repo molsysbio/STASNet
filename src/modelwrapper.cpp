@@ -101,7 +101,23 @@ SEXP ModelWrapper::simulate(Data *data, std::vector<double> parameters) {
     throw std::invalid_argument("length of parameter vector invalid");
 
   double_matrix datax;
-  model->predict(parameters, datax, data);
+  model->predict(parameters, datax, data, false);
+  Rcpp::List ret;
+  ret["prediction"]=datax;
+
+  return ret;
+}
+
+SEXP ModelWrapper::simulateWithOffset(Data *data, std::vector<double> parameters) {
+
+  if ( model == NULL ) 
+    throw std::logic_error("Model not initialized yet. use setModel() before");
+
+  if ( parameters.size() != model->nr_of_parameters() ) 
+    throw std::invalid_argument("length of parameter vector invalid");
+
+  double_matrix datax;
+  model->predict(parameters, datax, data, true);
   Rcpp::List ret;
   ret["prediction"]=datax;
 
@@ -384,6 +400,7 @@ RCPP_MODULE(ModelEx) {
     .default_constructor()
     .method( "setModel", &ModelWrapper::setModel )
     .method( "simulate", &ModelWrapper::simulate )
+    .method( "simulateWithOffset", &ModelWrapper::simulateWithOffset )
 
     .method( "printResponse", &ModelWrapper::printResponse )
     .method( "modelRank", &ModelWrapper::modelRank )

@@ -162,6 +162,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
+  offset = core0$data$scale
   cv = core0$cv
   if (verbose > 8) {
     message("Data dimensions~:")
@@ -186,13 +187,14 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
     unstim_data = rbind(unstim_data, core$data$unstim_data)
     stim_data = rbind(stim_data, core$data$stim_data)
     error = rbind(error, core$data$error)
+    offset = rbind(offset, core$data$scale)
     data_$addData(core$data, FALSE)
     cv = rbind(cv, core$cv)
   }
   data_$set_stim_data(stim_data)
   data_$set_unstim_data(unstim_data)
   data_$set_error(error)
-  data_$set_scale(error)
+  data_$set_scale(offset)
   
   model = new(STASNet:::ModelSet)
   model$setModel(core0$design, model_structure)
@@ -968,7 +970,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   perturbations = perturbations[-rm_rows,,drop=F]
   # Compute the mean and standard deviation of the data
   mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
-  blank_values = matrix(rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values))
+  blank_values = matrix( rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values), dimnames=list(NULL, colnames(data_values)) )
   unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
   colnames(unstim_values) <- colnames(mean_values)
   if (verbose > 7) {
@@ -1134,10 +1136,10 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   
   # Create data object
   data=new(STASNet:::Data)
-  data$set_unstim_data ( as.matrix(unstim_values[ , measured_nodes] ) )
-  data$set_scale( data$unstim_data )
-  data$set_stim_data( as.matrix(stim_data_sort) )
-  data$set_error( as.matrix( error_sort ))
+  data$set_unstim_data ( unstim_values[, measured_nodes, drop=FALSE] )
+  data$set_scale( blank_values[, measured_nodes, drop=FALSE] )
+  data$set_stim_data( as.matrix(stim_data_sort[, measured_nodes, drop=FALSE]) )
+  data$set_error( as.matrix( error_sort[, measured_nodes, drop=FALSE] ))
   
   # Finalize object 
   core = list()

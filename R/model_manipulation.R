@@ -59,7 +59,8 @@ plotModelAccuracy <- function(model_description) {
   stim_data = data$stim_data
   init_params = model_description$parameter
   
-  simulation = model$simulate(data, init_params)$prediction
+  simulation = model$simulateWithOffset(data, init_params)$prediction
+  prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
   mismatch = (stim_data - simulation) / error
   simulation = log2(simulation / data$unstim_data)
   stim_data = log2(stim_data / data$unstim_data)
@@ -79,19 +80,20 @@ plotModelAccuracy <- function(model_description) {
 
   message("Treatments : ")
   message(paste(treatments, collapse=" "))
-  colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
-  rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
+  colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = nodes[design$measured_nodes + 1]
+  rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
   plotHeatmap(mismatch,"(data - simulation) / error")
   plotHeatmap(stim_data-simulation,"log2(data/simulation)")
 # Log fold changes for the data and the stimulation with comparable color code
-  lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=T),
-                       quantile(simulation,0.05, na.rm=T),
-                       quantile(stim_data,0.95, na.rm=T),
-                       quantile(simulation,0.95, na.rm=T)) )))
-  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,T)
-  plotHeatmap(simulation, "Log-fold change Simulated data",lim,T)
+  lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
+                       quantile(simulation,0.05, na.rm=TRUE),
+                       quantile(stim_data,0.95, na.rm=TRUE),
+                       quantile(simulation,0.95, na.rm=TRUE)) )))
+  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE)
+  plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE)
+  plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
