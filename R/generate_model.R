@@ -70,7 +70,8 @@ cloneModel <- function(old_model){
   }
   
   links = old_model$model$getParametersLinks()
-  links_list = do.call("rbind",strsplit(gsub("^r_","",links[grep("^r_",links)]),"_"))[,c(2,1)]
+  tmp_links = unlist(strsplit(gsub("^r_|\\^\\(-1\\)","",links[grep("^r_",links)]),"\\*r_"))
+  links_list = do.call("rbind",strsplit(unique(tmp_links),"_"))[,c(2,1)]
   structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
   design = STASNet:::getExperimentalDesign(model.structure = structure,
                                            stim.nodes = structure$names[old_model$design$stim_nodes+1],

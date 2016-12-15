@@ -576,7 +576,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
   if (nb_samples > 10000) {
     
     # chop the data into optimal number of pieces
-    nb_blocks = nb_samples %/% 10000
+    nb_blocks = nb_samples %/% 10000 + 1
     block_size = NB_CORES * ((nb_samples %/% nb_blocks) %/% NB_CORES)
     best_keep = 10000 %/% nb_blocks
     best_results = list( residuals=c(), params=c() )
