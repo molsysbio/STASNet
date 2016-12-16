@@ -353,12 +353,14 @@ suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c
   sig_res = sum(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)
   if (sig_res > 0){
     select=match(c("from","to","value","Res_delta","adj_pval"),colnames(extension_mat))
-    message(paste0(sig_res ," significant link extensions found"))
+    message(paste0(sig_res ," significant link extension",ifelse(sig_res>1,"s",""),"found"))
     sig_res=min(sig_res,10)
     message(paste0("printing the first ",sig_res," :\n"))
     message(paste(colnames(extension_mat)[select],collapse="\t"))
     for (ii in 1:sig_res){
-    message(paste(as.matrix(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,][ii,select]),collapse="\t"))
+    tmp = as.matrix(extension_mat[as.numeric(as.matrix(extension_mat$adj_pval))<=0.05,][ii,select])  
+    tmp[,c("value","Res_delta","adj_pval")] = trim_num(tmp[,c("value","Res_delta","adj_pval")])  
+    message(paste(tmp,collapse="\t"))
     }
   }
   if(print)

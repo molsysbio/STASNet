@@ -23,17 +23,27 @@ get_running_time <- function(init_time, text="") {
 }
 
 trim_num <- function(x, non_zeros=2, behind_comma = 2){
-if (is.na(x)){ return(x) }
+trim_it <- function(x, non_zeros, behind_comma){  
+  if (is.na(x)){ return(x) }
 
-if (!is.numeric(x)){ oldx =x; x = as.numeric(as.character(x)) } 
+  if (!is.numeric(x)){ oldx =x; x = as.numeric(as.character(x)) } 
 
-if (is.na(x)){ stop(paste("Number or NA expected '", oldx ,"' received as input!")) } 
+  if (is.na(x)){ stop(paste("Number or NA expected '", oldx ,"' received as input!")) } 
   
-if (abs(x >= 1)){ 
-  return(round(x*10^behind_comma)/10^behind_comma)
-} else{
-  return(signif(x,non_zeros))  
-}  
+  if (abs(x >= 1)){ 
+    return(round(x*10^behind_comma)/10^behind_comma)
+  } else{
+    return(signif(x,non_zeros))  
+  }
+}
+
+if (is.null(dim(x))){
+  return(sapply(x,"trim_it",non_zeros,behind_comma))
+}else{
+ newx=sapply(1:ncol(x),function(y) sapply(x[,y],"trim_it",non_zeros,behind_comma))
+ dimnames(newx) <- dimnames(x)
+ return(newx)
+}
 }
 
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
