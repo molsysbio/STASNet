@@ -203,7 +203,7 @@ modelset=addVariableParameters(modelset = modelset,
                               accuracy=0.95)
   }
 if (extension){
-  extensionMat=suggestExtension(model_description = modelset,
+  extensionMat=suggestExtension(original_model = modelset,
                                 parallel = T,
                                 mc = cores,
                                 sample_range=c(10^(2:-1),0,-10^(-1:2)),
