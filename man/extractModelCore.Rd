@@ -6,7 +6,7 @@
 \usage{
 extractModelCore(model_structure, basal_activity, data_filename,
   var_filename = "", dont_perturb = c(), dont_read = c(), MIN_CV = 0.1,
-  DEFAULT_CV = 0.3)
+  DEFAULT_CV = 0.3, rearrange = "no")
 }
 \arguments{
 \item{model_structure}{Matrix of links [node1, node2]}
@@ -20,6 +20,8 @@ extractModelCore(model_structure, basal_activity, data_filename,
 \item{MIN_CV}{Minimum coefficient of variation.}
 
 \item{DEFAULT_CV}{Default coefficient of variation to use when none is provided and there are no replicates in the data.}
+
+\item{rearrange}{Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.}
 
 \item{datas}{Experimental data under the MIDAS format. See extractMIDAS.}
 

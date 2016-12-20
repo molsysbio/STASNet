@@ -3,10 +3,10 @@
 
 # Custom paste functions
 pastecoma <- function(...) {
-    return(paste(..., sep=","))
+    return(paste(..., sep=",", collapse=","))
 }
 pastetab <- function(...) {
-    return(paste(..., sep="\t"))
+    return(paste(..., sep="\t", collapse="\t"))
 }
 
 # Helper function to determine if an object is a string

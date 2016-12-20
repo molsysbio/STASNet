@@ -101,7 +101,23 @@ SEXP ModelWrapper::simulate(Data *data, std::vector<double> parameters) {
     throw std::invalid_argument("length of parameter vector invalid");
 
   double_matrix datax;
-  model->predict(parameters, datax, data);
+  model->predict(parameters, datax, data, false);
+  Rcpp::List ret;
+  ret["prediction"]=datax;
+
+  return ret;
+}
+
+SEXP ModelWrapper::simulateWithOffset(Data *data, std::vector<double> parameters) {
+
+  if ( model == NULL ) 
+    throw std::logic_error("Model not initialized yet. use setModel() before");
+
+  if ( parameters.size() != model->nr_of_parameters() ) 
+    throw std::invalid_argument("length of parameter vector invalid");
+
+  double_matrix datax;
+  model->predict(parameters, datax, data, true);
   Rcpp::List ret;
   ret["prediction"]=datax;
 
@@ -116,7 +132,7 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data);
+        ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
@@ -133,6 +149,7 @@ SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters) {
     return( fitmodel_wrapper(data, parameters, std::vector<size_t>()) );
 }
 SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+    for (size_t ii=0; ii<keep_constant.size(); ii++) { keep_constant[ii]--; }
     return( fitmodel_wrapper(data, parameters, keep_constant) );
 }
 
@@ -383,6 +400,7 @@ RCPP_MODULE(ModelEx) {
     .default_constructor()
     .method( "setModel", &ModelWrapper::setModel )
     .method( "simulate", &ModelWrapper::simulate )
+    .method( "simulateWithOffset", &ModelWrapper::simulateWithOffset )
 
     .method( "printResponse", &ModelWrapper::printResponse )
     .method( "modelRank", &ModelWrapper::modelRank )

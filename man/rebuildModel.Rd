@@ -4,7 +4,7 @@
 \alias{rebuildModel}
 \title{Import a save model with data files}
 \usage{
-rebuildModel(model_file, data_file, var_file = "")
+rebuildModel(model_file, data_file, var_file = "", rearrange = "no")
 }
 \arguments{
 \item{model_file}{A .mra file containing the information on the model}

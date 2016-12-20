@@ -1,11 +1,14 @@
 #context("General testing of STASNet")
 #### model tests ####
+
+context("Model")
+
 DATA_FILE = "test_model_no_error_midas.csv"
 VAR_FILE = ""
 
 context("Model fitting accuracy")
 
-model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs") )
+model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim") )
 
 test_that("All expected fields are present" ,{
     expect_equal(exists("min_cv", model), TRUE)
@@ -253,7 +256,6 @@ test_that("Cloned modelset is independent", {
   expect_gt(modelset$model$modelRank(), alt_modelset$model$modelRank())
 })
 
-
 context("ModelSet fitting accuracy")
 
 test_that("Additional modelSet default fields are present" ,{
@@ -261,9 +263,8 @@ test_that("Additional modelSet default fields are present" ,{
   expect_equal(exists("nb_models", modelset), TRUE)
 })
 
-test_that("The modelSet fit is completed", {
-  # Check that we get the fit we expect
-  expect_equal_to_reference(modelset$bestfit, "ms_bestfit.rds")
+test_that("The modelSet fit is reasonable", {
+  expect_equal_to_reference(modelset$bestfit, "ms_bestfit.rds", tolerance=1e-5)
 })
 
 test_that("The modelSet information is loaded correctly", {

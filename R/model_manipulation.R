@@ -59,7 +59,8 @@ plotModelAccuracy <- function(model_description) {
   stim_data = data$stim_data
   init_params = model_description$parameter
   
-  simulation = model$simulate(data, init_params)$prediction
+  simulation = model$simulateWithOffset(data, init_params)$prediction
+  prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
   mismatch = (stim_data - simulation) / error
   simulation = log2(simulation / data$unstim_data)
   stim_data = log2(stim_data / data$unstim_data)
@@ -79,19 +80,20 @@ plotModelAccuracy <- function(model_description) {
 
   message("Treatments : ")
   message(paste(treatments, collapse=" "))
-  colnames(mismatch) = colnames(stim_data) = colnames(simulation) = nodes[design$measured_nodes + 1]
-  rownames(mismatch) = rownames(stim_data) = rownames(simulation) = treatments
+  colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = nodes[design$measured_nodes + 1]
+  rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
   plotHeatmap(mismatch,"(data - simulation) / error")
   plotHeatmap(stim_data-simulation,"log2(data/simulation)")
 # Log fold changes for the data and the stimulation with comparable color code
-  lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=T),
-                       quantile(simulation,0.05, na.rm=T),
-                       quantile(stim_data,0.95, na.rm=T),
-                       quantile(simulation,0.95, na.rm=T)) )))
-  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,T)
-  plotHeatmap(simulation, "Log-fold change Simulated data",lim,T)
+  lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
+                       quantile(simulation,0.05, na.rm=TRUE),
+                       quantile(stim_data,0.95, na.rm=TRUE),
+                       quantile(simulation,0.95, na.rm=TRUE)) )))
+  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE)
+  plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE)
+  plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
@@ -480,4 +482,75 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
     tmp_model$bestfit = getModelError(tmp_model)$residual
 
     return(tmp_model)
+}
+
+#' Refit the model
+#'
+#' Refit the model with a specified parameter set while keeping parameters constant
+#' @param mra_model A MRAmodel object
+#' @param parameter_set A vector of values used as parameters for the model. There must be a many values as there are parameters, or one that will be used for all parameters.
+#' @param vary_param A vector of index or name of the parameters to refit, the others will be kept constant. Repetitions or redundant information (index and name designating the same parameter) are removed.
+#' @param inits Number of random initialisations for the variable parameters
+#' @param nb_cores Number of processes to use for the refitting. 0 to use all cores of the machines but one.
+#' @param method Method to use for the sample generation for the random initialisations
+#' @param fit_name Name of the refit for the title of the plots
+#' @return The refitted model as an MRAmodel object.
+#' @seealso printParametersNames
+#' @name refit
+#' @export
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr} 
+refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, nb_cores=1, method="randomlhs", fit_name="") {
+    if (length(parameter_set) == 0) {
+        stop("No 'parameter_set' provided in 'refitModel'")
+    } else if (length(parameter_set) == 1) {
+        parameter_set = rep(parameter_set, length(mra_model$parameters))
+    } else if (length(parameter_set) != length(mra_model$parameters)) {
+        stop("Incompatible 'parameter_set', wrong number of parameters in 'refitModel'")
+    }
+    if (length(vary_param) == 0) {
+        return(computeFitScore(mra_model, TRUE))
+    }
+    if (nb_cores == 0) {
+        nb_cores = detectCores()-1
+    }
+
+    pnames = getParametersNames(mra_model)
+    keep_constant = 1:length(mra_model$parameters)
+    for (ii in 1:length(vary_param)) {
+        if (!is.numeric(suppressWarnings(as.numeric(vary_param[ii])))) {
+            if (!vary_param[ii] %in% pnames) {
+                stop(paste0(vary_param[ii], " is not a valid parameter name"))
+            }
+            vary_param[ii] = which(pnames==vary_param[ii])
+        } else if (!vary_param[ii] %in% keep_constant) {
+            stop(paste0(vary_param[ii], " is not a valid index for the model"))
+        }
+    }
+    vary_param = unique(as.numeric(vary_param))
+    samples = getSamples(length(vary_param), inits-1, method, nb_cores)
+    init_pset = matrix(rep(parameter_set, inits), byrow=TRUE, nrow=inits)
+    for (ii in 1:length(vary_param)) {
+        init_pset[2:inits,vary_param[ii]] = samples[,ii]
+        keep_constant = keep_constant[-which( keep_constant==vary_param[ii] )]
+    }
+    results = parallel_initialisation(mra_model$model, mra_model$data, init_pset, nb_cores, keep_constant)
+    order_id = order(results$residuals)
+    plot(1:length(order_id), results$residuals[order_id], ylab="Likelihood", xlab="rank", main=paste0("Residuals ", fit_name), log="y")
+
+    new_model = cloneModel(mra_model) 
+    new_model$parameters = results$params[order_id[1],]
+    new_model$infos = c(new_model$infos, paste0("Refitted with variable parameters c(", pastecoma(vary_param), ")") )
+    if (fit_name != "") { new_model$name = fit_name }
+    return( computeFitScore(new_model, FALSE) )
+}
+
+#' Fit a model using the parameter set from another model
+#' @rdname refit
+#' @export
+fitFromModel <- function(mra_model, parameters_model, vary_param=c(), inits=100, nb_cores=1, method="randomlhs", fit_name="") {
+# Add controls
+    plp = parameters_model$model$getLocalResponseFromParameter(parameters_model$parameters)
+    new_pset = mra_model$model$getParameterFromLocalResponse(plp$local_response, plp$inhibitors)
+
+    return( refitModel(mra_model, new_pset, vary_param, inits, nb_cores, method, fit_name) )
 }

@@ -8,11 +8,12 @@
 #' A perturbation matrix is filled with 0 and 1, each row is a perturbation set and column names are used to determine the name of the perturbation.
 #' @param readouts List of nodes to simulate. If "all", all the nodes measured to fit the model will be used. Only nodes actually measured or inhibited for the model can be simulated.
 #' @param inhibition_effect A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.
+#' @param with_offset Whether the simulation should include the offset (fitted simulation) or not (real activity prediction)
 #' @return A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood
 # @seealso \code{\link{getCombinationMatrix}}
 #' @family simulation
 #' @export
-simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA) {
+simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, with_offset=FALSE) {
   design = model_description$design
   nodes = model_description$structure$names
   
@@ -38,13 +39,15 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
     inhibitors = gsub("i$", "", colnames(targets)[grep("i$", colnames(targets))] )
     stimulators = colnames(targets)[grep("i$", colnames(targets), invert=T)]
     target_matrix = targets
-    colnames(target_matrix)[grep("i$", colnames(targets))] = paste0(inhibitors, "i")
-    colnames(target_matrix)[grep("i$", colnames(targets), invert=T)] = stimulators
   } else if (targets == "all") {
     inhibitors = nodes[design$inhib_nodes + 1]
     stimulators = nodes[design$stim_nodes + 1]
     target_matrix = cbind(design$inhibitor, design$stimuli)
-    colnames(target_matrix) = c(paste0(inhibitors, "i"), stimulators)
+    if (length(inhibitors) > 0) {
+        colnames(target_matrix) = c(paste0(inhibitors, "i"), stimulators)
+    } else {
+        colnames(target_matrix) = stimulators
+    }
   } else if (is.list(targets)) { # TODO distinguish between numeric and character
     # List of perturbation giving nodes names in vectors, TODO
     stop("Providing a list of target is not an implemented method")
@@ -185,7 +188,11 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   }
   
   new_params = getParametersForNewDesign(model, model_description$model, model_description$parameters, old_inhib_nodes, inhib_nodes, inhib_values, use_fitted)
-  prediction$bestfit = model$simulate(new_data, new_params)$prediction
+  if (with_offset) {
+      prediction$bestfit = model$simulateWithOffset(new_data, new_params)$prediction
+  } else {
+      prediction$bestfit = model$simulate(new_data, new_params)$prediction
+  }
   colnames(prediction$bestfit) = simulated_nodes
   
   ## Parameters sets provided by the profile likelihood
@@ -207,7 +214,11 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   prediction$variants = list()
   i=1
   for (params in params_sets) {
-    prediction$variants = c(prediction$variants, list(model$simulate(new_data, params)$prediction))
+    if (with_offset) {
+        prediction$variants = c(prediction$variants, list(model$simulateWithOffset(new_data, params)$prediction))
+    } else {
+        prediction$variants = c(prediction$variants, list(model$simulate(new_data, params)$prediction))
+    }
     colnames(prediction$variants[[i]]) = simulated_nodes
     i=i+1
   }
@@ -225,7 +236,11 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
 #     }
       sim_design = target_matrix
       data_design = cbind(design$stimuli, design$inhibitor)
-      colnames(data_design) = c( model_description$structure$names[1+design$stim_nodes], paste0(model_description$structure$names[1+design$inhib_nodes], "i") )
+      if (length(design$inhib_nodes) > 0) {
+          colnames(data_design) = c( model_description$structure$names[1+design$stim_nodes], paste0(model_description$structure$names[1+design$inhib_nodes], "i") )
+      } else {
+          colnames(data_design) = model_description$structure$names[1+design$stim_nodes]
+      }
       # Extract from the data the lines where that correspond to the perturbation of the simulation, where no other simulation than those is applied
       common = colnames(data_design) %in% colnames(sim_design)
       valid_lines = which(apply(data_design, 1, function(drow){ all(drow[!common]==0) }))
@@ -404,12 +419,14 @@ build_combo <- function (symbols, remaining_steps, to_extend) {
 #' @param readouts List of nodes to simulate. If "all", all the nodes measured to fit the model will be used. Only nodes actually measured or inhibited for the model can be simulated.
 #' @param inhibition_effect A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.
 #' @param log_axis Boolean, whether the ordinate axis should be in log scale
+#' @param with_data Plot the data of the model next to the prediction
+#' @param compare A list of MRAmodel to compare the predictions, targets and readouts must be valid for MRAmodels
 #' @return A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood
 #' @export
 #' @return Invisibly, the matrix of the results of the simulation
 #' @author Mathurin Dorel \email{mathurin.dorel@@charite.de}
-plotModelSimulation <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, log_axis=F) {
-  invisible(plotSimulation(simulateModel(model_description, targets, readouts, inhibition_effect), log_axis))
+plotModelSimulation <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, log_axis=TRUE, with_data=FALSE, compare=list()) {
+    invisible(plotSimulation( simulateModel(model_description, targets, readouts, inhibition_effect), log_axis, compare=lapply(compare, simulateModel, targets, readouts, inhibition_effect), with_data=with_data ))
 }
 
 #' Plot predictions generated by simulateModel
@@ -420,7 +437,9 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #' @param log_axis Boolean, whether the ordinate axis should be in log scale
 #' @param with_data Display 2 bars per condition, one for the simulation and one for the data
 #' @param data_color Color of the bars corresponding to the data
-#' @param sim_color Color of the bars corresponding to the simulation
+#' @param sim_colors Vector of colors for the bars corresponding to the simulations. The first color is used for the main prediction and the next for the predictions in 'compare', recycled as necessary for all predictions.
+#' @param compare A list of predictions to compare to. A predition is a list with fields 'bestfit', 'conditions', 'error', 'data', 'unstim_data' and 'variants' as generated by simulateModel
+#' @param strict When 'compare' is not empty, whether the other prediction conformity must be strictly evaluated (presence and equality of the field 'condition', equal name of columns in field 'bestfit') or not (the 'bestfit' length is the only thing that is checked)
 #' @return Invisibly, the matrix of the results of the simulation
 #' @export
 #' @seealso getCombinationMatrix, simulateModel
@@ -428,10 +447,13 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #' @family simulation
 # TODO , plotsPerFrame = 4
 # @param maxPlotsPerFrame Maximum number of perturbation per frame
-plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_color="#559955", sim_color="#AAAAFF") {
-  colors = sim_color
+plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_color="#559955", sim_colors=cbbPalette[-1], compare=list(), strict=TRUE) {
+  colors = sim_colors[1]
+  color_idx = 2
+  legend = c("simulation")
   if (with_data && length(prediction$data) > 0) {
-      colors = c(data_color, sim_color)
+      colors = c(data_color, sim_colors[1])
+      legend = c("data", "simulation")
       if (length(prediction$error) > 0 && sum(!is.na(prediction$error)) > 0) {
           with_variation = TRUE
       }
@@ -439,10 +461,20 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       with_data = FALSE
       with_variation = FALSE
   }
-  if (log_axis) {
-    ylog = "y"
-  } else {
-    ylog = ""
+  compare_data = list()
+  if (length(compare) > 0) {
+      for (pidx in length(compare)) {
+          pred = compare[[pidx]]
+          if (all(dim(pred$bestfit)==dim(prediction$bestfit)) && (!strict || (all(pred$conditions==prediction$conditions) && colnames(prediction$bestfit)==colnames(pred$bestfit) )) ) {
+              colnames(pred$bestfit) = colnames(prediction$bestfit)
+              compare_data[[length(compare_data)+1]] = pred$bestfit
+              legend = c(legend, names(compare_data)[pidx])
+              colors = c(colors, sim_colors[color_idx]) # TODO define a gradient or something
+              color_idx = (color_idx + 1) %% length(sim_colors)
+          } else {
+              warning(paste0("The prediction ", pidx, " was not used because it is invalid"))
+          }
+      }
   }
   if (!is.list(prediction) || !is.matrix(prediction$bestfit) ) {
     stop("Invalid type for argument 'prediction', see 'simulateModel' return value")
@@ -454,19 +486,29 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
   for (node in 1:ncol(prediction$bestfit)) {
     # Collects the positions of the bars
     par(mar = c(1, 6, 4, 4))
+    if (length(compare_data) > 0) {
+        compare_row = t(sapply(compare_data, function(cd){cd[,node]}))
+    } else {
+        compare_row = c()
+    }
     if (with_data) {
-        to_plot = rbind(prediction$data[,node], prediction$bestfit[,node])
+        to_plot = rbind(prediction$data[,node], prediction$bestfit[,node], compare_row)
         bars = barplot(to_plot, plot=F, beside=TRUE)
         sim_bars = bars[2,]
         data_bars = bars[1,]
         bars = colMeans(bars)
-        limits = c(ifelse(log_axis, 1, 0), 2 * max(c(prediction$bestfit[,node], prediction$data[,node]), na.rm=TRUE)) # Expect values > 1
+    } else if (length(compare_data) > 0) {
+        to_plot = rbind(prediction$bestfit[,node], compare_row)
+        bars = barplot(to_plot, plot=F, beside=TRUE)
+        sim_bars = bars[1,]
+        bars = colMeans(bars)
     } else {
-        to_plot = prediction$bestfit[,node]
+        to_plot = cbind(prediction$bestfit[,node])
         bars = barplot(to_plot, plot=F, beside=TRUE)
         sim_bars = bars
-        limits = c(ifelse(log_axis, 1, 0), 2 * max(prediction$bestfit[,node]), na.rm=TRUE) # Expect values > 1
     }
+    if (log_axis) { to_plot = log(to_plot, 10) }
+    limits = c(ifelse(log_axis, 1, 0), 2 * max(c(to_plot), na.rm=TRUE)) # Expect values > 1
     if (length(prediction$variants) > 0) {
       low_var = numeric()
       high_var = numeric()
@@ -485,7 +527,7 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       }
       # Plot the bars with the errors
       entity = colnames(prediction$bestfit)[node]
-      barplot(to_plot, ylim=limits, ylab=paste0(entity, " activity (AU)"), log=ylog, col=colors, main=entity, beside=TRUE)
+      barplot(to_plot, ylim=limits, ylab=paste0(entity, ifelse(log_axis, " log", ""), " activity (AU)"), col=colors, main=entity, beside=TRUE)
       text_pos = limits[2] - 0.1 * limits[2]
       segments( sim_bars, low_var, sim_bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
       text( sim_bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2],ifelse(X<100000,round(X),signif(X,1)), "") }), pos=2, srt=90,offset=0.2 )
@@ -495,7 +537,7 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       segments(sim_bars[in_lim] - space, high_var[in_lim], sim_bars[in_lim] + space, high_var[in_lim])
     } else {
       entity = colnames(prediction$bestfit)[node]
-      barplot(to_plot, ylab=paste0(entity, " activity (AU)"), log=ylog, main=entity, beside=TRUE, col=colors)
+      barplot(to_plot, ylab=paste0(entity, ifelse(log_axis, " log", ""), " activity (AU)"), main=entity, beside=TRUE, col=colors)
       low_var=0;
       limits[1] = 1.2 * max(prediction$bestfit[,node], na.rm=TRUE)
     }
@@ -510,6 +552,7 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       y_coord = min(0, low_var, na.rm=TRUE)-pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
       if (log_axis) {
           y_coord = 1 / ( pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1) )
+          y_coord = min(0, low_var, na.rm=TRUE)-pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
       }
       text(bars, y_coord, legend_line)
       text(pert_name_x, y_coord, colnames(prediction$conditions)[pert], pos=2)
