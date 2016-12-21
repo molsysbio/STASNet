@@ -6,7 +6,7 @@ output:
     html_vignette:
         toc: yes
         toc_depth: 3
-        theme: united
+theme: united
 vignette: >
   %\VignetteIndexEntry{Using the STASNet package}
   %\VignetteEngine{knitr::rmarkdown}

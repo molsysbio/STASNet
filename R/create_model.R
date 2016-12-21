@@ -472,14 +472,14 @@ correlate_parameters <- function(model, core, perform_plot=F) {
     
     # Collect the measured data for the regression
     node_mes = which( measured_nodes == node)
-    measurements = log(data$stim_data[use, node_mes] / data$unstim_data[1, node_mes] )
+    measurements = log(data$stim_data[use, node_mes,drop=F] / mean(data$unstim_data[1, node_mes],na.rm=T) )
     regression = paste0('lm(measurements[,1] ~ ')
     first = TRUE
     node_name = model_structure$names[node]
     condition = paste(node_name, "and")
     for (sender in upstreams[[node]] ) {
       mes_index = which(measured_nodes==sender)
-      measurements = cbind(measurements, log(data$stim_data[use, mes_index] / data$unstim_data[1,mes_index]) )
+      measurements = cbind(measurements, log(data$stim_data[use, mes_index,drop=F] / mean(data$unstim_data[1,mes_index],na.rm=T)))
       if (first) {
         first = FALSE
       } else {
@@ -530,7 +530,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
   correlated$infos = c()
   links = model$getParametersLinks()
   for ( param in 1:length(params_vector) ) {
-    if (!is.nan(params_vector[param]) && params_vector[param] != 0) {
+    if (!is.infinite(params_vector[param]) && !is.na(params_vector[param]) && !is.nan(params_vector[param]) && params_vector[param] != 0) {
       correlated$list = c(correlated$list, param)
       correlated$values = c(correlated$values, params_vector[param])
       correlated$infos = c(correlated$infos, paste0("Correlated link ", simplify_path_name(links[param]), " = ", params_vector[param]))

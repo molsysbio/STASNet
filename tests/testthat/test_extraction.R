@@ -131,3 +131,14 @@ test_that("extractModelCore works as expected", {
 test_that("extractModelCore error when perturbations are missing", {
     expect_error(suppressMessages(extractModelCore(dumb_structure, dumb_activity, no_perturbations_midas)))
 })
+
+context("Model can handle precorrelations")
+structure = rbind(c("N1", "N2"), c("N2", "N3"), c("N2", "N5"), c("N5", "N4"), c("N3", "N4"))
+basal = c("N1", "N2", "N3", "N4", "N5")
+midas_data = as.data.frame(matrix(0, nrow=4, ncol=7,
+                                  dimnames=list(NULL, c("ID:type", "TR:N1", "TR:N2i", "DA:ALL", "DV:N2", "DV:N3", "DV:N4"))))
+midas_data[,1] = c("c", "t", "t", "t") # Type of experiment
+midas_data[,c(2,3)] = cbind(c(0,1,1,0), c(0,0,1,1)) # Perturbations
+midas_data[,c(5:7)] = cbind(c(1, 2, 2, 1), c(1, 2, 1.4, 0.7), c(1, 4, 2, 0.5)) # Experimental values
+test_that("uncorrelatable condition is tolerated",{expect_message(createModel(structure, basal, midas_data, inits=100))})
+
