@@ -6,11 +6,11 @@
 A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
 Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!}
 \usage{
-suggestExtension(model_description, parallel = F, mc = 1,
+suggestExtension(original_model, parallel = F, mc = 1,
   sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F)
 }
 \arguments{
-\item{model_description}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}
+\item{original_model}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}
 
 \item{parallel}{Boolean number indicating whether addition is executed in a parallel fashion}
 
