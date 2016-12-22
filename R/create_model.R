@@ -23,6 +23,9 @@ get_running_time <- function(init_time, text="") {
 }
 
 trim_num <- function(x, non_zeros=2, behind_comma = 2){
+  if (non_zeros==0){
+    error("number should have a digits reconsider setting non_zeros larger 0!!")
+  }
 trim_it <- function(x, non_zeros, behind_comma){  
   if (is.na(x)){ return(x) }
 
@@ -31,11 +34,16 @@ trim_it <- function(x, non_zeros, behind_comma){
   if (is.na(x)){ stop(paste("Number or NA expected '", oldx ,"' received as input!")) } 
   
   if (abs(x >= 1)){ 
-    return(round(x*10^behind_comma)/10^behind_comma)
+    newx = round(x*10^behind_comma)/10^behind_comma
   } else{
-    return(signif(x,non_zeros))  
+    newx =  signif(x,non_zeros)  
   }
-}
+
+  if (nchar(gsub("\\.|-","",as.character(newx))) > max(5,non_zeros+behind_comma)){
+    newx = format(newx, scientific = 0)  
+  }
+  return(newx)
+  }
 
 if (is.null(dim(x))){
   return(sapply(x,"trim_it",non_zeros,behind_comma))

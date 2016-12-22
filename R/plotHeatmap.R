@@ -52,7 +52,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
                       panel.levelplot(...)
                       panel.text(arg$x,
                                  arg$y,
-                                 signif(ref,sig_numbers),
+                                 trim_num(ref,sig_numbers),
                                  col = textCol,
                                  cex = 0.8)})
   print(p) # Plot the heatmap
