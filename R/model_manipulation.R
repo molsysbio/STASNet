@@ -119,7 +119,9 @@ getModelError <- function(mra_model) {
 #' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelScores.MRAmodel <- function(mra_model, ...) {
-    bb=barplot(mra_model$Rscores, xaxt="n", ...)
+    low_lim=ifelse(min(mra_model$Rscores,na.rm=T)<0,min(-1,0.1*min(mra_model$Rscores,na.rm=T)),0)
+    
+    bb=barplot(mra_model$Rscores, xaxt="n", ylim=c(low_lim,1), las=1,ylab = "R²", ...)
     lablist = names(mra_model$Rscores)
     text(bb, par("usr")[3] - 0.05, labels=lablist, srt=45, pos=1, xpd=TRUE)
 
