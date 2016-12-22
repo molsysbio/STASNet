@@ -63,7 +63,7 @@ midas_data = as.data.frame(matrix(0, nrow=4, ncol=7,
     dimnames=list(NULL, c("ID:type", "TR:N1", "TR:N2i", "DA:ALL", "DV:N2", "DV:N3", "DV:N4"))))
 midas_data[,1] = c("c", "t", "t", "t") # Type of experiment
 midas_data[,c(2,3)] = cbind(c(0,1,1,0), c(0,0,1,1)) # Perturbations
-midas_data[,c(5:7)] = cbind(c(1, 2, 2, 1), c(1, 2, 1.4, 0.7), c(1, 4, 2, 0.5)) # Experimental values
+midas_data[,c(5:7)] = cbind(c(111, 250, 187, 98), c(100, 150, 147, 76), c(103, 600, 217, 54)) # Experimental values
 print(midas_data)
 ```
 
@@ -99,7 +99,7 @@ We can the evaluate how the simulation compares to the data.
 ```{r}
 plotModelAccuracy(model)
 plotModelScores(model)
-simulation = plotModelSimulation(model, "all", "all")
+simulation = plotModelSimulation(model, "all", "all", with_data= TRUE,log_axis = T)
 print(simulation)
 ```
 

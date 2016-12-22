@@ -261,7 +261,7 @@ printParameters(model)
 #dev.off()
 # Plot the simulated conditions
 pdf(paste0(folder, "model_simulation_", model$name, ".pdf"))
-plotModelSimulation( model )
+plotModelSimulation( model_description = model ,with_data = TRUE,log_axis = FALSE)
 dev.off()
 
 }

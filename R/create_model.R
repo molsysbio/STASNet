@@ -121,7 +121,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   if (debug) {
     # Print the 20 smallest residuals to check if the optimum has been found several times
     message("Best residuals :")
-    message(paste0(sort(residuals)[1:20], collapse=" "))
+    message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
   if (perform_plots) {
     plot(1:length(order_resid), residuals[order_resid], main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y")
@@ -153,7 +153,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   # Information required to run the model (including the model itself)
   infos = generate_infos(data.stimulation, inits, sort(residuals)[1:5], method, model_links, model_name, fit_info)
   model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=infos$name, infos=infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv = DEFAULT_CV)
-  message(paste("Residual score =", model_description$bestfitscore))
+  message(paste("Residual score =", trim_num(model_description$bestfitscore,behind_comma = 4)))
   
   return(model_description)
 }
@@ -455,8 +455,9 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       valid_nodes = c(valid_nodes, node)
     }
   }
-  message(paste(length(valid_nodes), "target nodes found correlatable with their inputs"))
-  
+  if (verbose){
+  message(paste0(length(valid_nodes), " target node",ifelse(length(valid_nodes)>1,"s","") ,"found correlatable with inputs")) 
+  }
   # Collect the values and perform the correlation
   params_matrix = matrix(0, ncol=length(model_structure$names), nrow=length(model_structure$names)) # To store the values
   for (node in valid_nodes) {
@@ -611,14 +612,14 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
       
       # Only keep the best fits
       best = order(results$residuals)[1:best_keep]
-      message(paste(sum(is.na(results$residuals)), "NAs"), stderr())
+      if (verbose) { message(paste(sum(is.na(results$residuals)), "NAs"), stderr()) }
       best_results$residuals = c(best_results$residuals, results$residuals[best])
       best_results$params = rbind(best_results$params, results$params[best,])
     }
     
   } else {
     best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant)
-    message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr())
+    if (verbose) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
   }
   
   return(best_results)
