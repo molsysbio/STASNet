@@ -5,7 +5,8 @@
 \title{Plot the predictions by the model}
 \usage{
 plotModelSimulation(model_description, targets = "all", readouts = "all",
-  inhibition_effect = NA, log_axis = F)
+  inhibition_effect = NA, log_axis = TRUE, with_data = FALSE,
+  compare = list())
 }
 \arguments{
 \item{model_description}{A MRAmodel object that describes the model to be fitted}
@@ -18,6 +19,10 @@ A perturbation matrix is filled with 0 and 1, each row is a perturbation set and
 \item{inhibition_effect}{A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.}
 
 \item{log_axis}{Boolean, whether the ordinate axis should be in log scale}
+
+\item{with_data}{Plot the data of the model next to the prediction}
+
+\item{compare}{A list of MRAmodel to compare the predictions, targets and readouts must be valid for MRAmodels}
 }
 \value{
 A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood

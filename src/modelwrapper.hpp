@@ -48,6 +48,7 @@ public:
   SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth);
 
   SEXP simulate(Data *data, std::vector<double> parameters);
+  SEXP simulateWithOffset(Data *data, std::vector<double> parameters);
   SEXP getLocalResponse( std::vector<double> p );
   SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps);
 

@@ -23,7 +23,7 @@ profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
     # Print results
     message(paste("Residual =", init_residual))
     message(paste("Residual score =", model_description$bestfitscore))
-    message_error_intervals(profiles)
+    print_error_intervals(profiles)
 
     return(profiles)
 }
@@ -65,7 +65,7 @@ simplify_path_name <- function (path_name) {
     # Look for the node(s) without predecessor (i.e the first node of the path(s))
     selected=which(elements[,1]=="")
     if (is.na(selected[1])){
-      stop(writeLines(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
+      stop(paste0(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
     }
 
     # Build the most simple sub path(s)

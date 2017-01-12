@@ -46,8 +46,7 @@ ModelSet::ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbo
 }
 
 //void ModelSet::predict(const std::vector<double> &p, double_matrix &datax, const DataSet *dataset ) const {
-void ModelSet::predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const {
-
+void ModelSet::predict(const std::vector<double> &p, double_matrix &datax, const Data *data, const bool with_offset ) const {
     //const DataSet* dataset = (const DataSet*)data;
     const DataSet* dataset = dynamic_cast<const DataSet*>(data);
 
@@ -67,7 +66,7 @@ void ModelSet::predict(const std::vector<double> &p, double_matrix &datax, const
         for (size_t ii=0; ii< nr_of_parameters_per_submodel(); ii++ ) {
             ptmp[ii] = p[shift + ii];
         }
-        Model::predict(ptmp, sub_datax, &(dataset->datas_[mod]));
+        Model::predict(ptmp, sub_datax, &(dataset->datas_[mod]), with_offset);
         boost::detail::multi_array::multi_array_view<double, 2> datax_view = datax[ boost::indices[range(mod*rows, (mod+1)*rows, 1)][range(0, cols, 1)] ];
         copy_to_view(sub_datax, datax_view);
     }

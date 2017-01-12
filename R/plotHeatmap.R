@@ -1,6 +1,10 @@
 ########################### plotHeatmap.R ###########################
 # function to generate heatmap with cutoff and colormap scale function
 
+# A color blind palette
+#                Green      Orange    Sky Blue    Blue      Vermillion  Purple    Yellow      Black
+cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7", "#F0E442", "#000000")
+
 #' Plot a customized heatmap with a symmetrical scale that is not stretched by extreme values
 #' @param mat a numeric matrix that should be plotted
 #' @param lim a single number indicating the maximal range [-lim lim] for the color map
@@ -9,9 +13,10 @@
 #' @param main a character string representing the title to be passed
 #' @param col colorRampPalette object indicating the colormap
 #' @param textCol string denoting the color of inset text
+#' @param sig_numbers number of significant parameters to display in the heatmap
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10"){
+plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
   # cutoff and transformation of colour
@@ -47,7 +52,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = F,stripOut=0.05,col
                       panel.levelplot(...)
                       panel.text(arg$x,
                                  arg$y,
-                                 signif(ref,2),
+                                 trim_num(ref,sig_numbers),
                                  col = textCol,
                                  cex = 0.8)})
   print(p) # Plot the heatmap

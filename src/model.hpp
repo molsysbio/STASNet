@@ -55,7 +55,7 @@ public:
 public:
 
   // Evaluation of the model
-  virtual void predict(const std::vector<double> &p, double_matrix &datax, const Data *data ) const;
+  virtual void predict(const std::vector<double> &p, double_matrix &datax, const Data *data, const bool with_offset=true ) const;
   virtual void eval(const double *p, double *datax, const Data *data) const;
   double score(const double *p, const Data *data) const;
   //  evaluates the model with parameters p  and returns datax.

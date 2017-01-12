@@ -7,13 +7,16 @@
 compareModels(files)
 }
 \arguments{
-\item{files}{A list of .mra files}
+\item{files}{A list of '.mra' files}
 }
 \value{
-None
+matrix of parameters
 }
 \description{
 Compare the parameters of one network for different conditions (cell line, perturbations, ...)
-The links must be the same for all the networks
+Missing links are indicated by NA.
+}
+\author{
+Bertram Klinger \email{bertram.klinger@charite.de}
 }
 

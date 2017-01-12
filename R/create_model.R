@@ -22,6 +22,38 @@ get_running_time <- function(init_time, text="") {
   return(paste(run_hours, "h", run_minutes, "min", run_seconds, "s", text))
 }
 
+trim_num <- function(x, non_zeros=2, behind_comma = 2){
+  if (non_zeros==0){
+    error("number should have a digits reconsider setting non_zeros larger 0!!")
+  }
+trim_it <- function(x, non_zeros, behind_comma){  
+  if (is.na(x)){ return(x) }
+
+  if (!is.numeric(x)){ oldx =x; x = as.numeric(as.character(x)) } 
+
+  if (is.na(x)){ stop(paste("Number or NA expected '", oldx ,"' received as input!")) } 
+  
+  if (abs(x >= 1)){ 
+    newx = round(x*10^behind_comma)/10^behind_comma
+  } else{
+    newx =  signif(x,non_zeros)  
+  }
+
+  if (nchar(gsub("\\.|-","",as.character(newx))) > max(5,non_zeros+behind_comma)){
+    newx = format(newx, scientific = 0)  
+  }
+  return(newx)
+  }
+
+if (is.null(dim(x))){
+  return(sapply(x,"trim_it",non_zeros,behind_comma))
+}else{
+ newx=sapply(1:ncol(x),function(y) sapply(x[,y],"trim_it",non_zeros,behind_comma))
+ dimnames(newx) <- dimnames(x)
+ return(newx)
+}
+}
+
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
@@ -43,6 +75,7 @@ get_running_time <- function(init_time, text="") {
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
 #' @param model_name The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.
+#' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -55,12 +88,12 @@ get_running_time <- function(init_time, text="") {
 #' }
 #' @family Model initialisation
 # TODO completely remove examples or add datafile so they work (or use data matrices)
-createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default") {
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim") {
   # Creation of the model structure object
   model_structure = extractStructure(model_links)
   basal_activity = extractBasalActivity(basal_file)
   
-  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts, MIN_CV, DEFAULT_CV)
+  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
   expdes = core$design
   data = core$data
 
@@ -69,7 +102,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   model$setModel(expdes, model_structure)
   
   # INITIAL FIT
-  results <- initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
+  results = initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
   
   # Choice of the best fit
   params = results$params
@@ -96,9 +129,11 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   if (debug) {
     # Print the 20 smallest residuals to check if the optimum has been found several times
     message("Best residuals :")
-    message(paste0(sort(residuals)[1:20], collapse=" "))
+    message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
-  if (perform_plots) { hist(log(residuals, base=10), breaks="fd", main="Distribution of the residuals") }
+  if (perform_plots) {
+    plot(1:length(order_resid), residuals[order_resid], main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y")
+  }
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)
   best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
@@ -124,14 +159,9 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   }
   
   # Information required to run the model (including the model itself)
-  infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links), fit_info)
-  if (is.string(data.stimulation)) {
-    model_name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(data.stimulation)))
-  } else {
-    model_name = model_name
-  }
-  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=model_name, infos=infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
-  message(paste("Residual score =", model_description$bestfitscore))
+  infos = generate_infos(data.stimulation, inits, sort(residuals)[1:5], method, model_links, model_name, fit_info)
+  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=infos$name, infos=infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv = DEFAULT_CV)
+  message(paste("Residual score =", trim_num(model_description$bestfitscore,behind_comma = 4)))
   
   return(model_description)
 }
@@ -142,7 +172,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' @inheritParams createModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default") {
+createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim") {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -150,26 +180,28 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
       stop("'var_files' must have the same length as 'csv_files' or be of length 0")
     }
   }
+  if (!rearrange %in% c("bystim", "byinhib")) { stop("Invalid 'rearrange' for createModelSet, must be 'byinhib' or 'bystim'") }
   model_structure = extractStructure(model_links)
   basal_activity = extractBasalActivity(basal_file)
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV)
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
+  offset = core0$data$scale
   cv = core0$cv
   if (verbose > 8) {
     message("Data dimensions~:")
-    message(dim(core0$data$stim_data))
-    message(dim(core0$data$unstim_data))
-    message(dim(core0$data$error))
+    message(paste0(dim(core0$data$stim_data),collapse=" "))
+    message(paste0(dim(core0$data$unstim_data),collapse=" "))
+    message(paste0(dim(core0$data$error),collapse=" "))
   }
   # Build an extended dataset that contains the data of each model
   data_ = new(STASNet:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
-    core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV)
+    core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
     if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
@@ -182,13 +214,14 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
     unstim_data = rbind(unstim_data, core$data$unstim_data)
     stim_data = rbind(stim_data, core$data$stim_data)
     error = rbind(error, core$data$error)
+    offset = rbind(offset, core$data$scale)
     data_$addData(core$data, FALSE)
     cv = rbind(cv, core$cv)
   }
   data_$set_stim_data(stim_data)
   data_$set_unstim_data(unstim_data)
   data_$set_error(error)
-  data_$set_scale(error)
+  data_$set_scale(offset)
   
   model = new(STASNet:::ModelSet)
   model$setModel(core0$design, model_structure)
@@ -200,14 +233,9 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   parameters = results$params[bestid,]
   bestfit = results$residuals[bestid]
   
-  infos = c(paste0(inits, " samplings"), paste0( sort("Best residuals : "), paste0(sort(results$residuals)[1:5], collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links))
-  if (is.character(csv_files)) {
-    names = gsub("\\.csv", "", gsub("_MIDAS", "", basename(csv_files)))
-  } else {
-    names = model_name
-  }
-  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, names, infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts)
-  # param_range, lower_values, upper_values)
+  infos = generate_infos(csv_files, inits, sort(results$residuals)[1:5], method, model_links, model_name)
+  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV)
+  # param_range, lower_values, upper_values defined using profile likelihood
   return(self)
 }
 
@@ -215,7 +243,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #'
 #' See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
 #'
-#' @param modelset An MRAmodelSet object
+#' @param original_modelset An MRAmodelSet object
 #' @param nb_cores Number of cores to use for the refitting with the new variable parameters
 #' @param max_iterations Maximum number of variable parameters to add (if 0 takes as many as possible)
 #' @param nb_samples Number of samples to generate to fit the new variable parameters
@@ -224,7 +252,10 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #' @return An updated MRAmodelSet with the new parameter sets
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+  # clone MRAmodelSet object to have seperate objects at hand
+  modelset = cloneModel(original_modelset)
+  
   init_time = proc.time()["elapsed"];
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   model = modelset$model
@@ -245,20 +276,23 @@ addVariableParameters <- function(modelset, nb_cores=0, max_iterations=0, nb_sam
     
     bestres = min(unlist(psets["residuals",]))
     deltares = modelset$bestfit - bestres
-    if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+    df1 = modelset$nb_models-1 # Extra parameters
+    data_count = sum(!is.na(modelset$data$stim_data) & !is.nan(modelset$data$stim_data))
+    df2 = data_count - (length(modelset$parameters) + df1) # Degrees of freedom of the augmented model
+    f_score = (deltares/df1) / (bestres/df2)
+    if (f_score > qf(accuracy, df1, df2)) {
       res_id = which.min(unlist(psets["residuals",]))
       par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
       new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
       
-      writeLines(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pchisq(deltares, df=modelset$nb_models),2) ))
-      writeLines(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
-      writeLines(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
+      message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pf(f_score, df1, df2),2) ))
+      message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
+      message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
        
       var_pars = c( modelset$variable_parameters, par_id )
       modelset = setVariableParameters(modelset, var_pars)
       modelset$parameters = new_parameters
       modelset$bestfit = bestres
-      # modelset=computeFitScore(modelset) FUNCTION NOT READY FOR MODEL SET YET!!!!
       get_running_time(init_time, "elapsed");
     } else {
       break
@@ -305,6 +339,9 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
 #' @return A list with the initialisation results
 #' @family Model initialisation
 initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
+  if (inits <= 0) {
+    stop("Number of initialisations must be a positive integer")
+  }
   expdes = core$design
   data = core$data
   # Parallelized version uses all cores but one to keep control
@@ -346,6 +383,10 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
 #' @return A matrix with the random samples
 #' @author Bertram Klinger \email{klinger@@charite.de}
 getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) {
+  if (nb_samples > 10^8){
+    warning("Number of samples is too high, restricting sample size to 10^8 !")
+    nb_samples = 10^8
+  }
   valid_methods=data.frame(methods=c("randomlhs",
                                      "geneticlhs",
                                      "improvedlhs",
@@ -364,9 +405,7 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
     max_proc=ceiling(nb_samples/max_sample_stack_size)
     if (nb_cores>1){
       samples=qnorm(do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc))), sd=2)
-      #samples=do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc)))
     } else {
-      #samples=do.call(rbind,lapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx]))))
       samples=qnorm(do.call(rbind,lapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])))), sd=2)  
     }
   } else {
@@ -424,8 +463,9 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       valid_nodes = c(valid_nodes, node)
     }
   }
-  message(paste(length(valid_nodes), "target nodes found correlatable with their inputs"))
-  
+  if (verbose){
+  message(paste0(length(valid_nodes), " target node",ifelse(length(valid_nodes)>1,"s","") ,"found correlatable with inputs")) 
+  }
   # Collect the values and perform the correlation
   params_matrix = matrix(0, ncol=length(model_structure$names), nrow=length(model_structure$names)) # To store the values
   for (node in valid_nodes) {
@@ -441,14 +481,14 @@ correlate_parameters <- function(model, core, perform_plot=F) {
     
     # Collect the measured data for the regression
     node_mes = which( measured_nodes == node)
-    measurements = log(data$stim_data[use, node_mes] / data$unstim_data[1, node_mes] )
+    measurements = log(data$stim_data[use, node_mes,drop=F] / mean(data$unstim_data[1, node_mes],na.rm=T) )
     regression = paste0('lm(measurements[,1] ~ ')
     first = TRUE
     node_name = model_structure$names[node]
     condition = paste(node_name, "and")
     for (sender in upstreams[[node]] ) {
       mes_index = which(measured_nodes==sender)
-      measurements = cbind(measurements, log(data$stim_data[use, mes_index] / data$unstim_data[1,mes_index]) )
+      measurements = cbind(measurements, log(data$stim_data[use, mes_index,drop=F] / mean(data$unstim_data[1,mes_index],na.rm=T)))
       if (first) {
         first = FALSE
       } else {
@@ -499,7 +539,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
   correlated$infos = c()
   links = model$getParametersLinks()
   for ( param in 1:length(params_vector) ) {
-    if (!is.nan(params_vector[param]) && params_vector[param] != 0) {
+    if (!is.infinite(params_vector[param]) && !is.na(params_vector[param]) && !is.nan(params_vector[param]) && params_vector[param] != 0) {
       correlated$list = c(correlated$list, param)
       correlated$values = c(correlated$values, params_vector[param])
       correlated$infos = c(correlated$infos, paste0("Correlated link ", simplify_path_name(links[param]), " = ", params_vector[param]))
@@ -511,21 +551,24 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 
 # Parallel initialisation of the parameters
 # @family Model initialisation
-parallel_initialisation <- function(model, data, samples, NB_CORES) {
-  # Put the samples under list format, as mclapply only take "one dimension" objects
-  parallel_sampling = list()
-  nb_samples = dim(samples)[1]
-  length(parallel_sampling) = nb_samples # Prevents the resizing of the list
-  for (i in 1:nb_samples) {
-    parallel_sampling[[i]] = samples[i,]
+parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c()) {
+  if (NB_CORES == 0) {
+    NB_CORES = detectCores()-1
   }
+  # Put the samples under list format, as mclapply only take "one dimension" objects
+  nb_samples = nrow(samples)
+  parallel_sampling = lapply(1:nb_samples,function(x) samples[x,])
   # Parallel initialisations
   # The number of cores used depends on the ability of the detectCores function to detect them
-  fitmodel_wrapper <- function(params, data, model) {
+  fitmodel_wrapper <- function(params, data, model, keep_constant=c()) {
     init = proc.time()[3]
-    result = model$fitmodel(data, params)
+    if (length(keep_constant) > 0) {
+      result = model$fitmodelWithConstants(data, params, keep_constant)
+    } else {
+      result = model$fitmodel(data, params)
+    }
     if (verbose) {
-      write(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals), stderr())
+      message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
   }
@@ -536,16 +579,16 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
     init = proc.time()[3]
     result = model$fitmodelset(data, params)
     if (verbose) {
-      write(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals), stderr())
+      message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
   }
   
-  get_parallel_results <- function(model, data, samplings, NB_CORES) {
+  get_parallel_results <- function(model, data, samplings, NB_CORES, keep_constant=c()) {
     if (class(model) == "Rcpp_ModelSet") {
       parallel_results = mclapply(samplings, fitmodelset_wrapper, data, model, mc.cores=NB_CORES)
     } else {
-      parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES)
+      parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES, keep_constant)
     }
     
     # Reorder the results to get the same output as the non parallel function
@@ -563,35 +606,28 @@ parallel_initialisation <- function(model, data, samples, NB_CORES) {
   }
   # Since the aggregation in the end of the parallel calculations takes a lot of time for a big list, we calculate by block and take the best result of each block
   if (nb_samples > 10000) {
-    message("Using the block version for the parallel initialisation")
-    best_results = list()
-    best_results$residuals = c()
-    best_results$params = c()
-    for (i in 1:(nb_samples %/% 10000)) {
-      results = get_parallel_results(model, data, parallel_sampling[ (10000*(i-1)+1):(10000*i) ], NB_CORES)
+    
+    # chop the data into optimal number of pieces
+    nb_blocks = nb_samples %/% 10000 + 1
+    block_size = NB_CORES * ((nb_samples %/% nb_blocks) %/% NB_CORES)
+    best_keep = 10000 %/% nb_blocks
+    best_results = list( residuals=c(), params=c() )
+    message(paste0("Parallel initialization using block sizes of ", block_size, " samples"))
+    
+    for (i in 1:nb_blocks) {
+      seq = (block_size*(i-1)+1) : ifelse(block_size*(i+1) <= nb_samples, block_size*i, nb_samples)
+      results = get_parallel_results(model, data, parallel_sampling[seq], NB_CORES)
       
       # Only keep the best fits
-      best = order(results$residuals)[1:20]
-      write(paste(sum(is.na(results$residuals)), "NAs"), stderr())
-      best_results$residuals = c(best_results$residuals, results$residuals[best])
-      best_results$params = rbind(best_results$params, results$params[best,])
-      # We make it so that the size of best_results never execeeds 10000
-      if (i %% 500 == 0) {
-        best = order(best_results$residuals)[1:20]
-        best_results$residuals = best_results$residuals[best]
-        best_results$params = best_results$params[best,]
-      }
-    }
-    # The last block is smaller
-    if (nb_samples %% 10000 != 0) {
-      results = get_parallel_results(model, data, parallel_sampling[(10000 * nb_samples %/% 10000):nb_samples], NB_CORES)
-      
-      best = order(results$residuals)[1:20]
+      best = order(results$residuals)[1:best_keep]
+      if (verbose) { message(paste(sum(is.na(results$residuals)), "NAs"), stderr()) }
       best_results$residuals = c(best_results$residuals, results$residuals[best])
       best_results$params = rbind(best_results$params, results$params[best,])
     }
+    
   } else {
-    best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES)
+    best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant)
+    if (verbose) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
   }
   
   return(best_results)
@@ -712,7 +748,7 @@ extractStructure <- function(to_detect, names="") {
 #' @export
 # TODO extraction of the basal activity with different format
 extractBasalActivity <- function(to_detect) {
-  if (is.string(to_detect)) {
+  if (is.string(to_detect) && to_detect != "") {
     return(as.character(read.delim(to_detect,header=FALSE)[,1]))
     #unlist(read.delim(to_detect,header = F,colClasses = "character"))
   } else {
@@ -862,81 +898,101 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 #' Extracts the data, the experimental design and the structure from the input files
 #' @param model_structure Matrix of links [node1, node2]
 #' @param basal_activity The node of the structure with a basal activity
-#' @param data_filename Experimental data under the MIDAS format. See extractMIDAS.
+#' @param datas Experimental data under the MIDAS format. See extractMIDAS.
 #' @param var_file Variation file name under MIDAS format or "" to compute an error from the data. See extractMIDAS.
 #' @param dont_perturb Perturbations to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param dont_read Readouts to be removed for the fit, will not be used nor simulated. (vector of names)
 #' @param MIN_CV Minimum coefficient of variation.
-#' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
+#' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicates in the data.
+#' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
 #' @seealso \code{\link{extractMIDAS}}
-extractModelCore <- function(model_structure, basal_activity, data_filename, var_file="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3) {
+extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3, rearrange="no") {
 
+  model_structure = extractStructure(model_structure)
+  basal_activity = extractBasalActivity(basal_activity)
   vpert = c(model_structure$names, paste0(model_structure$names, "i")) # Perturbations that can be simulated
   data_file = extractMIDAS(data_filename)
-  data_values = data_file[,grepl("DV.", colnames(data_file))]
+  data_values = data_file[,grepl("^DV.", colnames(data_file)),drop=FALSE]
   colnames(data_values) = gsub("^[A-Z]{2}.", "", colnames(data_values))
-  not_included = colnames(data_values)[!(colnames(data_values) %in% model_structure$names)]
-  perturbations = data_file[,grepl("TR.", colnames(data_file))]
+  not_included = setdiff(colnames(data_values), model_structure$names)
+  perturbations = data_file[,grepl("^TR.", colnames(data_file)),drop=FALSE]
+  if (ncol(perturbations) == 0) {
+    stop("Perturbation informations are required")
+  }
   colnames(perturbations) = gsub("^[A-Z]{2}.", "", colnames(perturbations))
-  not_perturbable = colnames(perturbations)[!(colnames(perturbations)%in%vpert)]
-  id_colums = grepl("ID.type", colnames(data_file))
-  blanks = grep("b|blank", data_file[,id_colums])
-  controls = grep("c|control", data_file[,id_colums])
-  if (length(controls) == 0) { stop("Control experiments are required (indicated as 'control' in the column 'ID:type', see extractMIDAS)") }
-
+  not_perturbable = setdiff(colnames(perturbations), vpert)
+  id_colums = grepl("^ID.type", colnames(data_file))
+  blanks = which(tolower(data_file[,id_colums]) %in% c("b","blank"))
+  controls = which(tolower(data_file[,id_colums]) %in% c("c","ctl","ctrl","control"))
+  if (length(controls) == 0) { 
+    stop("Control experiments are required (indicated as 'control' in the column 'ID:type', see extractMIDAS)")
+    }
   # Warn for the measured nodes that have not been found in the network, and don't use them
   if (length(not_included) > 0) {
     message(paste(not_included , "measurement is not in the network structure (could be a mispelling or a case error)\n"))
-    data_values = as.matrix(data_values[,-which(colnames(data_values)%in%not_included)])
+    data_values = data_values[,-which(colnames(data_values) %in% not_included), drop=FALSE]
   }
   # Remove extra readouts that should not be used
   for (ro in dont_read) {
     if (ro %in% colnames(data_values)) {
-      data_values = as.matrix(data_values[,-which(colnames(data_values)==ro)])
+      message(paste(ro, "readout will not be used for the fit\n"))
+      data_values = data_values[,-which(colnames(data_values)==ro), drop=FALSE]
     }
   }
-
   # Remove the perturbations that cannot be simulated to get a correct fit
   for (erm in dont_perturb) {
     if (!erm %in% vpert) {
       message(paste0(erm, " is not a valid perturbation name for this dataset"))
     }
   }
-  dont_perturb = dont_perturb[which(dont_perturb%in%vpert)]
-  not_perturbable = c(not_perturbable, dont_perturb)
+  dont_perturb = intersect(dont_perturb, vpert)
   rm_rows = c()
-  if (length(not_perturbable) > 0) {
-    message(paste(not_perturbable , " perturbation not compatible with the network structure, it will not be used" ))
-    rm_rows = unique(unlist(sapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
-    perturbations = perturbations[,-which(colnames(perturbations)%in%not_perturbable)]
+  if (length(not_perturbable) > 0 || length(dont_perturb) > 0) {
+    if (length(not_perturbable) > 0) {
+      message(paste(not_perturbable , "perturbation not compatible with the network structure, it will not be used\n" ))
+    }
+    if (length(dont_perturb) > 0) {
+      message(paste(dont_perturb, "perturbation will not be used for the fit\n"))
+    }
+    not_perturbable = c(not_perturbable, dont_perturb)
+    rm_rows = unique(unlist(lapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
+    perturbations = perturbations[,-which(colnames(perturbations) %in% not_perturbable), drop=F]
+    if (length(perturbations)==0){
+      stop("All perturbations have been removed can not continue modelling")
+    }
+    if (!any(perturbations[-rm_rows,]==1)){
+      stop("Remaining perturbations only occur in combination with removed perturbations, please reconsider perturbation scheme")
+    }
   }
-
-  # Means of basal activity of the network and of the blank fixation of the antibodies
+  # Means of the blank fixation of the antibodies
   if (length(blanks) == 0) {
-    blank_values = rep(0, ncol(data_values))
-  } else if (length(blanks) == 1) {
-    blank_values = data_values[blanks,]
+    blank_values = matrix( rep(0, ncol(data_values)), nrow=1, dimnames=list(NULL, colnames(data_values)) )
   } else {
-    blank_values = colMeans(data_values[blanks,])
+    blank_values = colMeans(data_values[blanks,,drop=F], na.rm=T)
   }
-  blank_values[is.nan(blank_values)] = 0; # For perturbations without blank values 
-  if (length(controls) == 1) {
-    unstim_values = as.matrix(data_values[controls,])
+  blank_values[is.nan(blank_values)|is.na(blank_values)] = 0 # For perturbations without blank values 
+  # Means of basal activity of antibodies
+  unstim_values = colMeans(data_values[controls,,drop=F], na.rm=T)
+  if (any(is.nan(unstim_values)|is.na(unstim_values))) {
+    stop("Unstimulated data are required to simulate the network")
+  }
+  # Calculate statistics for variation data
+  if (length(c(rm_rows,blanks))>0){
+    mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
   } else {
-    unstim_values = colMeans(data_values[controls,])
+    mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
   }
-  check_unstim = lapply(unstim_values, function(X) { if (is.nan(X)|is.na(X)) {stop("Unstimulated data are required to simulate the network")}})
-  rm_rows = c(rm_rows, controls, blanks) # Delete the perturbations that cannot be used with the blank and controls from the dataset
-  if (length(rm_rows) > 0) {
-    data_values = data_values[-rm_rows,]
-    perturbations = perturbations[-rm_rows,]
-  }
-
+  # Delete the perturbations that cannot be used, blank and controls from the dataset
+  rm_rows = c(rm_rows, controls, blanks) 
+  data_values = data_values[-rm_rows,,drop=F]
+  perturbations = perturbations[-rm_rows,,drop=F]
   # Compute the mean and standard deviation of the data
-  mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
-  blank_values = matrix(rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values))
-  unstim_values = matrix(rep(unstim_values,each=dim(mean_values)[1]),nrow=dim(mean_values)[1])
-  sd_values = aggregate(data_values, by=perturbations, sd, na.rm=T)[,-(1:ncol(perturbations))]
+  mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
+  blank_values = matrix( rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values), dimnames=list(NULL, colnames(data_values)) )
+  unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
+  colnames(unstim_values) <- colnames(mean_values)
   if (verbose > 7) {
     message("Data used:")
     message(mean_values)
@@ -946,76 +1002,172 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
 
   # Error model
-  if (any(var_file != "")) {
+  if (any(var_filename != "")) {
     # We use the CV file if there is one
     # The format and the order of the conditions are assumed to be the same as the data file
-    message(paste0("Using var file ", var_file))
-    variation_file = extractMIDAS(var_file)
-    if (ncol(variation_file) <= 1) {
-      variation_file = read.delim(var_file, sep="\t") # Accept tab-delimited MIDAS files
-    }
+    message(paste0("Using var file ", var_filename))
+    variation_file = extractMIDAS(var_filename)
     # Check that the number of samples is the same for the measurements and the variation and that the names in the measurements file and in the variation file match
-    if (nrow(variation_file) != nrow(data_file)) { stop("Different number of experiments for the variation and the measurement files") }
-    matchError = FALSE
-    for (name in colnames(variation_file)) {
-      if (!(name %in% colnames(data_file))) {
-        matchError = TRUE
-        write(paste0("Field ", name, " from the variation file is not in the measurement file"), stderr())
-      }
+    if (nrow(variation_file) != nrow(data_file)) {
+      stop("Different number of experiments for the variation and the measurement files") 
     }
-    if (matchError) { stop("Names of the variation and measurement files do not match") }
+    notInVar = setdiff(colnames(data_file),colnames(variation_file))
+    if (length(notInVar)>0){
+      stop(paste0("Names of the variation and measurement files do not match","\n",
+                  "Columns ",paste0(notInVar,collapse=" "),
+                  " from data file are not found in var file!"))
+    }
+    # Reorder and filter variation columns to columns present in data file
+    variation_file=variation_file[,colnames(data_file)]
+    # Check whether the order and type of the perturbations is preserved
+    if (!all(data_file[,grepl("^TR.", colnames(data_file))]==variation_file[,grepl("^TR.", colnames(variation_file))])){
+      stop("Order or type of experiments in the variation file is different from the measurement file, please adapt them to be the same!") 
+    }
     # Gather the cv values corresponding to the experimental design
     pre_cv = variation_file[, grepl("^DV", colnames(variation_file))]
     colnames(pre_cv) = gsub("^[A-Z]{2}.", "", colnames(pre_cv))
     cv_values = pre_cv[,colnames(pre_cv)%in%colnames(mean_values)]
-    cv_values = cv_values[-rm_rows,]
+    cv_values = cv_values[-rm_rows,,drop=FALSE]
     cv_values = aggregate(cv_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
   } else {
-    cv_values = sd_values / mean_values
-    median_cv = apply(cv_values, 2, median, na.rm=T)
-#    median_cv = matrix(rep(colMedians(cv_values, na.rm=T), nrow(cv_values)), nrow=nrow(cv_values))
-    cv_values[!(mean_values > 2 * blank_values)] = DEFAULT_CV
-    cv_values = t(apply(cv_values, 1, function(X) { sapply(1:length(X), function(ii) { ifelse(X[ii]>median_cv[ii] && !is.na(X[ii]), X[ii], median_cv[ii]) }) }))
-    cv_values[is.nan(cv_values)] = DEFAULT_CV
+    # remove measurements not different from blank
+    mean_stat[mean_stat <= 2 * blank_values] = NA
+    median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
+    cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
-
+  
+  colnames(cv_values)=colnames(mean_values)
+  cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
-  cv_values[is.na(cv_values)] = DEFAULT_CV
   error = blank_values + cv_values * mean_values
   error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt
 
-  # Create data object
-  data=new(STASNet:::Data)
-  data$set_unstim_data ( as.matrix(unstim_values) )
-  data$set_scale( data$unstim_data )
-  data$set_stim_data( as.matrix(mean_values) )
-  data$set_error( as.matrix( error ))
-
   # Extract experimental design
-  perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations))]
+  perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
   names = colnames(perturbations)
   stim_names = names[grepl("[^i]$", names)]
-  stim_nodes = as.character( stim_names[ stim_names %in% model_structure$names] )
+  stim_nodes = as.character( stim_names[match(model_structure$names, stim_names, nomatch = 0)] )
   names = gsub("i$", "", names[grepl("i$", names)])
-  inhib_nodes = as.character( names[names %in% model_structure$names] )
+  inhib_nodes = as.character( names[match(model_structure$names, names, nomatch = 0 )] )
+  
+  no_stim=F
+  no_inh=F
+  if (length(stim_nodes)>0){
+    stimuli = as.matrix(perturbations[,stim_nodes,drop=F])
+  } else{
+    stimuli = perturbations[,0]
+    no_stim=T
+  }
+  
+  if (length(inhib_nodes)>0){  
+    inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep=""),drop=F])
+  }else if (no_stim){
+    stop("Neither a valid stimulation nor inhibition was given, at least one type is needed!")
+  }else{
+    inhibitor = perturbations[,0]
+    no_inh=T
+  }
+  
+  measured_nodes = colnames(mean_values)
+  measured_nodes = measured_nodes[measured_nodes %in% model_structure$names] # Preserve the order in the file, allowing to specify the order of the readouts in the input
+  
+  if (rearrange %in% c("bystim", "byinhib")) {
+    # Arrange data according to experimental design
+    stim_motifs = aggregate(stimuli,by=as.data.frame(stimuli),max,na.rm=T)[,-(1:ncol(stimuli)),drop=F] # sorts automatically
+    inh_motifs = aggregate(inhibitor,by=as.data.frame(inhibitor),max,na.rm=T)[,-(1:ncol(inhibitor)),drop=F] # sorts automatically
+    
+    error_sort = error[0, measured_nodes,drop=F]
+    stim_data_sort = mean_values[0, measured_nodes,drop=F]
+    cv_sort = cv_values[0,measured_nodes,drop=F]
+    stim_sort = if (no_stim) {as.matrix(stimuli)} else{stimuli[0, ,drop=F]}
+    inh_sort = if (no_inh) {as.matrix(inhibitor)} else{inhibitor[0, ,drop=F]}
+    if (rearrange == "byinhib") { # Invert variables
+      tmp = stim_sort
+      stim_sort = inh_sort
+      inh_sort = tmp
+      tmp = no_stim
+      no_stim = no_inh
+      no_inh = tmp
+      tmp = stim_motifs
+      stim_motifs = inh_motifs
+      inh_motifs = tmp
+      tmp = stimuli
+      stimuli = inhibitor
+      inhibitor = tmp
+    }
+    
+    if (!no_stim){
+      for (ii in 1:nrow(stim_motifs)){
+        stim_pos = apply(stimuli==matrix(rep(stim_motifs[ii,], each=nrow(stimuli)), nrow=nrow(stimuli)), 1, all)
+        if (!no_inh){
+          for (jj in 1:nrow(inh_motifs)){
+            inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
+            if (any(stim_pos & inh_pos)){
+              error_sort = rbind(error_sort, error[stim_pos & inh_pos, measured_nodes,drop=F])
+              stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos & inh_pos, measured_nodes, drop=F])
+              cv_sort = rbind(cv_sort, cv_values[stim_pos & inh_pos, measured_nodes, drop=F])
+              stim_sort = rbind(stim_sort, stimuli[stim_pos & inh_pos, ,drop=F])
+              inh_sort = rbind(inh_sort, inhibitor[stim_pos & inh_pos, ,drop=F])
+            }
+          }
+        }else if (any(stim_pos)){
+          error_sort = rbind(error_sort, error[stim_pos, measured_nodes,drop=F])
+          stim_data_sort = rbind(stim_data_sort, mean_values[stim_pos, measured_nodes,drop=F])
+          cv_sort = rbind(cv_sort, cv_values[stim_pos, measured_nodes,drop=F])
+          stim_sort = rbind(stim_sort, stimuli[stim_pos, ,drop=F])
+        }
+      }
+    }else{
+      for (jj in 1:nrow(inh_motifs)){
+        inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
+        if (any(inh_pos)){
+          error_sort = rbind(error_sort, error[inh_pos, measured_nodes,drop=F])
+          stim_data_sort = rbind(stim_data_sort, mean_values[inh_pos, measured_nodes,drop=F])
+          cv_sort = rbind(cv_sort, cv_values[inh_pos, measured_nodes,drop=F])
+          inh_sort = rbind(inh_sort, inhibitor[inh_pos, ,drop=F])
+        }
+      }
+    }
 
-  stimuli = as.matrix(perturbations[,stim_nodes])
-  inhibitor = as.matrix(perturbations[,paste(inhib_nodes, "i", sep="")])
+    if (rearrange == "byinhib") { # Re-invert the variables that are used later
+      tmp = stim_sort
+      stim_sort = inh_sort
+      inh_sort = tmp
+    }
+  } else {
+    if (!rearrange %in% c("n", "no", "")) {
+        warning(paste0("Unknown option '", rearrange, "' for the arrangement of the perturbations, interpreted as 'no'"))
+    }
+    stim_sort = as.matrix(stimuli)
+    inh_sort = as.matrix(inhibitor)
+    stim_data_sort = mean_values[,measured_nodes, drop=FALSE]
+    cv_sort = cv_values[,measured_nodes, drop=FALSE]
+    error_sort = error[,measured_nodes, drop=FALSE]
+  }
+  
   if (verbose > 3) {
     message("Stimulated nodes")
-    message(stimuli)
+    message(stim_sort)
     message("Inhibited nodes")
-    message(inhibitor)
+    message(inh_sort)
   }
-  measured_nodes = colnames(mean_values)
-  expdes=getExperimentalDesign(model_structure,stim_nodes,inhib_nodes,measured_nodes,stimuli,inhibitor,basal_activity)
-
+  
+  expdes=getExperimentalDesign(model_structure, stim_nodes, inhib_nodes, measured_nodes, stim_sort, inh_sort, basal_activity)
+  
+  # Create data object
+  data=new(STASNet:::Data)
+  data$set_unstim_data ( unstim_values[, measured_nodes, drop=FALSE] )
+  data$set_scale( blank_values[, measured_nodes, drop=FALSE] )
+  data$set_stim_data( as.matrix(stim_data_sort[, measured_nodes, drop=FALSE]) )
+  data$set_error( as.matrix( error_sort[, measured_nodes, drop=FALSE] ))
+  
+  # Finalize object 
   core = list()
   core$design = expdes
   core$data = data
   core$structure = model_structure
   core$basal = expdes$basal_activity
-  core$cv = as.matrix(cv_values)
+  core$cv = as.matrix(cv_sort)
 
   return(core)
 }
@@ -1034,15 +1186,15 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples \dontrun{
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
-rebuildModel <- function(model_file, data_file, var_file="") {
+rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   if (!grepl(".mra$", model_file)) {
     stop("The model file does not have the mra extension")
   }
   model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
   
-  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts)
+  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
   return(model)
 }

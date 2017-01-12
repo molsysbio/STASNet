@@ -6,7 +6,7 @@
 Simulate a model for a specified set of perturbation}
 \usage{
 simulateModel(model_description, targets = "all", readouts = "all",
-  inhibition_effect = NA)
+  inhibition_effect = NA, with_offset = FALSE)
 }
 \arguments{
 \item{model_description}{A MRAmodel object that describes the model to be fitted}
@@ -17,6 +17,8 @@ A perturbation matrix is filled with 0 and 1, each row is a perturbation set and
 \item{readouts}{List of nodes to simulate. If "all", all the nodes measured to fit the model will be used. Only nodes actually measured or inhibited for the model can be simulated.}
 
 \item{inhibition_effect}{A single value, a list of values or NA. Values in ]0, -inf] to use for the inhibition, representing the log2-fold change in activity of the node (alternatively, a value between 0 and 1 representing the fraction of activity remaining after inhibition compared to basal). If NA, the values fitted for the inhibition will be used, or -1 if an inhibition is requested for a node that was not inhibited in the experiment.}
+
+\item{with_offset}{Whether the simulation should include the offset (fitted simulation) or not (real activity prediction)}
 }
 \value{
 A list that represents a MIDAS measure-like format with fields 'conditions' the matrix of perturbations provided as 'targets', 'bestfit' the simulation, and 'variants' a list of simulations for the alternative parameter sets from profile likelihood

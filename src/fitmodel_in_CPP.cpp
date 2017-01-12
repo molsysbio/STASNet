@@ -263,16 +263,14 @@ void fitmodel( std::vector <double> &bestfit,
       }
       std::cerr << "Initial fit: " << sumsquares << std::endl;
   }
-  *bestresid=fit_using_lsqnonlin(model, datax, number_of_measurements, p, keep_constant, data);
-
-  // Return the bestfit after ensuring that the inhibitor parameters have negative values
+  *bestresid=fit_using_lsqnonlin(model, datax, number_of_measurements, p, keep_constant, data); 
+// Return the bestfit after ensuring that the inhibitor parameters have negative values
   bestfit.resize(number_of_parameters);
   model->setNegativeInhibitions(p);
   std::copy(p,p+number_of_parameters,bestfit.begin());
 
   // Also return the predicted values
   model->predict(bestfit, prediction, data);
-
 }
 
 // Perform simulated annealing to find the global optimum for the model
