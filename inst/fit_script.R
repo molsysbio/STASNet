@@ -29,7 +29,7 @@ precorrelate = TRUE
 reduction = FALSE
 perform_pl = FALSE
 perf_plots = TRUE
-extension = TRUE
+extension = FALSE
 
 if (!exists("cargs")) {
     cargs = commandArgs(trailingOnly=T)
@@ -125,8 +125,6 @@ for (argument in cargs) {
         argument = gsub("^-d", "", argument)
         argument = gsub("\"", "", argument)
         unused_readouts = c( unused_readouts, unlist(strsplit(argument, " |\t")) )
-    } else if (grepl("^--noext", argument)) {
-      extend == FALSE
     } else if (grepl("^-", argument)) {
         print(paste0("Unknown argument: '", argument, "'"))
     }
