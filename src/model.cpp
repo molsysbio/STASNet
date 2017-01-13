@@ -417,10 +417,9 @@ void Model::predict(const std::vector<double> &p, double_matrix &datax, const Da
             if (linear_approximation_) {
                 datax[j][i]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i]);
             } else {
-                if (with_offset) {
-                    datax[j][i]= data->scale[j][i] + data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
-                } else {
-                    datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
+                datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
+                if (with_offset && datax[j][i] < data->scale[j][i]) {
+                    datax[j][i] = data->scale[j][i]; // Minimum value is blank
                 }
             }
         }
@@ -450,7 +449,10 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
             if (linear_approximation_) {
                 datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
             } else {
-                datax[i*rows+j]= ( data->scale[j][i] + data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
+                datax[i*rows+j]= ( data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
+                if (datax[i*rows+j] < data->scale[j][i]/data->error[j][i]) {
+                    datax[i*rows+j] = data->scale[j][i]/data->error[j][i];
+                }
             }
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*rows+j]=0;

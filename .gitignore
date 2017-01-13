@@ -7,3 +7,5 @@
 */tags
 inst/doc
 vignettes
+tests/testthat/*.rds
+R/.nfs*

@@ -53,10 +53,18 @@ test_that("computeFitScore works as expected", {
 
 context("Model import-export")
 
-test_that("Import-export works correctly", {
+test_that("Export works correctly", {
     expect_output(exportModel(model, "model.mra"), NA)
+})
+test_that("Import works correctly", {
     expect_output(importModel("model.mra"), NA)
+})
+test_that("Rebuild works correctly", {
     expect_output(rebuildModel("model.mra", DATA_FILE), NA)
+    .GlobalEnv$reb_model = rebuildModel("model.mra", DATA_FILE)
+})
+test_that("The rebuilt model is consistent", {
+    expect_equal(reb_model$bestfit, model$bestfit)
 })
 
 context("Simulation helper functions")
