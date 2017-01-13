@@ -402,7 +402,6 @@ void Model::getConstraints( parameterlist &params, std::vector<MathTree::math_it
 
 // Give the value of the model for each condition for the set of parameters p
 void Model::predict(const std::vector<double> &p, double_matrix &datax, const Data *data, const bool with_offset ) const {
-
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
 
     datax.resize(boost::extents[rows][cols]);

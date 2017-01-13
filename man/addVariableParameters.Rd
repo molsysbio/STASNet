@@ -4,11 +4,11 @@
 \alias{addVariableParameters}
 \title{Extend a MRAmodelSet with relevant variable parameters}
 \usage{
-addVariableParameters(modelset, nb_cores = 0, max_iterations = 0,
+addVariableParameters(original_modelset, nb_cores = 0, max_iterations = 0,
   nb_samples = 100, accuracy = 0.95, method = "geneticlhs")
 }
 \arguments{
-\item{modelset}{An MRAmodelSet object}
+\item{original_modelset}{An MRAmodelSet object}
 
 \item{nb_cores}{Number of cores to use for the refitting with the new variable parameters}
 

@@ -100,6 +100,7 @@ context("No inhibition or simulations")
 
 only_stim = dumb_midas[, -3]
 only_inhib = dumb_midas[, -2]
+
 test_that("Only inhibitions works in extractModelCore (no sorting)", {
     expect_silent(extractModelCore(dumb_structure, dumb_activity, only_inhib))
 })
@@ -115,37 +116,29 @@ test_that("Only inhibitions createModel works", {
 test_that("Only stimulations createModel works", {
     expect_silent(suppressMessages(createModel(dumb_structure, dumb_activity, only_stim, inits=1)))
 })
-test_that("Deleting all inhibitions work", {
+test_that("Deleting all inhibition work", {
     expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N2i")) ))
 })
-test_that("Deleting all stimulations work", {
+test_that("Deleting all stimulation work", {
     expect_silent(suppressMessages( createModel(dumb_structure, dumb_activity, dumb_midas, inits=1, unused_perturbations=c("N1")) ))
 })
 
-context("Helper functions")
+context("Model core data extraction")
 
-alph=c("a", "b", "c", "d")
-num = 1:4
-combine = paste0(alph, num)
-test_df = data.frame(list(a=num, b=alph, c=alph), row.names=combine)
+test_that("extractModelCore works as expected", {
+    expect_silent(suppressMessages(extractModelCore(dumb_structure, dumb_activity, dumb_midas)))
+})
+test_that("extractModelCore error when perturbations are missing", {
+    expect_error(suppressMessages(extractModelCore(dumb_structure, dumb_activity, no_perturbations_midas)))
+})
 
-test_that("Select one row using sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, 1), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
-#a=test_df$a[1], b=test_df$a[1], c=test_df$a[1] -> gives numbers
-#a=test_d[1,1], b=test_df[1,2], c=test_df[1,3] -> gives factors
-})
-test_that("Select one row by name with sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, "a1"), data.frame(a=test_df[1,1], b=test_df[1,2], c=test_df[1,3], row.names=combine[1]) )
-})
-test_that("Select several rows with sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, c("a1", "c3")), test_df[c("a1", "c3"),] )
-})
-test_that("Select one colum using sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, cols=1), data.frame(a=num, row.names=combine) )
-})
-test_that("Select one colum by name with sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, cols="a"), data.frame(a=num, row.names=combine) )
-})
-test_that("Select several colum using sub_data_frame", {
-    expect_equal( sub_data_frame(test_df, cols=c("a", "b")), test_df[, c("a", "b")] )
-})
+context("Model can handle precorrelations")
+structure = rbind(c("N1", "N2"), c("N2", "N3"), c("N2", "N5"), c("N5", "N4"), c("N3", "N4"))
+basal = c("N1", "N2", "N3", "N4", "N5")
+midas_data = as.data.frame(matrix(0, nrow=4, ncol=7,
+                                  dimnames=list(NULL, c("ID:type", "TR:N1", "TR:N2i", "DA:ALL", "DV:N2", "DV:N3", "DV:N4"))))
+midas_data[,1] = c("c", "t", "t", "t") # Type of experiment
+midas_data[,c(2,3)] = cbind(c(0,1,1,0), c(0,0,1,1)) # Perturbations
+midas_data[,c(5:7)] = cbind(c(1, 2, 2, 1), c(1, 2, 1.4, 0.7), c(1, 4, 2, 0.5)) # Experimental values
+test_that("uncorrelatable condition is tolerated",{expect_message(createModel(structure, basal, midas_data, inits=100))})
+

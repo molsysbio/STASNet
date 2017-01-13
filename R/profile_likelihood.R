@@ -23,7 +23,7 @@ profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
     # Print results
     message(paste("Residual =", init_residual))
     message(paste("Residual score =", model_description$bestfitscore))
-    message_error_intervals(profiles)
+    print_error_intervals(profiles)
 
     return(profiles)
 }
@@ -101,7 +101,7 @@ simplify_path_name <- function (path_name) {
 }
 
 # Print each path value with its error from the profile likelihood
-message_error_intervals <- function(profiles) {
+print_error_intervals <- function(profiles) {
     for (i in 1:length(profiles)) {
         lidx = profiles[[i]]$lower_error_index[1]
         hidx = profiles[[i]]$upper_error_index[1]

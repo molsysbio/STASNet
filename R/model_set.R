@@ -12,8 +12,7 @@
 createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=1000, init_distribution=F, method="default") {
     files = unique(gsub("\\..*$", "", readLines(data_list)))
     folder_files = dir()
-    model_set = list()
-    model_set[[length(files)]] = ""
+    model_set = vector("list",length(files))
     ii = 1
     for (file in files) {
         if (paste0(file, ".var") %in% folder_files) {
@@ -28,23 +27,28 @@ createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=100
 #' Compare networks
 #'
 #' Compare the parameters of one network for different conditions (cell line, perturbations, ...)
-#' The links must be the same for all the networks
-#' @param files A list of .mra files
-#' @return None
-# TODO improve the function so that different networks with common links can be compared
+#' Missing links are indicated by NA.
+#' @param files A list of '.mra' files
+#' @return matrix of parameters
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 compareModels <- function(files) {
-  models = list()
-  for (i in 1:length(files)) { models[[i]] = importModel(files[i])
-
-  links = c()
-  for (model in models) { links = cbind(links, model$parameters) }
-  rownames(links) = models[[1]]$model$getParametersLinks()
-  colnames(links) = files  
-  med = median(abs(links))
-  m = max(abs(links))
-  breaks = unique(c(seq(-m, -2*med, length.out = 10), seq(-2*med, 2*med, length.out=50), seq(2*med, m, length.out=10)))
-  pheatmap(links, breaks = breaks, color=colorRampPalette("deepskyblue", "black", "red")(length(breaks)-1))
-  }
+  models = vector("list",length(files))
+  for (ii in 1:length(files)) { models[[ii]] = importModel(files[ii]) }
+  
+  parameter=unique(unlist(lapply(1:length(models),function(x) models[[x]]$model$getParametersLinks())))
+  links = matrix(NA, nrow=length(parameter), ncol=0) 
+  rownames(links) = parameter
+  
+  for (model in models) { 
+    links = cbind(links, NA)
+    links[match(model$model$getParametersLinks(),parameter),ncol(links)] = model$parameters
+    }
+  
+  colnames(links) = sapply(1:length(models),function(x) models[[x]]$name)
+  plotHeatmap(mat = links,
+              main = "model parameter comparison",
+              lim = 10)
+  return(links)
 }
 
 #' Constructor for MRAmodelSet objects
@@ -62,7 +66,7 @@ MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, ba
     }
 
     # An MRAmodelSet is an MRAmodel
-    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations, min_cv, default_cv)
+    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv)
     # With some extra attributes
     class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models
@@ -99,14 +103,13 @@ setVariableParameters <- function(modelset, parameters_ids) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 extractSubmodels <- function(modelset) {
-    model_list = list()
-    model_list[[modelset$nb_models]] = NA
+    model_list = vector('list',modelset$nb_models)
     model = new(STASNet:::Model)
     model$setModel(modelset$design, modelset$structure)
+    nb_parameters = length(modelset$parameters)/modelset$nb_models # All submodels have the same number of parameters
+    data_size = nrow(modelset$data$unstim_data)/modelset$nb_models # The data matrix dimensions are the same for all models
     for (ii in 1:modelset$nb_models) {
-        nb_parameters = length(modelset$parameters)/modelset$nb_models # All submodels have the same set of parameters
         parameters = modelset$parameters[((ii-1)*nb_parameters+1):(ii*nb_parameters)]
-        data_size = nrow(modelset$data$unstim_data)/modelset$nb_models # The data matrix dimensions are the same for all models
         row_selection = ((ii-1)*data_size+1):(ii*data_size)
         cv = modelset$cv[row_selection,]
         data = modelset$data$datas_list[[ii]]

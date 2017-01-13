@@ -1,10 +1,14 @@
 #context("General testing of STASNet")
+#### model tests ####
+
+context("Model")
+
 DATA_FILE = "test_model_no_error_midas.csv"
 VAR_FILE = ""
 
 context("Model fitting accuracy")
 
-model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs") )
+model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim") )
 
 test_that("All expected fields are present" ,{
     expect_equal(exists("min_cv", model), TRUE)
@@ -101,6 +105,27 @@ test_that("Noise free toy data is properly refited", {
     expect_equal(refit$bestfit, 0)
 })
 
+context("Cloning model")
+
+test_that("Model is cloned correctly", {
+  expect_silent(STASNet:::cloneModel(model))
+  alt_model = STASNet:::cloneModel(model)
+  expect_false(capture.output(alt_model$model$.pointer) == capture.output(model$model$.pointer))
+  expect_false(capture.output(alt_model$design$.pointer) == capture.output(model$design$.pointer))
+  expect_false(capture.output(alt_model$structure$.pointer) == capture.output(model$structure$.pointer))
+  expect_false(capture.output(alt_model$data$.pointer) == capture.output(model$data$.pointer))
+  expect_equal(alt_model$model$modelRank(),model$model$modelRank())
+})
+
+alt_model = STASNet:::cloneModel(model)
+
+test_that("Cloned model is independent", {
+  tmp_adj = alt_model$structure$adjacencyMatrix
+  tmp_adj[4,3] = 0
+  alt_model$structure$setAdjacencyMatrix(tmp_adj)
+  alt_model$model$setModel(alt_model$design, alt_model$structure)
+  expect_gt(model$model$modelRank(), alt_model$model$modelRank()) 
+})
 
 context("Model reduction")
 
@@ -196,4 +221,117 @@ test_that("Requested readouts are duplicated", {
 })
 test_that("Prediction of new conditions", {
     expect_silent( simulateModel(refit, getCombinationMatrix(c("N1", "N2i", "N3i"))) )
+})
+
+#### modelset tests ####
+
+context("ModelSet")
+
+DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv") 
+VAR_FILES = c()
+
+modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
+
+
+context("Cloning modelset")
+
+test_that("Modelset is cloned correctly", {
+  expect_silent(STASNet:::cloneModel(modelset))
+  alt_modelset = STASNet:::cloneModel(modelset)
+  expect_false(capture.output(alt_modelset$model$.pointer) == capture.output(modelset$model$.pointer))
+  expect_false(capture.output(alt_modelset$design$.pointer) == capture.output(modelset$design$.pointer))
+  expect_false(capture.output(alt_modelset$structure$.pointer) == capture.output(modelset$structure$.pointer))
+  expect_false(capture.output(alt_modelset$data$.pointer) == capture.output(modelset$data$.pointer))
+  expect_equal(alt_modelset$model$modelRank(),modelset$model$modelRank())
+})
+
+alt_modelset = cloneModel(modelset)
+
+test_that("Cloned modelset is independent", {
+  tmp_adj = alt_modelset$structure$adjacencyMatrix
+  tmp_adj[4,3] = 0
+  alt_modelset$structure$setAdjacencyMatrix(tmp_adj)
+  alt_modelset$model$setModel(alt_modelset$design, alt_modelset$structure)
+  alt_modelset$model$setNbModels(alt_modelset$nb_models)
+  expect_gt(modelset$model$modelRank(), alt_modelset$model$modelRank())
+})
+
+context("ModelSet fitting accuracy")
+
+test_that("Additional modelSet default fields are present" ,{
+  expect_equal(exists("names", modelset), TRUE)
+  expect_equal(exists("nb_models", modelset), TRUE)
+})
+
+test_that("The modelSet fit is reasonable", {
+  expect_equal_to_reference(modelset$bestfit, "ms_bestfit.rds", tolerance=1e-5)
+})
+
+test_that("The modelSet information is loaded correctly", {
+  expect_equal(modelset$nb_models, 2)
+})
+
+test_that("The modelSet structure is loaded correctly", {
+  expect_equal_to_reference(modelset$structure$names, "ms_structure_names.rds")
+  expect_equal_to_reference(modelset$structure$adjacencyMatrix, "ms_structure_adjacencyMatrix.rds")
+})
+
+test_that("The data are loaded correctly", {
+  expect_equal_to_reference(modelset$data$stim_data, "ms_data_stim_data.rds")
+  expect_equal_to_reference(modelset$data$unstim_data, "ms_data_unstim_data.rds")
+  expect_equal_to_reference(modelset$data$error, "ms_data_error.rds")
+})
+
+test_that("The computation is consistent", {
+  expect_equal( sum( ((modelset$model$simulate(modelset$data, modelset$parameters)$prediction - modelset$data$stim_data) / modelset$data$error)^2, na.rm=T ), modelset$bestfit )
+})
+
+test_that("ModelSet breakup works", {
+  expect_silent(extractSubmodels(modelset))
+})
+
+context("ModelSet relaxation")
+test_that("parameters can be relaxed",{
+        expect_message(addVariableParameters(modelset, 1, 0, 10))
+        relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
+        expect_equal(relax_modelset$variable_parameters, 5)
+        expect_equal(sum( ((relax_modelset$model$simulate(relax_modelset$data, relax_modelset$parameters)$prediction - relax_modelset$data$stim_data) / relax_modelset$data$error)^2, na.rm=T ), relax_modelset$bestfit)
+})
+
+relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
+
+test_that("variable parameters are kept when cloned", {
+  expect_silent(cloneModel(relax_modelset))
+  tmp_modelset = cloneModel(relax_modelset)
+  expect_equal(tmp_modelset$variable_parameters,relax_modelset$variable_parameters)
+  expect_equal(tmp_modelset$parameters,relax_modelset$parameters)
+})
+
+
+context("ModelSet extension")
+
+test_that("modelSet with fixed parameters is extended correctly", {
+    expect_message(suggestExtension(modelset,T))
+    exprmat = suppressMessages(suggestExtension(modelset,T))
+    expect_equal(all(as.numeric(as.character(exprmat$Res_delta))>=10^-5),T)
+})
+
+test_that("modelSet with variable parameters is extended correctly", {
+  expect_message(suggestExtension(relax_modelset,T))
+  exprmat = suppressMessages(suggestExtension(relax_modelset,T))
+  expect_equal(all(as.numeric(as.character(exprmat$Res_delta))>=10^-5),T)
+  })
+
+# TODO test for nonidentifiable link that erroniously produces worse fit; add after fix!!!
+
+context("ModelSet reduction")
+
+test_that("modelSet with fixed parameters is reduced correctly", {
+  expect_message(selectMinimalModel(modelset))
+  red_modelset = selectMinimalModel(modelset)
+})
+
+test_that("modelSet with variable parameters is reduced correctly", {
+  expect_message(selectMinimalModel(relax_modelset))
+  red_modelset = selectMinimalModel(relax_modelset)
 })

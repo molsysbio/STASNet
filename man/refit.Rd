@@ -25,7 +25,7 @@ fitFromModel(mra_model, parameters_model, vary_param = c(), inits = 100,
 
 \item{method}{Method to use for the sample generation for the random initialisations}
 
-\item{fit_name}{Name of the refit for the title of the plotss}
+\item{fit_name}{Name of the refit for the title of the plots}
 }
 \value{
 The refitted model as an MRAmodel object.
@@ -34,6 +34,9 @@ The refitted model as an MRAmodel object.
 Refit the model with a specified parameter set while keeping parameters constant
 
 Fit a model using the parameter set from another model
+}
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
 }
 \seealso{
 printParametersNames

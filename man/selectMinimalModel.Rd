@@ -5,12 +5,12 @@
 \alias{selectMinimalModel}
 \title{Selection of a minimal model by the removal of non significant links with an F-test}
 \usage{
-reduceModel(model_description, accuracy = 0.95)
+reduceModel(original_model, accuracy = 0.95)
 
-selectMinimalModel(model_description, accuracy = 0.95)
+selectMinimalModel(original_model, accuracy = 0.95)
 }
 \arguments{
-\item{model_description}{An MRAmodel object, as the one produced by createModel or importModel}
+\item{original_model}{An MRAmodel object, as the one produced by createModel or importModel}
 
 \item{accuracy}{Probability threshold, the type I error for each link will be 1-accuracy. Multiple testing is not taken into account.}
 }
@@ -22,5 +22,7 @@ Selection of a minimal model by the removal of non significant links with an F-t
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
+
+Bertram Klinger \email{bertram.klinger@charite.de}
 }
 

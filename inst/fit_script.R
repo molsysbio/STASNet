@@ -16,11 +16,6 @@ get_running_time <- function(init_time, text="") {
 # Create a model from the data and fit a minimal model
 # Takes relative paths as arguments in the order network data basal
 
-reduction = FALSE
-extension = FALSE
-perform_pl = FALSE
-perf_plots = TRUE
-
 data = ""
 network = ""
 basal_nodes = ""
@@ -30,8 +25,11 @@ inits = 1000
 method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
-precorrelate=T
-extend=T
+precorrelate = TRUE
+reduction = FALSE
+perform_pl = FALSE
+perf_plots = TRUE
+extension = TRUE
 
 if (!exists("cargs")) {
     cargs = commandArgs(trailingOnly=T)
@@ -217,7 +215,7 @@ exportModel(model, paste0(folder, conditions, ".mra"))
 #dev.off()
 # Plot the simulated conditions
 pdf(paste0(folder, "model_prediction_", conditions, ".pdf"))
-plotModelSimulation( model )
+plotModelSimulation( model_description = model, With_data = TRUE, log_axis = FALSE)
 dev.off()
 
 if (reduction) {
@@ -236,7 +234,6 @@ if (reduction) {
     exportModel(reduced_model, paste0(folder, "reduced_", conditions, ".mra"));
     # Plot the simulated conditions
     pdf(paste0(folder, "reduced_all_", conditions, ".pdf"))
-    plotModelSimulation( reduced_model )
     dev.off()
 
     pdf(paste0(folder, "reduced_accuracy_", conditions, ".pdf"))
@@ -252,7 +249,7 @@ if (reduction) {
 
 if (extension) {
     sug_ext = suggestExtension(model, T, cores)
-    write.table(sug_ext, paste0(folder, "extension_", conditions, ".csv"), row.names=FALSE)
+    write.table(sug_ext, paste0(folder, "extension_", conditions, ".csv"), row.names=FALSE, quote=FALSE, sep="\t")
 }
 
 print("Finished")
