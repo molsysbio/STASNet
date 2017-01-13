@@ -215,7 +215,7 @@ exportModel(model, paste0(folder, conditions, ".mra"))
 #dev.off()
 # Plot the simulated conditions
 pdf(paste0(folder, "model_prediction_", conditions, ".pdf"))
-plotModelSimulation( model_description = model, With_data = TRUE, log_axis = FALSE)
+plotModelSimulation( model_description = model, with_data = TRUE, log_axis = FALSE)
 dev.off()
 
 if (reduction) {
