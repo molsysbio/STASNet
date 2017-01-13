@@ -1174,7 +1174,7 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   #links = matrix(rep(model$structure$names, 2), ncol=2)
   core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
   
-  model = MRAmodel(model$model, model$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
+  model = MRAmodel(model$model, core$design, model$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
   return(model)
 }

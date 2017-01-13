@@ -78,7 +78,7 @@ computeFitScore <- function(mra_model, refit_model=FALSE) {
         mra_model$parameters = refit$params[1,]
     } else {
         simulation = simulateModel(mra_model)
-        mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/simulation$error^2 )
+        mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/simulation$error^2, na.rm=T )
     }
     prediction = getSimulation(mra_model)
     Rscores = c()
