@@ -84,7 +84,7 @@ cloneModel <- function(old_model){
     model$setModel(design = design, structure = structure)
     
     data$set_unstim_data ( old_model$data$unstim_data )
-    data$set_scale( old_model$data$unstim_data )
+    data$set_scale( old_model$data$scale )
     data$set_stim_data( old_model$data$stim_data )
     data$set_error( old_model$data$error)
     
