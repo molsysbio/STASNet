@@ -56,8 +56,8 @@ for (argument in cargs) {
         message("    --mr | --reduce              Apply model reduction")
         message("    --ext | --extension          Compute possible extensions to the network")
         message("    -m<string>                   Method to apply for the initialisation")
-        message("    --nopl                       Disable profile likelihood")
-        message("    --pl                       Enable profile likelihood")
+        message("    --opl                        Disable profile likelihood")
+        message("    --pl                         Enable profile likelihood")
         message("    -s<int>                      Number of steps for the profile likelihood")
         message("    --noplots                    Cancel plot generation")
         message("    -v                           Activate debug")
@@ -213,7 +213,7 @@ exportModel(model, paste0(folder, conditions, ".mra"))
 #dev.off()
 # Plot the simulated conditions
 pdf(paste0(folder, "model_prediction_", conditions, ".pdf"))
-plotModelSimulation( model_description = model, with_data = TRUE, log_axis = FALSE)
+plotModelSimulation( model_description = model, with_data = TRUE, log_axis = TRUE)
 dev.off()
 
 if (reduction) {
