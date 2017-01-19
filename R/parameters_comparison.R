@@ -23,8 +23,6 @@ pl_ci_product <- function(mra_model, p1id, p2id) {
         stop("Profile likelihood results are necessary to compute a confidence interval")
     }
     get_range_product <- function(values1, range1) {
-        print(values1)
-        print(range1)
         if (is.na(values1) || is.na(range1) || is.nan(values1) || is.nan(range1)) {
             return(NA)
         } else {
@@ -32,8 +30,6 @@ pl_ci_product <- function(mra_model, p1id, p2id) {
         }
     }
     
-    print(p1id)
-    print(p2id)
     values = c( get_range_product(mra_model$upper_values[p1id], mra_model$param_range[[p1id]]$high_set[p2id]),
                 get_range_product(mra_model$upper_values[p2id], mra_model$param_range[[p2id]]$high_set[p1id]),
                 get_range_product(mra_model$lower_values[p1id], mra_model$param_range[[p1id]]$low_set[p2id]),
@@ -53,7 +49,7 @@ pl_ci_product <- function(mra_model, p1id, p2id) {
 #' 
 #' Compute the direct paths for a model and their confidence intervals by combining the paths containing links with negative exponents with paths containing the same link with a positive exponent.
 #' @param mra_model An MRAmodel object
-#' @value A list
+#' @return A list of lists indexed by the path name. Each sublist has fields path, value, hv and lv which represent respectively the path equation, the value of the path, the upper bound of the path and the lower bound of the path.
 #' @export
 getDirectPaths <- function(mra_model) {
     pnames = names(getParametersNames(mra_model))
@@ -70,7 +66,7 @@ getDirectPaths <- function(mra_model) {
         if (any(denom_pos)) {
             rev_links[[length(rev_links)+1]] = list( pid=pid, path=gsub("\\^\\(-1\\)", "", links[denom_pos]) )
         } else {
-            final_paths[[length(final_paths)+1]] = list(path=path, composition=pid, value=mra_model$parameters[pid], hv=mra_model$upper_values[pid], lv=mra_model$lower_values[pid] )
+            final_paths[[length(final_paths)+1]] = list(path=path, value=mra_model$parameters[pid], hv=mra_model$upper_values[pid], lv=mra_model$lower_values[pid] )
         }
     }
 
@@ -81,10 +77,8 @@ getDirectPaths <- function(mra_model) {
             path = paths[[pid]]
             if (all(rev$path %in% path$links)) {
                 cip = pl_ci_product(mra_model, rev$pid, pid)
-                print(cip)
                 pmul = mul_path(main_path$links, path$links)
-                final_paths[[length(final_paths)+1]] = list( path=pmul, composition=c(rev$pid, pid),
-                                                            value=cip[1], lv=cip[2], hv=cip[3] )
+                final_paths[[length(final_paths)+1]] = list( path=paste0(pmul, collapse="*"), value=cip[1], lv=cip[2], hv=cip[3] )
             }
         }
         if (!all_positived) { # Not tested !!
