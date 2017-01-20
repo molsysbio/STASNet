@@ -45,12 +45,14 @@ printParameters <- function(model_description, precision=2) {
 
 #' Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction
 #' @param model_description An MRAmodel object
+#' @param limit An integer to force the limit of the heatmaps
+#' @param show_values Whether the values should be printed in the heatmap boxes or not.
 #' @return Nothing
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelAccuracy <- function(model_description) {
+plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -84,16 +86,17 @@ plotModelAccuracy <- function(model_description) {
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
-  plotHeatmap(mismatch,"(data - simulation) / error")
-  plotHeatmap(stim_data-simulation,"log2(data/simulation)")
+  plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values)
+  plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values)
 # Log fold changes for the data and the stimulation with comparable color code
   lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
                        quantile(simulation,0.05, na.rm=TRUE),
                        quantile(stim_data,0.95, na.rm=TRUE),
                        quantile(simulation,0.95, na.rm=TRUE)) )))
-  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE)
-  plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE)
-  plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE)
+  if (!is.infinite(limit)) { lim = limit }
+  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values)
+  plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values)
+  plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }

@@ -25,6 +25,9 @@ inits = 1000
 method = "geneticlhs"
 # Autodetection of the cores
 cores = 0
+limit = Inf
+plot_accuracy = FALSE
+show_values = FALSE
 precorrelate = TRUE
 reduction = FALSE
 perform_pl = FALSE
@@ -56,10 +59,12 @@ for (argument in cargs) {
         message("    --mr | --reduce              Apply model reduction")
         message("    --ext | --extension          Compute possible extensions to the network")
         message("    -m<string>                   Method to apply for the initialisation")
-        message("    --opl                        Disable profile likelihood")
+        message("    --nopl                       Disable profile likelihood")
         message("    --pl                         Enable profile likelihood")
         message("    -s<int>                      Number of steps for the profile likelihood")
         message("    --noplots                    Cancel plot generation")
+        message("    -l                           Force the limit of the gradients for the heatmaps")
+        message("    --values                     Print values in the -l accuracy heatmaps, only used if -l is specified")
         message("    -v                           Activate debug")
         message("    -D<float>                    Default coefficient of variation")
         message("    -D<float>                    Minimum coefficient of variation")
@@ -109,6 +114,11 @@ for (argument in cargs) {
         perform_pl = FALSE
     } else if (argument == "--noplots" || argument == "--noplot") {
         perf_plots = FALSE
+    } else if (grepl("^-l", argument)) {
+        limit = as.numeric(gsub("^-l", "", argument))
+        plot_accuracy = TRUE
+    } else if (grepl("^--values", argument)) {
+        show_values = TRUE
     } else if (grepl("^-v", argument)) {
         STASNet:::setDebug(T)
     } else if (grepl("^--npc", argument)) {
@@ -191,6 +201,12 @@ if (recomputing) {
     plotModelScores(model, main=paste0("Global R = ", model$bestfitscore))
     dev.off()
     printParameters(model)
+}
+if (plot_accuracy) {
+    mat=model$data$stim_data
+    pdf(paste0(folder, "l", limit, "_accuracy_heatmap_", conditions, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
+    plotModelAccuracy(model, limit, show_values)
+    dev.off()
 }
 
 if (method == "annealing") {
