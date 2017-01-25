@@ -6,7 +6,7 @@
 Simulate a model for a specified set of perturbation}
 \usage{
 simulateModel(model_description, targets = "all", readouts = "all",
-  inhibition_effect = NA, with_offset = FALSE)
+  inhibition_effect = NA, with_offset = TRUE)
 }
 \arguments{
 \item{model_description}{A MRAmodel object that describes the model to be fitted}

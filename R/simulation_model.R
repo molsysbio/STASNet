@@ -13,7 +13,7 @@
 # @seealso \code{\link{getCombinationMatrix}}
 #' @family simulation
 #' @export
-simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, with_offset=FALSE) {
+simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, with_offset=TRUE) {
   design = model_description$design
   nodes = model_description$structure$names
   
@@ -580,8 +580,12 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
 #' Simulate the model for the experimental design used for the fitting
 #' @param mra_model The MRAmodel to simulate
 #' @return A matrix containing the simulation with the names of the measured nodes as column names
-getSimulation <- function(mra_model) {
-  prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+getSimulation <- function(mra_model, with_offset=TRUE) {
+  if (with_offset) {
+      prediction = mra_model$model$simulateWithOffset(mra_model$data, mra_model$parameters)$prediction
+  } else {
+      prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+  }
   colnames(prediction) = getMeasuredNodesNames(mra_model)
   return(prediction)
 }
