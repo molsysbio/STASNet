@@ -250,6 +250,19 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
                    model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
       
       message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=dr, df2=dfreedom)) ))
+
+      other_best = which((residuals[order.res] - residuals[order.res[1]]) < 1e-4)[-1]
+      if (length(other_best) > 0) {
+          message("--- Other best links ---")
+          for (lid in other_best) {
+              deltares = residuals[order.res[lid]] - init_residual
+              f_score = (deltares/dr) / (init_residual/dfreedom)
+              message(paste0("    Could remove ",
+                           model_structure$names[((links.to.test[order.res[lid]]-1) %/% (dim(adj)[1])) +1], "->", 
+                           model_structure$names[((links.to.test[order.res[lid]]-1) %% (dim(adj)[1])) +1])); 
+              message(paste( "    New residual = ", residuals[order.res[lid]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=dr, df2=dfreedom)) ))
+          }
+      }
       message("------------------------------------------------------------------------------------------------------")
       
       model_description$bestfit = sort(residuals)[1]
