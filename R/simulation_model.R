@@ -164,6 +164,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   model$setModel( new_design, model_description$structure )
   new_data = new(STASNet:::Data)
   new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
+  new_data$set_scale( matrix( rep(model_description$data$scale[1, simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ) )
   
   # Compute the predictions
   prediction = list()

@@ -155,7 +155,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   init_residual = residuals[best_id]
   if (verbose) {
     message("Model simulation with optimal parameters :")
-    message(model$simulate(data, init_params)$prediction)
+    message(model$simulateWithOffset(data, init_params)$prediction)
   }
   
   # Information required to run the model (including the model itself)
