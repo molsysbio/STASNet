@@ -235,6 +235,12 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
     new_rank = ranks[order.res[1]]
     new_residual = residuals[order.res[1]]
     dr = rank - new_rank
+    if (dr==0) {
+      warning(paste0("Link ",
+                             model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->",
+                             model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1], " belongs to a non-identifiable combination, setting df to 1."))
+      dr=1
+      }
     deltares = new_residual - init_residual
     dfreedom = data_count - rank
     f_score = ((new_residual - init_residual) / dr) / (init_residual/dfreedom)
@@ -244,7 +250,6 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
       adj[links.to.test[order.res[1]]]=0
       rank = new_rank
       initial_response=params[[order.res[1]]]
-      init_residual = residuals[order.res[1]]
       #message(initial_response)
       message(paste0("Remove ",
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
@@ -252,20 +257,28 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
       
       message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=dr, df2=dfreedom)) ))
 
-      other_best = which((residuals[order.res] - residuals[order.res[1]]) < 1e-4)[-1]
+      other_best = which((abs(residuals[order.res] - residuals[order.res[1]])) < 1e-4)[-1]
       if (length(other_best) > 0) {
           message("--- Other best links ---")
           for (lid in other_best) {
               deltares = residuals[order.res[lid]] - init_residual
-              f_score = (deltares/dr) / (init_residual/dfreedom)
+              tmp_rank = ranks[order.res[lid]]
+              tmp_dr = rank-tmp_rank
+              if (tmp_dr==0) {
+                warning(paste0("    Link ",
+                               model_structure$names[((links.to.test[order.res[lid]]-1) %/% (dim(adj)[1])) +1], "->",
+                               model_structure$names[((links.to.test[order.res[lid]]-1) %% (dim(adj)[1])) +1], " belongs to a non-identifiable combination, setting df to 1."))
+                tmp_dr=1
+              }
+              f_score = (deltares/tmp_dr) / (init_residual/dfreedom)
               message(paste0("    Could remove ",
                            model_structure$names[((links.to.test[order.res[lid]]-1) %/% (dim(adj)[1])) +1], "->", 
                            model_structure$names[((links.to.test[order.res[lid]]-1) %% (dim(adj)[1])) +1])); 
-              message(paste( "    New residual = ", residuals[order.res[lid]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=dr, df2=dfreedom)) ))
+              message(paste( "    New residual = ", residuals[order.res[lid]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=tmp_dr, df2=dfreedom)) ))
           }
       }
       message("------------------------------------------------------------------------------------------------------")
-      
+      init_residual = residuals[order.res[1]]
       model_description$bestfit = sort(residuals)[1]
     } else {
       reduce=FALSE
