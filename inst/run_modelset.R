@@ -28,6 +28,7 @@ if (!exists("cargs")) {
   cargs = strsplit(cargs, " ")[[1]]
 }
 
+
 if (any(grepl("--help|-h", cargs))) {
     message("Help for STASNet fitting model sets:")
     message("  Initial fitting:")
@@ -120,6 +121,7 @@ if (any(grepl("^-s", cargs))) {
     print("Incorrect number of samples, performing with 10")
   }
 } 
+
 if (any(cargs %in% "--noplots") || any(cargs %in% "--noplot"))
     perf_plots = FALSE
 if (any(grepl("^-v", cargs)))
@@ -155,7 +157,6 @@ if (data_files[1] == ""){
 if (basal_nodes == ""){
   stop("A basal activity (.dat) list file is required")
 }
-
 
 #### LIBRARIES ####
 library("STASNet")
@@ -263,7 +264,6 @@ printParameters(model)
 pdf(paste0(folder, "model_simulation_", model$name, ".pdf"))
 plotModelSimulation( model_description = model ,with_data = TRUE,log_axis = FALSE)
 dev.off()
-
 }
 
 #### EXPORT MODEL DATA ####

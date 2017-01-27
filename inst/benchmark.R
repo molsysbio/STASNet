@@ -1,6 +1,6 @@
 #!/usr/bin/Rscript
 #-*- coding: utf8 -*-
-suppressPackageStartupMessages(library(fitmodel))
+suppressPackageStartupMessages(library(STASNet))
 suppressPackageStartupMessages(library(parallel))
 # Benchmarking of the fitmodel package on a network structure
 

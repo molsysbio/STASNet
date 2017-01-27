@@ -1,7 +1,7 @@
 
 
 require(svUnit)
-require(fitmodel)
+require(STASNet)
 
 
 test.model.regression <- function() {

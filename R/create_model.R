@@ -71,7 +71,7 @@ if (is.null(dim(x))){
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
 #' @param unused_perturbations Perturbations in the dataset that should not be used
-#' @param unused_readouts Readouts in the dataset that should not be used
+#' @param unused_readouts Measured nodes in the datasets that should not be used
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
 #' @param model_name The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.
@@ -575,7 +575,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
   
   fitmodelset_wrapper <- function(params, data, model) {
     # TODO add keep_constant control
-    if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a fitmodel::DataSet object") }
+    if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a STASNet::DataSet object") }
     init = proc.time()[3]
     result = model$fitmodelset(data, params)
     if (verbose) {
