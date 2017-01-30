@@ -167,9 +167,11 @@ addPLinfos <- function(model_description, profiles) {
 #' @seealso \code{\link{profileLikelihood}}
 niplotPL <- function(profiles, data_name="default", folder="./") {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
-    for (profile in profiles) {
-        residual_limit = 1.1 * (profile$thresholds[2] - profile$thresholds[1]) + profile$thresholds[2]
-        profile$residuals[ profile$pathid, profile$residuals[profile$pathid,] > residual_limit ] = residual_limit
+    for (pmain in 1:length(profiles)) {
+        # Scale the other parameters profiles
+        for (pid in (1:length(profiles))[-pmain]) {
+            profiles[[pmain]]$residuals[pid,] = profiles[[pmain]]$residuals[pid,] / max(abs(profiles[[pmain]]$residuals[pid,]))
+        }
     }
     # Sort the profiles to output differently whether they are identifiable or not
     sorted_profiles = classify_profiles(profiles)
@@ -177,103 +179,79 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
     ni_profiles = sorted_profiles[[2]]
 
 # Non identifiables
-    nbni = length(ni_profiles)
+    nbni = length(sorted_profiles$niid)
     message(paste(nbni, "non identifiable paths"))
     # Compute the dimension, minimal size if there are not enough non identifiables
-    if (nbni > 3) {
-        dimension = 2 * nbni + 1
-    }
-    else {
-        dimension = 7
-    }
+    dimension = 7
+    # Attribute color and style to each parameter
+    colors = rep(cbbPalette, length.out=length(profiles))
+    styles = rep(c(sapply(1:6, rep, length(cbbPalette))), length.out=length(profiles))
 
     pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
-    #limx = i_profiles[[1]]$
-    if (nbni > 0) {
-        margin = c(2, 2, 0.5, 0.5)
-        par(mfcol=c(nbni, nbni), mar=margin, lab=c(3, 3, 4))
-        for (ni in 1:nbni) {
-            # Set the y margins
-            if (ni == 1) {margin[2]=4;}
-            else {margin[2]=2;}
+    for (plid in 1:length(profiles)) {
+        profile = profiles[[plid]]
+        th_diff = profile$thresholds[2]-profile$thresholds[1]
+        identifiable = plid %in% sorted_profiles$iid
+        if (!identifiable) {
+            layout(matrix(c(1, 1, 2, 3), ncol=2))
+        } else {
+            layout(matrix(c(1, 1, 2, 2), ncol=2))
+        }
+        par( mar=c(5, 2, 1, 1)+0.1, oma=c(0, 2, 2, 0) )
+        bfit = min(profile$residuals[plid,])
+        xlabel = paste(profile$path, "value")
+        plot( profile$explored, profile$residuals[plid,], type="l", main="Likelihood profile", ylim=c(bfit-th_diff/20, profile$thresholds[2] + th_diff/10), lwd=2, xlab=xlabel )
+        title(ylab="Residual", xpd=NA)
+        lines( profile$explored, rep(profile$thresholds[1], length(profile$explored)), lty=2, col="grey" )
+        lines( profile$explored, rep(profile$thresholds[2], length(profile$explored)), lty=2, col="grey" )
+        lines( rep(profile$value, 2), c(bfit-th_diff/30, bfit+th_diff/30), col="red" )
 
-            for (j in 1:nbni) {
-                # Set the x margins
-                if (j == nbni) {margin[1]=4;}
-                else {margin[1]=2;}
-
-                par(mar=margin)
-                if (j == ni) {
-                    limy = c( range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], na.rm=T)[1], ni_profiles[[ni]]$thresholds[2] * 1.1)
-                }
-                else {
-                    limy = range(ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], na.rm=T)
-                }
-                #message (limy)
-                ### Modification of limy if it reaches Inf, should not have to be done
-                if (!is.finite(limy[1]) ) {limy[1] = 0; message(paste("Error in low lim value :", ni_profiles[[ni]]$thresholds[2]))}
-                if (!is.finite(limy[2]) ) {limy[2] = 10000; message(paste("Error in high lim value :", ni_profiles[[ni]]$thresholds[2]))}
-                
-                plot(ni_profiles[[ni]]$explored, ni_profiles[[ni]]$residuals[ni_profiles[[j]]$pathid,], xlab="", ylab="", type="l", col=abs(ni-j)+1, ylim = limy)
-                # Print labels on the right and bottom
-                if (ni == 1) { title(ylab=ni_profiles[[j]]$path, las=2); }
-                if (j == nbni) { title(xlab=ni_profiles[[ni]]$path); }
-                if (j == ni) {
-                    # Could be accelerated with two points instead of hundreds
-                    lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[1], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" )
-                    lines( ni_profiles[[ni]]$explored, rep(ni_profiles[[ni]]$thresholds[2], length(ni_profiles[[ni]]$explored)), lty=2, col="grey" )
-                    pl_range = range(ni_profiles[[ni]]$resniuals[ni_profiles[[ni]]$pathni,])
-                    lines( rep(ni_profiles[[ni]]$value, 2), c( pl_range[1]-0.1*(pl_range[1]-ni_profiles[[ni]]$threshold[1]), pl_range[1]+0.1*(pl_range[1]-ni_profiles[[ni]]$threshold[1]) ), col="red")
+        # Functionnal relation profiles
+        if (identifiable) {
+            plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
+            for (pid in (1:length(profiles))[-plid]) {
+                lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2)
+            }
+            title(main="Other paths profiles", xpd=NA)
+        } else { # Separate identifiable and non identifiable profiles
+            plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
+            for (pid in sorted_profiles$niid) {
+                if (pid != profile$pathid) {
+                    lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2 )
                 }
             }
-            message(paste("Non identifiable path", ni_profiles[[ni]]$path, "plotted"))
-        }
-    }
-
-# Identifiables
-    nbid = length(i_profiles)
-    message(paste(nbid, "identifiable paths"))
-    par( mfcol=c(1, 2), mar=c(3, 2, 0, 1), oma=c(0, 0, 2, 0) )
-    if (nbid > 0) {
-        for (id in 1:nbid) {
-            # Plot the profile likelihood with the thresholds and a tick for the optimum
-            plot(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i_profiles[[id]]$pathid, ], type="l", sub=paste(i_profiles[[id]]$path, "profile"))
-            lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[1], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
-            lines( i_profiles[[id]]$explored, rep(i_profiles[[id]]$thresholds[2], length(i_profiles[[id]]$explored)), lty=2, col="grey" )
-            pl_range = range(i_profiles[[id]]$residuals[i_profiles[[id]]$pathid,])
-            lines( rep(i_profiles[[id]]$value, 2), c( pl_range[1]-0.1*(pl_range[1]-i_profiles[[id]]$threshold[1]), pl_range[1]+0.1*(pl_range[1]-i_profiles[[id]]$threshold[1]) ), col="red")
-
-            plot(1, type="n", xlim=range(i_profiles[[id]]$explored), ylim=range( i_profiles[[id]]$residuals[-i_profiles[[id]]$pathid,], na.rm=T) )
-            # Plot the functionnal relation
-            for (i in 1:dim(i_profiles[[id]]$residuals)[1]) {
-                if (i != i_profiles[[id]]$pathid) {
-                    lines(i_profiles[[id]]$explored, i_profiles[[id]]$residuals[i, ], sub="Functionnal relation", col=i)
-                }
+            title(main="Other non identifiable paths profiles", xpd=NA)
+            plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
+            for (pid in sorted_profiles$iid) {
+                lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2 )
             }
-            title (main=i_profiles[[id]]$path, outer=T)
-            message(paste("Identifiable path", i_profiles[[id]]$path, "plotted") )
+            title(main="Identifiable paths profiles", xpd=NA)
         }
+        title(main=profile$path, outer=T)
     }
 
     dev.off()
-
 }
 
 # Separates the profiles whether they are identifiables or not
 classify_profiles <- function (profiles) {
     ni_profiles = list()
     i_profiles = list()
+    i_index = c()
+    ni_index = c()
 
-    for (lprofile in profiles) {
+    for (plid in 1:length(profiles)) {
+        lprofile = profiles[[plid]]
         # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
         if (lprofile$lower_pointwise && lprofile$upper_pointwise) {
             i_profiles[[length(i_profiles)+1]] <- lprofile
-        }
-        else {
+            i_index = c(i_index, plid)
+        } else {
             ni_profiles[[length(ni_profiles)+1]] <- lprofile
+            ni_index = c(ni_index, plid)
         }
     }
-    sorted_profiles = list(i_profiles, ni_profiles)
+    sorted_profiles = list(identifiables=i_profiles, non_identifiables=ni_profiles, iid=i_index, niid=ni_index)
     message("Profiles sorted")
     return(sorted_profiles)
 }
