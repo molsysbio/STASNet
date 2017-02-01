@@ -136,7 +136,7 @@ reduceModel <- function(original_model, accuracy=0.95) {
     selectMinimalModel(original_model, accuracy)
 }
 
-#' Selection of a minimal model by the removal of non significant links with an F-test
+#' Selection of a minimal model by the removal of non significant links with an Chi^2 test
 #' @param original_model An MRAmodel object, as the one produced by createModel or importModel
 #' @param accuracy Probability threshold, the type I error for each link will be 1-accuracy. Multiple testing is not taken into account.
 #' @return An MRAmodel object of the reduced model with the data
@@ -173,7 +173,6 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
   
   if (is.na(model_description$bestfit)) {stop("A prior best fitting step is required to reduce the model from")}
   real_data = model_description$data$stim_data
-  data_count = sum(!is.na(real_data) & !is.nan(real_data))
   
   message("Performing model reduction...")
   init_residual = model_description$bestfit
@@ -220,10 +219,8 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
         dr = rank - new_rank
         message(paste("old :", rank, ", new : ", new_rank))
         new_residual = residuals[length(residuals)]
-        dfreedom = data_count - rank
         deltares = new_residual - init_residual
-        f_score = ((new_residual - init_residual) / dr) / (init_residual/dfreedom)
-        message(paste(model_structure$names[(ii-1) %/% dim(adj)[1]+1], "->", model_structure$names[(ii-1) %% dim(adj)[1]+1], ": Delta residual = ", trim_num(deltares), "; Delta rank = ", dr, ", p-value = ", trim_num(pf(f_score, dr, dfreedom)) )) 
+        message(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", trim_num(deltares), "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
       }
       
       newadj[ii]=1 ## Slightly accelerate the computation
@@ -241,11 +238,9 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
       dr=1
       }
     deltares = new_residual - init_residual
-    dfreedom = data_count - rank
-    f_score = ((new_residual - init_residual) / dr) / (init_residual/dfreedom)
-    # Some boundary cases might give low improvement of the fit
+    chi_score =qchisq(accuracy,df=dr)
     if (deltares < 0) { warning(paste("Negative delta residual :", deltares)) ; deltares = -deltares  }
-    if (f_score < qf(accuracy, df1=dr, df2=dfreedom)) {
+    if (deltares < chi_score) {
       adj[links.to.test[order.res[1]]]=0
       rank = new_rank
       initial_response=params[[order.res[1]]]
@@ -254,7 +249,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                    model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
       
-      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=dr, df2=dfreedom)) ))
+      message(paste( "New residual = ", residuals[order.res[1]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pchisq(deltares, df=dr)) ))
 
       other_best = which((abs(residuals[order.res] - residuals[order.res[1]])) < 1e-4)[-1]
       if (length(other_best) > 0) {
@@ -269,11 +264,10 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
                                model_structure$names[((links.to.test[order.res[lid]]-1) %% (dim(adj)[1])) +1], " belongs to a non-identifiable combination, setting df to 1."))
                 tmp_dr=1
               }
-              f_score = (deltares/tmp_dr) / (init_residual/dfreedom)
               message(paste0("    Could remove ",
                            model_structure$names[((links.to.test[order.res[lid]]-1) %/% (dim(adj)[1])) +1], "->", 
                            model_structure$names[((links.to.test[order.res[lid]]-1) %% (dim(adj)[1])) +1])); 
-              message(paste( "    New residual = ", residuals[order.res[lid]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pf(f_score, df1=tmp_dr, df2=dfreedom)) ))
+              message(paste( "    New residual = ", residuals[order.res[lid]], ", Delta residual = ", trim_num(deltares), ",  p-value = ", trim_num(pchisq(deltares, df=tmp_dr)) ))
           }
       }
       message("------------------------------------------------------------------------------------------------------")
@@ -455,9 +449,6 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   }
   dr = new_rank-rank
   deltares = init_residual-result$residuals
-  data_count = sum(!is.na(data$stim_data) & !is.nan(data$stim_data))
-  dfreedom = data_count - length(result$parameters)
-  f_score = (deltares/dr) / (result$residuals/dfreedom)
   extension_mat = matrix(c(new_link,
                            model_structure$names[(new_link-1) %/% dim(adj)[1]+1],
                            model_structure$names[(new_link-1) %% dim(adj)[1]+1],
@@ -466,7 +457,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                            new_rank,
                            deltares,
                            dr,
-                           1-pf(f_score, dr, dfreedom)),nrow=1)  
+                           1-pchisq(deltares, df=dr)),nrow=1)   
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
   adj[new_link] = 0
   model_structure$setAdjacencyMatrix( adj )
