@@ -2,7 +2,7 @@
 % Please edit documentation in R/create_model.R
 \name{rebuildModel}
 \alias{rebuildModel}
-\title{Import a save model with data files}
+\title{Import a saved model with data files}
 \usage{
 rebuildModel(model_file, data_file, var_file = "", rearrange = "no")
 }

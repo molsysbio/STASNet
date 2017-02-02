@@ -1196,7 +1196,7 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   return(model)
 }
 
-#' Import a saved modelSet with data files
+#' Import a saved set of models with data files to construct a modelSet object
 #'
 #' Build a fitted modelSet object from the individual .mra files, and import data for this modelSet
 #' Does NOT perform any initialisation
@@ -1210,14 +1210,12 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
 #' @examples \dontrun{
 #' rebuildModelSet(c("model1.mra",model2.mra), c("data1.csv","data2.csv"), c("data1.var","data2.var"))
 #' }
-rebuildModelSet <- function(model_files, data_files, var_files="", rearrange="no") {
-# sanity checks size
-    if (length(model_files)!= length(data_files)){
-      stop("Number of model files and data files is not equal!")
-    }
-# check for bijection and rearrange if needed
-  mod = sapply(model_files,function(x) gsub("\\.mra","",rev(unlist(strsplit(x,"/")))[1]))
-  dat = sapply(data_files,function(x) gsub("\\_MIDAS.csv","",rev(unlist(strsplit(x,"/")))[1]))
+rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="no") {
+  # check size
+  if (length(model_files)!= length(data_files)){ stop("Number of model files and data files is not equal!") }
+  # check for bijection and rearrange if needed
+  mod = sapply(model_files,function(x) gsub("\\.mra$","",rev(unlist(strsplit(x,"/")))[1]))
+  dat = sapply(data_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.csv$","",rev(unlist(strsplit(x,"/")))[1]))))
   dpos = match(dat,mod)
   if (sum(is.na(dpos)) == 0){
     data_files = data_files[dpos]  
@@ -1225,21 +1223,20 @@ rebuildModelSet <- function(model_files, data_files, var_files="", rearrange="no
     message("names of model_files and data_files can not be matched... using given order.")
   }
   
-    if (length(var_files) > 0){
-    if (length(model_files) != length(var_files)){
-      stop("var files are given, but do not match the number of model files!")
+  if (length(var_files) > 0){
+    if (length(model_files) != length(var_files)){ stop("var files are given, but do not match the number of model files!") }
+    
+    var = sapply(var_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.var$","",rev(unlist(strsplit(x,"/")))[1]))))
+    vpos = match(var,mod)
+    if (sum(is.na(vpos)) == 0){
+      var_files = var_files[vpos]  
+    }else{
+      message("names of model_files and var_files can not be matched... using given order.")
     }
-  var = sapply(var_files,function(x) gsub("\\_MIDAS.var","",rev(unlist(strsplit(x,"/")))[1]))
-  vpos = match(var,mod)
-  if (sum(is.na(vpos)) == 0){
-    var_files = var_files[vpos]  
-  }else{
-    message("names of model_files and var_files can not be matched... using given order.")
   }
-  }
-
-# rebuild single models
-  nb_models=length(model_files)
+  
+  # rebuild single models
+  nb_models = length(model_files)
   data_ = new(STASNet:::DataSet)
   
   model1 = rebuildModel(model_files[1],data_files[1],ifelse(length(var_files>0),var_files[1],""),rearrange)
@@ -1252,66 +1249,57 @@ rebuildModelSet <- function(model_files, data_files, var_files="", rearrange="no
   cv = model1$cv
   
   for (ii in 2:nb_models){
-   model=rebuildModel(model_files[ii],data_files[ii],ifelse(length(var_files>0),var_files[ii],""),rearrange)
-   data_$addData(model$data, FALSE)
-   if (!all( dim(model1$data$unstim_data)==dim(model$data$unstim_data) )) {
-     stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
-   } else if (!all( dim(model1$data$error)==dim(model$data$error) )) {
-     stop(paste0("dimension of 'error' from model ", ii, " do not match those of model 1"))
-   } else if (!all( dim(model1$data$stim_data)==dim(model$data$stim_data) )) {
-     stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
-   } else if (!all( dim(model1$cv)==dim(model$cv) )) {
-     stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
-   }
-   params=cbind(params, model$parameters)
-   stim_data = rbind(stim_data, model$data$stim_data)
-   unstim_data = rbind(unstim_data, model$data$unstim_data)
-   error = rbind(error, model$data$error)
-   offset = rbind(offset, model$data$scale)
-   cv = rbind(cv, model$cv)
+    model=rebuildModel(model_files[ii],data_files[ii],ifelse(length(var_files>0),var_files[ii],""),rearrange)
+    data_$addData(model$data, FALSE)
+    if (!all( dim(model1$data$unstim_data) == dim(model$data$unstim_data) )) {
+      stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
+    } else if (!all( dim(model1$data$error) == dim(model$data$error) )) {
+      stop(paste0("dimension of 'error' from model ", ii, " do not match those of model 1"))
+    } else if (!all( dim(model1$data$stim_data) == dim(model$data$stim_data) )) {
+      stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
+    } else if (!all( dim(model1$cv) == dim(model$cv) )) {
+      stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
+    }
+    params = cbind(params, model$parameters)
+    stim_data = rbind(stim_data, model$data$stim_data)
+    unstim_data = rbind(unstim_data, model$data$unstim_data)
+    error = rbind(error, model$data$error)
+    offset = rbind(offset, model$data$scale)
+    cv = rbind(cv, model$cv)
   }
-
- data_$set_unstim_data ( unstim_data )
- data_$set_scale( offset )
- data_$set_stim_data( stim_data )
- data_$set_error( error )
-   
-# populate MRAmodelSet
-   modelSet = new(STASNet:::ModelSet)
-   modelSet$setModel(design = model1$design, structure = model1$structure)
-   modelSet$setNbModels(nb_models)
-   
-   
-   #results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores)
-   #bestid = order(results$residuals)[1]
-   #parameters = results$params[bestid,]
-   bestfit = as.numeric(unlist(strsplit(model1$infos[3]," "))[4])
-   infos = STASNet:::generate_infos(input_file = data_files,
-                          inits = as.numeric(unlist(strsplit(model1$infos[2]," "))[1]),
-                          best_resid = as.numeric(unlist(strsplit(model1$infos[3]," "))[4:8]),
-                          method = unlist(strsplit(model1$infos[4]," "))[3],
-                          model_links = unlist(strsplit(model1$infos[5]," "))[3], 
-                          name = dat)
-   
-   self = STASNet:::MRAmodelSet(nb_models = nb_submodels,
-                      model = modelSet, 
-                      design = model1$design, 
-                      structure = model1$structure,
-                      basal = model1$basal,
-                      data = data_,
-                      cv = cv,
-                      parameters = params[,1],
-                      bestfit = bestfit,
-                      name = infos$name,
-                      infos = infos$infos,
-                      unused_perturbations = model1$unused_perturbations,
-                      unused_readouts = model1$unused_readouts,
-                      min_cv = model1$min_cv, 
-                      default_cv = model1$default_cv)
-     
-     if ( length(old_model$variable_parameters) > 0 ){ 
-       new_model = setVariableParameters(new_model, old_model$variable_parameters)
-}  
+  
+  data_$set_unstim_data ( unstim_data )
+  data_$set_scale( offset )
+  data_$set_stim_data( stim_data )
+  data_$set_error( error )
+  
+  # populate MRAmodelSet
+  modelSet = new(STASNet:::ModelSet)
+  modelSet$setModel(design = model1$design, structure = model1$structure)
+  modelSet$setNbModels(nb_models)
+  
+  bestfit = as.numeric(unlist(strsplit(model1$infos[3]," "))[4])
+  self = STASNet:::MRAmodelSet(nb_models = nb_models,
+                               model = modelSet, 
+                               design = model1$design, 
+                               structure = model1$structure,
+                               basal = model1$basal,
+                               data = data_,
+                               cv = cv,
+                               parameters = c(params),
+                               bestfit = bestfit,
+                               name = unname(mod),
+                               infos = model1$infos[2:5],
+                               unused_perturbations = model1$unused_perturbations,
+                               unused_readouts = model1$unused_readouts,
+                               min_cv = model1$min_cv, 
+                               default_cv = model1$default_cv)
+  
+  variaPar = rowSums(abs(sweep(params,1,params[,1],"-"))) > 0   
+  if ( any(variaPar) ){ 
+    self = setVariableParameters(self, which(variaPar))
+  }
+}
 
 # Perform several simulated annealing, one per core
 parallelAnnealing <- function(model, core, max_it, nb_cores, perform_plot=F) {

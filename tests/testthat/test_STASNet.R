@@ -315,6 +315,18 @@ test_that("variable parameters are kept when cloned", {
   expect_equal(tmp_modelset$parameters,relax_modelset$parameters)
 })
 
+context("ModelSet rebuild")
+MODEL_FILES=c("var_model1.mra","var_model2.mra")
+
+test_that("Rebuild of variable modelset works correctly", {
+  expect_error(rebuildModelSet(MODEL_FILES,DATA_FILES[1]))
+  expect_error(rebuildModelSet(MODEL_FILES))
+  expect_error(rebuildModelSet(MODEL_FILES[1],DATA_FILES))
+  expect_error(rebuildModelSet(MODEL_FILES,DATA_FILES,DATA_FILES[1]))
+  expect_output(rebuildModelSet(MODEL_FILES, DATA_FILES), NA)
+  reb_modelset <- rebuildModelSet(MODEL_FILES, DATA_FILES)
+  expect_equal(reb_modelset$variable_parameters,relax_modelset$variable_parameters)
+})
 
 context("ModelSet extension")
 
