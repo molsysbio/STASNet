@@ -28,7 +28,7 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 
 \item{unused_perturbations}{Perturbations in the dataset that should not be used}
 
-\item{unused_readouts}{Readouts in the dataset that should not be used}
+\item{unused_readouts}{Measured nodes in the datasets that should not be used}
 
 \item{MIN_CV}{Minimum coefficient of variation.}
 

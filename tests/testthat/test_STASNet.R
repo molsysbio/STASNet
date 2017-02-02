@@ -343,3 +343,20 @@ test_that("modelSet with variable parameters is reduced correctly", {
   expect_message(selectMinimalModel(relax_modelset))
   red_modelset = selectMinimalModel(relax_modelset)
 })
+
+context("Direct paths extraction")
+
+p1 = c("r_B_E", "r_C_B")
+p2 = c("r_B_E^(-1)", "r_B_A")
+p3 = c("r_C_B")
+
+test_that("Product of direct paths is correct", {
+    expect_equal(mul_path(p1, p3), c("r_B_E","r_C_B","r_C_B"))
+})
+test_that("Product of direct and inverted paths is correct", {
+    expect_equal(mul_path(p1, p2), c("r_C_B","r_B_A"))
+})
+test_that("getDirectPaths works", {
+    expect_equal_to_reference(getDirectPaths(model), "model_direct_path.rds", tolerance=1e-5)
+})
+

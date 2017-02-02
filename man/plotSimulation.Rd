@@ -7,8 +7,8 @@ One plot per measured node
 Plot with error bars if available, and give absolute value}
 \usage{
 plotSimulation(prediction, log_axis = FALSE, with_data = TRUE,
-  data_color = "#559955", sim_colors = cbbPalette[-1], compare = list(),
-  strict = TRUE)
+  data_color = cbbPalette[1], sim_colors = cbbPalette[-1],
+  compare = list(), strict = TRUE)
 }
 \arguments{
 \item{prediction}{A list of the model predictions as produced by \link{simulateModel}}

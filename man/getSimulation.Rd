@@ -4,7 +4,7 @@
 \alias{getSimulation}
 \title{Simulate the model for the experimental design used for the fitting}
 \usage{
-getSimulation(mra_model)
+getSimulation(mra_model, with_offset = TRUE)
 }
 \arguments{
 \item{mra_model}{The MRAmodel to simulate}

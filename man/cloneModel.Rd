@@ -7,15 +7,18 @@
 cloneModel(old_model)
 }
 \arguments{
-\item{old_model}{A MRAmodel/MRAmodelSet object.}
+\item{old_model}{A MRAmodel or MRAmodelSet object.}
 }
 \value{
-An MRAmodel/MRAmodelSet object with the same properties as old_model
+An MRAmodel/MRAmodelSet object with the same properties but separated from the old model
 }
 \description{
 Copy a MRAmodel or MRAmodelSet object into a new independent variable
 }
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}
+#' @examples \dontrun{
+clonedModel = cloneModel(mramodel)
+}
 }
 

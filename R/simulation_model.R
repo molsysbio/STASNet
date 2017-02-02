@@ -13,7 +13,7 @@
 # @seealso \code{\link{getCombinationMatrix}}
 #' @family simulation
 #' @export
-simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, with_offset=FALSE) {
+simulateModel <- function(model_description, targets="all", readouts = "all", inhibition_effect=NA, with_offset=TRUE) {
   design = model_description$design
   nodes = model_description$structure$names
   
@@ -164,6 +164,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   model$setModel( new_design, model_description$structure )
   new_data = new(STASNet:::Data)
   new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
+  new_data$set_scale( matrix( rep(model_description$data$scale[1, simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ) )
   
   # Compute the predictions
   prediction = list()
@@ -447,7 +448,7 @@ plotModelSimulation <- function(model_description, targets="all", readouts = "al
 #' @family simulation
 # TODO , plotsPerFrame = 4
 # @param maxPlotsPerFrame Maximum number of perturbation per frame
-plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_color="#0072B2", sim_colors=cbbPalette[-1], compare=list(), strict=TRUE) {
+plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_color=cbbPalette[1], sim_colors=cbbPalette[-1], compare=list(), strict=TRUE) {
   colors = sim_colors[1]
   color_idx = 2
   legend = c("simulation")
@@ -508,7 +509,7 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
         sim_bars = bars
     }
     if (log_axis) { to_plot = log(to_plot, 10) }
-    limits = c(ifelse(log_axis, 1, 0), ifelse(log_axis,1.1,2) * max(c(to_plot), na.rm=TRUE)) # Expect values > 1
+    limits = c(ifelse(log_axis, 1, 0), ifelse(log_axis,1.1,1.5) * max(c(to_plot), na.rm=TRUE)) # Expect values > 1
     if (length(prediction$variants) > 0) {
       low_var = numeric()
       high_var = numeric()
@@ -534,9 +535,14 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       }
       
       text_pos = limits[2] - 0.1 * limits[2]
+      if (log_axis) {
+          low_var = log(low_var, 10)
+          high_var = log(high_var, 10)
+      }
+      # Write the value if the bar goes outside the plotting frame
       segments( sim_bars, low_var, sim_bars, sapply(high_var, function(X){ ifelse(X>limits[2], text_pos, X) }) )
       text( sim_bars, text_pos, sapply(high_var, function(X){ ifelse(X>limits[2],ifelse(X<100000,round(X),signif(X,1)), "") }), pos=2, srt=90,offset=0.2 )
-      space = abs(sim_bars[2] - sim_bars[1])/3
+      space = abs(sim_bars[2] - sim_bars[1])/(3*(2+length(compare)+ifelse(with_data, 1, 0)))
       segments(sim_bars - space, low_var, sim_bars + space, low_var)
       in_lim=high_var<=limits[2]
       segments(sim_bars[in_lim] - space, high_var[in_lim], sim_bars[in_lim] + space, high_var[in_lim])
@@ -557,11 +563,7 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
     for (pert in 1:ncol(prediction$conditions)) {
       legend_line = rep("-", nrow(prediction$conditions))
       legend_line[prediction$conditions[, pert] == 1] = "+"
-      # legend_line = c(colnames(prediction$conditions)[pert], legend_line)
-      y_coord = min(0, low_var, na.rm=TRUE)-pert * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
-      if (log_axis) {
-          y_coord = min(0, low_var, na.rm=TRUE)-0.08*(limits[2]-low_var)-pert *1.3* (limits[2]-low_var) * (1-ratio) / (ncol(prediction$conditions)+1)
-      }
+      y_coord = min(limits[1], low_var, na.rm=TRUE) - (pert+1) * limits[2] * 0.9 * (1-ratio) / (ncol(prediction$conditions)+1)
       text(bars, y_coord, legend_line)
       text(pert_name_x, y_coord, colnames(prediction$conditions)[pert], pos=2)
     }
@@ -579,8 +581,12 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
 #' Simulate the model for the experimental design used for the fitting
 #' @param mra_model The MRAmodel to simulate
 #' @return A matrix containing the simulation with the names of the measured nodes as column names
-getSimulation <- function(mra_model) {
-  prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+getSimulation <- function(mra_model, with_offset=TRUE) {
+  if (with_offset) {
+      prediction = mra_model$model$simulateWithOffset(mra_model$data, mra_model$parameters)$prediction
+  } else {
+      prediction = mra_model$model$simulate(mra_model$data, mra_model$parameters)$prediction
+  }
   colnames(prediction) = getMeasuredNodesNames(mra_model)
   return(prediction)
 }

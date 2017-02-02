@@ -14,9 +14,10 @@ cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7"
 #' @param col colorRampPalette object indicating the colormap
 #' @param textCol string denoting the color of inset text
 #' @param sig_numbers number of significant parameters to display in the heatmap
+#' @param show_values Whether the values should be printed in the heatmap boxes or not.
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2){
+plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
   # cutoff and transformation of colour
@@ -38,6 +39,20 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
   ref=c(t(as.matrix(mat[nrow(mat):1,]))) 
 
   # Generate heatmap with textual inset
+  if (show_values) {
+    panel_function <- function(...){
+                      arg<-list(...)
+                      panel.levelplot(...)
+                      panel.text(arg$x, arg$y,
+                                 trim_num(ref,sig_numbers),
+                                 col = textCol,
+                                 cex = 0.8)}
+  } else {
+  panel_function <- function(...){
+                      arg<-list(...)
+                      panel.levelplot(...)
+                    }
+  }
   p<- levelplot(x = t(as.matrix(m[nrow(m):1,])),
                 col.regions = col,
                 at = breaks,
@@ -47,14 +62,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
                 ylab = "",
                 main = main,
                 scales = list(alternating = 2,tck = c(0,1),x = list(rot = 90)),
-                panel=function(...){
-                      arg<-list(...)
-                      panel.levelplot(...)
-                      panel.text(arg$x,
-                                 arg$y,
-                                 trim_num(ref,sig_numbers),
-                                 col = textCol,
-                                 cex = 0.8)})
+                panel=panel_function)
   print(p) # Plot the heatmap
 }
 
@@ -66,6 +74,6 @@ define_breaks <- function(m,lim = Inf,fixedRange = F) {
       if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
           stop("'lim' is invalid, cannot generate breaks within a fixed range")
       }
-      return(seq(-1.1*lim,1.1*lim,length.out=22))  
+      return(seq(-1.1*(lim)*ifelse(min(m,na.rm=T)<0,1,0),1.1*lim*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
   }
 }

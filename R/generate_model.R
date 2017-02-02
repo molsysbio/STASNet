@@ -49,9 +49,13 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
 #' Clone an MRAmodel or MRAmodelSet object 
 #'
 #' Copy a MRAmodel or MRAmodelSet object into a new independent variable
-#' @param old_model A MRAmodel/MRAmodelSet object.
-#' @return An MRAmodel/MRAmodelSet object with the same properties as old_model
+#' @param old_model A MRAmodel or MRAmodelSet object.
+#' @return An MRAmodel/MRAmodelSet object with the same properties but separated from the old model
+#' @export
 #' @author Bertram Klinger \email{bertram.klinger@charite.de}
+#' #' @examples \dontrun{
+#' clonedModel = cloneModel(mramodel)
+#' }
 cloneModel <- function(old_model){
   
   type = class(old_model)

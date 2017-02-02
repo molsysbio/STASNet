@@ -4,10 +4,14 @@
 \alias{plotModelAccuracy}
 \title{Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction}
 \usage{
-plotModelAccuracy(model_description)
+plotModelAccuracy(model_description, limit = Inf, show_values = TRUE)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
+
+\item{limit}{An integer to force the limit of the heatmaps}
+
+\item{show_values}{Whether the values should be printed in the heatmap boxes or not.}
 }
 \value{
 Nothing

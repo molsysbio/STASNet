@@ -63,7 +63,7 @@ MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv
 #' @param mra_model The MRAmodel object for which the score should be computed
 #' @param refit_model Whether the model should be refitted before computing the scores (using the 'mra_model$parameters' as the initial value)
 #' @return A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
-computeFitScore <- function(mra_model, refit_model=FALSE) {
+computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
     data = mra_model$data
 # The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason
 # Couldn't find the bug so we do not compute the score for the MRAmodelSet objects
@@ -77,10 +77,10 @@ computeFitScore <- function(mra_model, refit_model=FALSE) {
         mra_model$bestfit = refit$residual[1]
         mra_model$parameters = refit$params[1,]
     } else {
-        simulation = simulateModel(mra_model)
+        simulation = simulateModel(mra_model, with_offset=with_offset)
         mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/simulation$error^2, na.rm=T )
     }
-    prediction = getSimulation(mra_model)
+    prediction = getSimulation(mra_model, with_offset=with_offset)
     Rscores = c()
     meanScores = c()
     for ( abc in 1:ncol(prediction) ) {
