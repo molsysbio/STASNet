@@ -31,6 +31,7 @@ show_values = FALSE
 precorrelate = TRUE
 reduction = FALSE
 perform_pl = FALSE
+mr_pl = FALSE
 perf_plots = TRUE
 extension = FALSE
 
@@ -61,6 +62,7 @@ for (argument in cargs) {
         message("    -m<string>                   Method to apply for the initialisation")
         message("    --nopl                       Disable profile likelihood")
         message("    --pl                         Enable profile likelihood")
+        message("    --mrpl                       Perform model reduction and profile likelihood of the reduced model")
         message("    -s<int>                      Number of steps for the profile likelihood")
         message("    --noplots                    Cancel plot generation")
         message("    -l                           Force the limit of the gradients for the heatmaps")
@@ -110,6 +112,9 @@ for (argument in cargs) {
         method = gsub("^-m", "", argument)
     } else if (argument == "--pl") {
         perform_pl = TRUE
+    } else if (argument == "--mrpl") {
+        mr_pl = TRUE
+        reduction = TRUE
     } else if (argument == "--nopl") {
         perform_pl = FALSE
     } else if (argument == "--noplots" || argument == "--noplot") {
@@ -238,7 +243,7 @@ if (reduction) {
     print("Reduction of the model...")
     reduced_model = selectMinimalModel(model)
     # Profile likelihood on the reduced model
-    if (perform_pl) {
+    if (mr_pl) {
         reduced_profiles = profileLikelihood(reduced_model, nb_steps, nb_cores=min(cores, length(reduced_model$parameters)));
         reduced_model = addPLinfos(reduced_model, reduced_profiles)
         if (perf_plots) {
