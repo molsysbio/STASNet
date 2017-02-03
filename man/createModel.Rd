@@ -59,12 +59,11 @@ model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detec
 model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
 }
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 importModel, exportModel, rebuildModel
 
 Other Model initialisation: \code{\link{initModel}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

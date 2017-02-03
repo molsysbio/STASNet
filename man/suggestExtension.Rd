@@ -30,10 +30,9 @@ Note that valöues assigned to be exactly 1 inidicate almost always an non-ident
 ext_list = suggestExtension(mramodel)
 }
 }
-\author{
-Bertram Klinger \email{bertram.klinger@charite.de}
-}
 \seealso{
 selectMinimalModel, createModel
 }
-
+\author{
+Bertram Klinger \email{bertram.klinger@charite.de}
+}

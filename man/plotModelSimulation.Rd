@@ -35,4 +35,3 @@ Plot the predictions by the model
 \author{
 Mathurin Dorel \email{mathurin.dorel@charite.de}
 }
-

@@ -36,4 +36,3 @@ Plot a customized heatmap with a symmetrical scale that is not stretched by extr
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}
 }
-

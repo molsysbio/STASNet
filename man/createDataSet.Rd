@@ -25,4 +25,3 @@ createDataSet(model_links, data_list, basal_file, cores = 1, inits = 1000,
 \description{
 Import multiple files to create a group of models
 }
-

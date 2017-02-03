@@ -23,9 +23,6 @@ createSimulation(input_network, perturbations = "", measured = "",
 \description{
 Simulate data with noise from a network and a perturbation scheme
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 \code{\link{simulateModel}}
 
@@ -33,4 +30,6 @@ Other toy data generation: \code{\link{addLayerLinks}},
   \code{\link{generateToyDesign}},
   \code{\link{generateToyNetwork}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

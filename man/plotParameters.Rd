@@ -17,4 +17,3 @@ Generic function to plot parameters
 \seealso{
 plotParameters.modelGroup
 }
-

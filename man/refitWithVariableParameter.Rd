@@ -26,4 +26,3 @@ A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 
 \description{
 Refit modelset by iterative relaxation of single parameters
 }
-

@@ -20,4 +20,3 @@ Set the parameters that can vary across submodels for an MRAmodelSet
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
-

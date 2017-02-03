@@ -18,4 +18,3 @@ Extract individual models from an MRAmodelSet where they were fitted together an
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
-

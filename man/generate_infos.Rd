@@ -13,4 +13,3 @@ generate_infos(input_file, inits, best_resid, method, model_links, name,
 \description{
 Build infos vector from the parameters used to build the model and
 }
-

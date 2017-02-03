@@ -19,10 +19,9 @@ Nothing
 \description{
 Export an MRAmodel object in a .mra file
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 importModel, rebuildModel
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

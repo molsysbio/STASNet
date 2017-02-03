@@ -22,4 +22,3 @@ Compute the direct paths for a model and their confidence intervals by combining
 
 Print the direct paths with confidence interval
 }
-

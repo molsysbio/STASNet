@@ -29,4 +29,3 @@ See if a MRAmodelSet requires some parameters to be variable among models to exp
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
-

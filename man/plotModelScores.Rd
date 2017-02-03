@@ -22,4 +22,3 @@ Other Model plots: \code{\link{plotModelAccuracy}},
   \code{\link{plotModelScores.MRAmodel}},
   \code{\link{plotParameters.modelGroup}}
 }
-

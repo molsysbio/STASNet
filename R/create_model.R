@@ -1311,6 +1311,7 @@ rebuildModelSet <- function(model_files, data_files, var_files="", rearrange="no
      
      if ( length(old_model$variable_parameters) > 0 ){ 
        new_model = setVariableParameters(new_model, old_model$variable_parameters)
+     }
 }  
 
 # Perform several simulated annealing, one per core

@@ -44,4 +44,3 @@ Build and fit an MRAmodelSet, which consists of the simultaneous fitting of seve
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
-

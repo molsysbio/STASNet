@@ -15,4 +15,3 @@ A modelGroup object
 \description{
 Construct a modelGroup object, which contains several mraModels and provides methods to compare them
 }
-

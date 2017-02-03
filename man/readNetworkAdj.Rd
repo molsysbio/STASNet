@@ -15,4 +15,3 @@ The weighted adjacency matrix corresponding to the network
 \description{
 Get the adjacency matrix from a various formats of network files
 }
-

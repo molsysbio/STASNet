@@ -25,4 +25,3 @@ Mathurin Dorel \email{dorel@horus.ens.fr}
 
 Bertram Klinger \email{bertram.klinger@charite.de}
 }
-

@@ -21,4 +21,3 @@ Bertram Klinger \email{bertram.klinger@charite.de}
 clonedModel = cloneModel(mramodel)
 }
 }
-

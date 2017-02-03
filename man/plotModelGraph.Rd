@@ -12,9 +12,6 @@ plotModelGraph(mra_model)
 \description{
 Plot the network used in the model with the experimental design on top of it
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 Other Model plots: \code{\link{plotModelAccuracy}},
   \code{\link{plotModelScores.MRAmodel}},
@@ -23,4 +20,6 @@ Other Model plots: \code{\link{plotModelAccuracy}},
 
 Other Network graph: \code{\link{plotNetworkGraph}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

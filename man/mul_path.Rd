@@ -9,4 +9,3 @@ mul_path(p1, p2)
 \description{
 Multiply two paths (list of links with exponent)
 }
-

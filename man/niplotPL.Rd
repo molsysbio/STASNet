@@ -21,10 +21,9 @@ Nothing
 Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
 and redirect it in a pdf file.
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 \code{\link{profileLikelihood}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

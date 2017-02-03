@@ -22,4 +22,3 @@ Computes the profile likelihood and the parameters relationships of each paramet
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
-
