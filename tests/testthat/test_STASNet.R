@@ -8,7 +8,14 @@ VAR_FILE = ""
 
 context("Model fitting accuracy")
 
+test_that("createModel works", {
+    expect_output( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim"), NA)
+})
 model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim") )
+test_that("createModel works with unused readouts and perturbations", {
+     expect_output( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", unused_readout=c("node2"), unused_perturbation=c("node2i")), NA )
+})
+sub_model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", unused_readout=c("node2"), unused_perturbation=c("node2i")) )
 
 test_that("All expected fields are present" ,{
     expect_equal(exists("min_cv", model), TRUE)
@@ -58,6 +65,15 @@ test_that("Export works correctly", {
 })
 test_that("Import works correctly", {
     expect_output(importModel("model.mra"), NA)
+})
+test_that("Export works correctly with unused readouts and perturbations", {
+    expect_output(exportModel(sub_model, "sub_model.mra"), NA)
+})
+test_that("Import works correctly with unused readouts and perturbations", {
+    expect_output(importModel("sub_model.mra"), NA)
+})
+test_that("Rebuild works correctly with unused readouts and perturbations", {
+    expect_output(rebuildModel("sub_model.mra", DATA_FILE), NA)
 })
 test_that("Rebuild works correctly", {
     expect_output(rebuildModel("model.mra", DATA_FILE), NA)
