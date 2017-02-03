@@ -221,6 +221,7 @@ createSimulation <- function(input_network, perturbations="", measured="", inhib
 
     data = new(STASNet:::Data)
     data$set_unstim_data( matrix( rep(10, nrow(stimuli)*length(measured)), nrow=nrow(stimuli) ))
+    data$set_scale( matrix( rep(0, nrow(stimuli)*length(measured)), nrow=nrow(stimuli) ))
 
     model = new(STASNet:::Model)
     model$setModel(expdes, structure)
