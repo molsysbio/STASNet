@@ -11,5 +11,6 @@ tests/testthat/*.rds
 R/.nfs*
 tests/testthat/.Rhistory
 .Rhistory
+tests/testthat/model.mra
 
 
