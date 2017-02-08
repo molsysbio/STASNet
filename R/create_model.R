@@ -861,7 +861,7 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
       cc = which(afrom==efrom & ato==eto)
       cc = ifelse(length(cc)!=0, cc, which(afrom==eto & ato==efrom)) # Link in both directions
       edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
-      edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
+      edgeRenderInfo(g1)$label[cc] = trim_num(vv)
       
       coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
       edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(edgeRenderInfo(g1)$label[cc])*10/2)
@@ -877,7 +877,7 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
         nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
         cc = which(nname==efrom & iname==eto)
         edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
-        edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
+        edgeRenderInfo(g1)$label[cc] = trim_num(vv)
         edgeRenderInfo(g1)$textCol[cc]="red"
         
         coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
