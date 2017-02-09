@@ -197,14 +197,14 @@ writeLines(modelset$infos[2])
 
 #### 2 FIND VARIABLE PARAMETERS ####
 if (relax){
-modelset=addVariableParameters(modelset = modelset,
-                               nb_cores = cores,
+modelset=addVariableParameters(original_modelset = modelset,
+                              nb_cores = cores,
                               max_iterations=0,
                               nb_samples=var_samples,
                               accuracy=0.95)
   }
 if (extension){
-  extensionMat=suggestExtension(original_model = modelset,
+  extensionMat=suggestExtension(qoriginal_model = modelset,
                                 parallel = T,
                                 mc = cores,
                                 sample_range=c(10^(2:-1),0,-10^(-1:2)),
