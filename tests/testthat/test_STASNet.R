@@ -372,7 +372,25 @@ test_that("Product of direct paths is correct", {
 test_that("Product of direct and inverted paths is correct", {
     expect_equal(mul_path(p1, p2), c("r_C_B","r_B_A"))
 })
+# Note: This model does not have profile likelihood information
 test_that("getDirectPaths works", {
     expect_equal_to_reference(getDirectPaths(model), "model_direct_path.rds", tolerance=1e-5)
+    .GlobalEnv$direct_path = getDirectPaths(model)
+})
+test_that("getDirectPaths works with node removed", {
+    expect_equal_to_reference(getDirectPaths(model, c("node1")), "model_merged_direct_path.rds", tolerance=1e-5)
+})
+
+test_that("aggregateDirectPaths works", {
+    expect_silent( aggregateDirectPaths(list(a=direct_path, b=direct_path)) )
+})
+test_that("aggregateDirectPaths raises an error if 'direct_paths' is not a list", {
+    expect_error( aggregateDirectPaths(c("A->B")), "must be a list" )
+})
+test_that("aggregateDirectPaths raises an error if 'names(direct_paths)' is NULL", {
+    expect_error( aggregateDirectPaths(list(direct_path, direct_path)), "must be non NULL" )
+})
+test_that("plotModelParameters works", {
+    expect_silent( plotModelParameters(model) )
 })
 
