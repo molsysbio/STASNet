@@ -968,11 +968,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (length(blanks) == 0) {
     blank_values = matrix( rep(0, ncol(data_values)), nrow=1, dimnames=list(NULL, colnames(data_values)) )
   } else {
-    blank_values = colMeans(data_values[blanks,,drop=F], na.rm=T)
+    blank_values = apply(data_values[blanks,,drop=FALSE], 2, min, na.rm=TRUE)
   }
   blank_values[is.nan(blank_values)|is.na(blank_values)] = 0 # For perturbations without blank values 
   # Means of basal activity of antibodies
-  unstim_values = colMeans(data_values[controls,,drop=F], na.rm=T)
+  unstim_values = colMeans(data_values[controls,,drop=FALSE], na.rm=TRUE)
   if (any(is.nan(unstim_values)|is.na(unstim_values))) {
     stop("Unstimulated data are required to simulate the network")
   }
