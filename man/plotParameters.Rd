@@ -4,9 +4,11 @@
 \alias{plotParameters}
 \title{Plot parameters}
 \usage{
-plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE)
+plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE,
+  vertical = TRUE)
 
-plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE)
+plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE,
+  vertical = TRUE)
 }
 \arguments{
 \item{aggregated_paths}{Aggregated direct paths as returned by aggregateDirectPaths}
@@ -16,6 +18,8 @@ plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE)
 \item{repar}{Whether par() should be called, use FALSE for the function to work with layouts.}
 
 \item{resetpar}{Whether par() should be called after the plotting to restore the previous plot parameters}
+
+\item{vertical}{Whether the parametres should be organised vertically (TRUE) or horizontally (FALSE)}
 
 \item{x}{A Model object}
 

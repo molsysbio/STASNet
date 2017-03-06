@@ -171,17 +171,39 @@ aggregateDirectPaths <- function(direct_paths){
     if (!is.list(direct_paths)) { stop("'direct_paths' must be a list") }
     if (is.null(names(direct_paths))) { stop("'names(direct_paths)' must be non NULL for the aggregation") }
     aggregated_paths = c()
+    paths_per_model = c()
     for (pname in names(direct_paths)) {
         path = direct_paths[[pname]]
         agg_path = t(sapply(path, function(X){ c(X$value, ifelse(is.null(X$hv), NA, X$hv), ifelse(is.null(X$lv), NA, X$lv)) }))
         rownames(agg_path)=paste0(rownames(agg_path), " ", pname)
+        paths_per_model = c( paths_per_model, rep(pname, nrow(agg_path)) )
         colnames(agg_path)=c("value", "hv", "lv")
 
         aggregated_paths = rbind(aggregated_paths, agg_path)
     }
-    aggregated_paths = aggregated_paths[order(rownames(aggregated_paths)),]
+    ordered_names = order(rownames(aggregated_paths))
+    aggregated_paths = aggregated_paths[ordered_names,]
+    paths_per_model = paths_per_model[ordered_names]
 
-    return( list(paths=aggregated_paths, model_names=names(direct_paths)) )
+    return( list(paths=aggregated_paths, model_names=names(direct_paths), paths_attribution=paths_per_model) )
+}
+
+#' Extract a subset of paths aggregated from multiple models
+#'
+#' Extract the subset of paths aggregated from multiple models that match a gived regex
+#' @param aggregated_paths Aggregated paths as returned by aggregateDirectPaths
+#' @param regex A regular expression
+#' @rdname aggregateDirectPaths
+#' @export
+subsetDirectPathsAggregation <- function(aggregated_paths, regex) {
+    subset = grepl(paste0( regex ), rownames(aggregated_paths$paths))
+    return(
+           list(
+                model_names=aggregated_paths$model_names,
+                paths=rbind(aggregated_paths$paths[subset, ]),
+                paths_attribution=aggregated_paths$paths_attribution[subset]
+                )
+           )
 }
 
 #' Plot parameters from aggregated direct paths
@@ -191,47 +213,81 @@ aggregateDirectPaths <- function(direct_paths){
 #' @param lim The absolute limit of the plot y-axis, the parameters with value falling outside the range [-lim, lim] will have their value displayed at the edge of the plotting area.
 #' @param repar Whether par() should be called, use FALSE for the function to work with layouts.
 #' @param resetpar Whether par() should be called after the plotting to restore the previous plot parameters
+#' @param vertical Whether the parametres should be organised vertically (TRUE) or horizontally (FALSE)
 #' @export
 #' @seealso \code{\link{aggregateDirectPaths}}
-plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE) {
+plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, vertical=TRUE) {
     if (lim < 0) {
         lim = abs(lim)
         warning("Negative limit provided, using absolute value")
     }
     model_names = aggregated_paths$model_names
+    colors = cbbPalette[ as.factor(aggregated_paths$paths_attribution) ]
+
     aggregated_paths = aggregated_paths$paths
     aggregated_paths = t( apply(aggregated_paths, 1, function(rr){ rr[is.na(rr)] = rr["value"]; rr }) )
-
-    # Get enough margin in the bottom for the long path names
-    if (repar) {
-        opar = par()
-        par(mar=c(max(10, opar$mar[1]), max(4, opar$mar[2]), max(opar$mar[3], 4), max(opar$mar[4], 2)) + 0.1)
-    }
+    # Compute the limits of the drawing region and make NA and infinite values extend beyond
     ymin = max(-lim, min(aggregated_paths, na.rm=TRUE))
     ymax = min(lim, max(aggregated_paths, na.rm=TRUE))
-    aggregated_paths[is.na(aggregated_paths[,"lv"])|is.infinite(aggregated_paths[,"lv"]), "lv"] = 1.1 * ymin
-    aggregated_paths[is.na(aggregated_paths[,"hv"])|is.infinite(aggregated_paths[,"hv"]), "hv"] = 1.1 * ymax
-    # Plot the parameters with error bars
-    plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax), ylab="Path value")
-    lines(1:nrow(aggregated_paths), rep(0, nrow(aggregated_paths)), col="grey", lty=2)
-    segments(1:nrow(aggregated_paths), aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], xlab="")
-    text(1:nrow(aggregated_paths), par("usr")[3] - (ymax-ymin)/18, srt = 45, adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
-    axis(1, 1:nrow(aggregated_paths), label=F)
-    # Add text for the parameters whose value is outside the limits
-    out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
-    if (length(out_up) > 0) {
-        text(out_up, lim, signif(aggregated_paths[out_up, "value"], 3) )
-    }
-    out_down = which(apply(aggregated_paths, 1, function(X) {X["value"] < -lim}))
-    if (length(out_down) > 0) {
-        text(out_down, -lim, signif(aggregated_paths[out_down, "value"], 3) )
-    }
+    aggregated_paths[is.na(aggregated_paths[,"lv"])|is.nan(aggregated_paths[,"lv"])|is.infinite(aggregated_paths[,"lv"]), "lv"] = 1.1 * ymin
+    aggregated_paths[is.na(aggregated_paths[,"hv"])|is.nan(aggregated_paths[,"hv"])|is.infinite(aggregated_paths[,"hv"]), "hv"] = 1.1 * ymax
+
 
     # Check sames paths for different models
     testline = cbind(rownames(aggregated_paths), c(rownames(aggregated_paths)[-1], NA))
     models_test = paste0(model_names, collapse="|")
     line_pos = which(apply(testline, 1, function(rr) { gsub(models_test, "", rr[1])!=gsub(models_test, "", rr[2]) })) + 0.5
-    segments(line_pos, ymin, line_pos, ymax, col="gray")
+
+    sepnames = strtrim(rownames(aggregated_paths), 16)
+    if (vertical) {
+        # Get enough margin on the left for the path names
+        if (repar) {
+            opar = par()
+            par(mar=c(min(2, opar$mar[1]), max(20, opar$mar[2]), min(opar$mar[3], 1), min(opar$mar[4], 2)) + 0.1)
+        }
+        xmin = ymin
+        xmax = ymax
+        # Plot the parameters with error bars
+        plot(aggregated_paths[,"value"], 1:nrow(aggregated_paths), yaxt="n", ylab="", pch=20, xlim=c(xmin, xmax), xlab="Path value", lwd=4)
+        lines(rep(0, nrow(aggregated_paths)), 1:nrow(aggregated_paths), col="grey", lty=2)
+        segments(aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], 1:nrow(aggregated_paths), xlab="", lwd=4, col=colors)
+        #text(par("usr")[4] - (xmax-xmin)/10, 1:nrow(aggregated_paths), adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
+        axis(2, 1:nrow(aggregated_paths), label=rownames(aggregated_paths), xpd=TRUE, cex=0.7, las=1)
+        # Add text for the parameters whose value is outside the limits
+        out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
+        if (length(out_up) > 0) {
+            text(xmax, out_up, signif(aggregated_paths[out_up, "value"], 3) )
+        }
+        out_down = which(apply(aggregated_paths, 1, function(X) {X["value"] < -lim}))
+        if (length(out_down) > 0) {
+            text(xmin, out_down, signif(aggregated_paths[out_down, "value"], 3) )
+        }
+        # Draw lines to separate paths
+        segments(xmin, line_pos, ymax, line_pos, col="gray")
+    } else {
+        # Get enough margin in the bottom for the long path names
+        if (repar) {
+            opar = par()
+            par(mar=c(max(10, opar$mar[1]), max(4, opar$mar[2]), max(opar$mar[3], 4), min(opar$mar[4], 1)) + 0.1)
+        }
+        # Plot the parameters with error bars
+        plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax), ylab="Path value", lxw=4)
+        lines(1:nrow(aggregated_paths), rep(0, nrow(aggregated_paths)), col="grey", lty=2)
+        segments(1:nrow(aggregated_paths), aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], xlab="", lwd=4, col=colors)
+        text(1:nrow(aggregated_paths), par("usr")[3] - (ymax-ymin)/18, srt = 45, adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
+        axis(1, 1:nrow(aggregated_paths), label=F)
+        # Add text for the parameters whose value is outside the limits
+        out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
+        if (length(out_up) > 0) {
+            text(out_up, ymax, signif(aggregated_paths[out_up, "value"], 3) )
+        }
+        out_down = which(apply(aggregated_paths, 1, function(X) {X["value"] < -lim}))
+        if (length(out_down) > 0) {
+            text(out_down, ymin, signif(aggregated_paths[out_down, "value"], 3) )
+        }
+        # Draw lines to separate paths
+        segments(line_pos, ymin, line_pos, ymax, col="gray")
+    }
     if (repar && resetpar) { suppressWarnings(par(opar)) }
 }
 
