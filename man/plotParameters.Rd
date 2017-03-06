@@ -4,14 +4,18 @@
 \alias{plotParameters}
 \title{Plot parameters}
 \usage{
-plotParameters(aggregated_paths, lim = 2)
+plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE)
 
-plotParameters(aggregated_paths, lim = 2)
+plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE)
 }
 \arguments{
 \item{aggregated_paths}{Aggregated direct paths as returned by aggregateDirectPaths}
 
 \item{lim}{The absolute limit of the plot y-axis, the parameters with value falling outside the range [-lim, lim] will have their value displayed at the edge of the plotting area.}
+
+\item{repar}{Whether par() should be called, use FALSE for the function to work with layouts.}
+
+\item{resetpar}{Whether par() should be called after the plotting to restore the previous plot parameters}
 
 \item{x}{A Model object}
 

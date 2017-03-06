@@ -165,7 +165,7 @@ printDirectPaths <- function(mra_model, digits=2) {
 #' Aggregate the paths values for plotting
 #'
 #' @param direct_paths A list of direct paths (as outputed by getDirectPaths). The names of the elements are considered to be the names of the models.
-#' @return A list with two entries. 'paths' is a matrix with the path and the models names as rownames, and columns 'value', 'hv' and 'lv' representing the value with confidence interval of the path. 'models' is the name of the models.
+#' @return A list with two entries. 'paths' is a matrix with the path and the models names as rownames, and columns 'value', 'hv' and 'lv' representing the value with confidence interval of the path. 'model_names' is the name of the models.
 #' @export
 aggregateDirectPaths <- function(direct_paths){
     if (!is.list(direct_paths)) { stop("'direct_paths' must be a list") }
@@ -181,7 +181,7 @@ aggregateDirectPaths <- function(direct_paths){
     }
     aggregated_paths = aggregated_paths[order(rownames(aggregated_paths)),]
 
-    return( list(paths=aggregated_paths, models=names(direct_paths)) )
+    return( list(paths=aggregated_paths, model_names=names(direct_paths)) )
 }
 
 #' Plot parameters from aggregated direct paths
@@ -189,25 +189,30 @@ aggregateDirectPaths <- function(direct_paths){
 #' Plot parameters from aggregated direct paths. The margins are increased to c(10, 4, 4, 2) but can be increased more by specifying larger margins in 'par' before calling the function.
 #' @param aggregated_paths Aggregated direct paths as returned by aggregateDirectPaths
 #' @param lim The absolute limit of the plot y-axis, the parameters with value falling outside the range [-lim, lim] will have their value displayed at the edge of the plotting area.
+#' @param repar Whether par() should be called, use FALSE for the function to work with layouts.
+#' @param resetpar Whether par() should be called after the plotting to restore the previous plot parameters
+#' @export
 #' @seealso \code{\link{aggregateDirectPaths}}
-plotParameters <- function(aggregated_paths, lim=2) {
+plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE) {
     if (lim < 0) {
         lim = abs(lim)
         warning("Negative limit provided, using absolute value")
     }
-    models = aggregated_paths$models
+    model_names = aggregated_paths$model_names
     aggregated_paths = aggregated_paths$paths
     aggregated_paths = t( apply(aggregated_paths, 1, function(rr){ rr[is.na(rr)] = rr["value"]; rr }) )
 
     # Get enough margin in the bottom for the long path names
-    opar = par()
-    par(mar=c(max(10, opar$mar[1]), max(4, opar$mar[2]), max(opar$mar[3], 4), max(opar$mar[4], 2)) + 0.1)
+    if (repar) {
+        opar = par()
+        par(mar=c(max(10, opar$mar[1]), max(4, opar$mar[2]), max(opar$mar[3], 4), max(opar$mar[4], 2)) + 0.1)
+    }
     ymin = max(-lim, min(aggregated_paths, na.rm=TRUE))
     ymax = min(lim, max(aggregated_paths, na.rm=TRUE))
-    aggregated_paths[is.na(aggregated_paths[,"lv"]), "lv"] = 1.1 * ymin
-    aggregated_paths[is.na(aggregated_paths[,"hv"]), "hv"] = 1.1 * ymax
+    aggregated_paths[is.na(aggregated_paths[,"lv"])|is.infinite(aggregated_paths[,"lv"]), "lv"] = 1.1 * ymin
+    aggregated_paths[is.na(aggregated_paths[,"hv"])|is.infinite(aggregated_paths[,"hv"]), "hv"] = 1.1 * ymax
     # Plot the parameters with error bars
-    plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax))
+    plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax), ylab="Path value")
     lines(1:nrow(aggregated_paths), rep(0, nrow(aggregated_paths)), col="grey", lty=2)
     segments(1:nrow(aggregated_paths), aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], xlab="")
     text(1:nrow(aggregated_paths), par("usr")[3] - (ymax-ymin)/18, srt = 45, adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
@@ -224,10 +229,10 @@ plotParameters <- function(aggregated_paths, lim=2) {
 
     # Check sames paths for different models
     testline = cbind(rownames(aggregated_paths), c(rownames(aggregated_paths)[-1], NA))
-    models_test = paste0(models, collapse="|")
+    models_test = paste0(model_names, collapse="|")
     line_pos = which(apply(testline, 1, function(rr) { gsub(models_test, "", rr[1])!=gsub(models_test, "", rr[2]) })) + 0.5
     segments(line_pos, ymin, line_pos, ymax, col="gray")
-    suppressWarnings(par(opar))
+    if (repar && resetpar) { suppressWarnings(par(opar)) }
 }
 
 #' Plot the parameters for a model or a list of models
@@ -235,7 +240,8 @@ plotParameters <- function(aggregated_paths, lim=2) {
 #' @param lim The absolute limit of the plot y-axis, the parameters with value falling outside the range [-lim, lim] will have their value displayed at the edge of the plotting area.
 #' @param digits Number of digits to display for the confidence interval values
 #' @return Invisibly the aggregated direct paths
-#' @seealso \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code\link{{aggregateDirectPaths}}
+#' @export
+#' @seealso \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code{\link{aggregateDirectPaths}}
 plotModelParameters <- function(models, non_stop_nodes=c(), lim=2) {
     if ("MRAmodel" %in% class(models)) {
         model_list = list()

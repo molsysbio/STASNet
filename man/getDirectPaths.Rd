@@ -19,7 +19,7 @@ printDirectPaths(mra_model, digits = 2)
 \value{
 A list of lists indexed by the path name. Each sublist has fields path, value, hv and lv which represent respectively the path equation, the value of the path, the upper bound of the path and the lower bound of the path.
 
-printDirectPaths returns the direct paths invisibly
+Hidden. The direct paths
 }
 \description{
 Compute the direct paths for a model and their confidence intervals by combining the paths containing links with negative exponents with paths containing the same link with a positive exponent.
