@@ -103,7 +103,7 @@ cloneModel <- function(old_model){
                                       cv = old_model$cv,
                                       parameters = old_model$parameters,
                                       bestfit = old_model$bestfit,
-                                      name = old_model$name,
+                                      name = old_model$names,
                                       infos = old_model$infos,
                                       param_range = old_model$param_range,
                                       lower_values = old_model$lower_values,

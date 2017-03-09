@@ -10,7 +10,7 @@
 data_files = ""
 network = ""
 basal_nodes = ""
-var_files = ""
+var_files = c()
 inits = 10000
 var_samples=10
 method = "geneticlhs"
@@ -143,6 +143,9 @@ if (any(grepl("^-d", cargs))) {
     unused_readouts = c( unused_readouts, unlist(strsplit(argument, " |\t")) )
 }
 
+#### LIBRARIES ####
+library("STASNet")
+
 if (cores == 0) {
   cores = detectCores() - 1;
 }
@@ -157,9 +160,6 @@ if (data_files[1] == ""){
 if (basal_nodes == ""){
   stop("A basal activity (.dat) list file is required")
 }
-
-#### LIBRARIES ####
-library("STASNet")
 
 #### HELPER FUNCTIONS ####
 # Print the time it took in a readable format
@@ -204,7 +204,7 @@ modelset=addVariableParameters(original_modelset = modelset,
                               accuracy=0.95)
   }
 if (extension){
-  extensionMat=suggestExtension(qoriginal_model = modelset,
+  extensionMat=suggestExtension(original_model = modelset,
                                 parallel = T,
                                 mc = cores,
                                 sample_range=c(10^(2:-1),0,-10^(-1:2)),
