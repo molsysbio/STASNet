@@ -17,6 +17,19 @@ mul_path <- function(p1, p2) {
     return(c(pos_links, remaining))
 }
 
+# Special product for confidence interval
+# A multiplication by 0 is 0 whatever the other side
+get_range_product <- function(values1, range1) {
+    if (any(!is.na(c(values1, range1))) && any(c(values1, range1) == 0)) {
+        return(0)
+    }
+    if (is.na(values1) || is.na(range1) || is.nan(values1) || is.nan(range1)) {
+        return(NA)
+    } else {
+        return(values1 * range1)
+    }
+}
+
 # Compute the confidence interval without any dependency assumption
 product_ci <- function(ci1, ci2) {
     aa = ci1$value
@@ -33,19 +46,17 @@ product_ci <- function(ci1, ci2) {
     lb = ci2$lv
     if (is.null(lb)) { lb = -Inf
     } else if (is.na(lb) || is.nan(lb)) { lb = -Inf }
-    return(c( aa*bb, min(ha*lb, hb*la, la*lb, ha*hb), max(ha*hb, hb*la, ha*lb, la*lb) ))
+    values = c( get_range_product(ha, hb),
+                get_range_product(hb, la),
+                get_range_product(ha, lb),
+                get_range_product(lb, la)
+               )
+    return(c( aa*bb, min(values, na.rm=TRUE), max(values, na.rm=TRUE) ))
 }
 # Compute the confidence interval of a product of parameters using the information provided by profile likelihood
 pl_ci_product <- function(mra_model, p1id, p2id) {
     if (length(mra_model$upper_values)==0 || length(mra_model$lower_values)==0) {
         stop("Profile likelihood results are necessary to compute a confidence interval")
-    }
-    get_range_product <- function(values1, range1) {
-        if (is.na(values1) || is.na(range1) || is.nan(values1) || is.nan(range1)) {
-            return(NA)
-        } else {
-            return(values1 * range1)
-        }
     }
     
     values = c( get_range_product(mra_model$upper_values[p1id], mra_model$param_range[[p1id]]$high_set[p2id]),
@@ -57,10 +68,14 @@ pl_ci_product <- function(mra_model, p1id, p2id) {
     if (length(which(!is.na(values))) > 0) {
         values = c(values[!is.na(values)], param_value)
     } else {
-        values = NA
+        return(param_value, NA, NA)
     }
+    min_value = min(values)
+    max_value = max(values)
+    if (min_value > param_value) { min_value = -Inf }
+    if (max_value < param_value) { max_value = Inf }
 
-    return(c( param_value, min(values), max(values) ))
+    return(c( param_value, min_value, max_value ))
 }
 
 #' Compute direct paths for a model
@@ -98,13 +113,6 @@ getDirectPaths <- function(mra_model, non_stop_nodes=c()) {
                 cip = pl_ci_product(mra_model, rev$pid, pid)
                 pmul = mul_path(main_path$links, path$links)
                 final_paths[[length(final_paths)+1]] = list( path=paste0(pmul, collapse="*"), value=cip[1], lv=cip[2], hv=cip[3] )
-            }
-        }
-        if (!all_positived) { # Not tested !!
-            if (length(rev$path) > 1) {
-                for (pp in rev$path) {
-                    rev_links[[length(rev_links)+1]] = list(pid=rev$pid, path=pp)
-                }
             }
         }
     }
@@ -234,7 +242,6 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
     colors = cbbPalette[ as.factor(aggregated_paths$paths_attribution) ]
 
     aggregated_paths = aggregated_paths$paths
-    aggregated_paths = t( apply(aggregated_paths, 1, function(rr){ rr[is.na(rr)] = rr["value"]; rr }) )
     # Compute the limits of the drawing region and make NA and infinite values extend beyond
     ymin = max(-lim, min(aggregated_paths, na.rm=TRUE))
     ymax = min(lim, max(aggregated_paths, na.rm=TRUE))
@@ -270,11 +277,11 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
         # Add text for the parameters whose value is outside the limits
         out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
         if (length(out_up) > 0) {
-            text(xmax, out_up, signif(aggregated_paths[out_up, "value"], 3) )
+            text(xmax, out_up, signif(aggregated_paths[out_up, "value"], 3), cex=1.4 )
         }
         out_down = which(apply(aggregated_paths, 1, function(X) {X["value"] < -lim}))
         if (length(out_down) > 0) {
-            text(xmin, out_down, signif(aggregated_paths[out_down, "value"], 3) )
+            text(xmin, out_down, signif(aggregated_paths[out_down, "value"], 3), cex=1.4 )
         }
         # Draw lines to separate paths
         segments(xmin, line_pos, ymax, line_pos, col="gray")
@@ -293,11 +300,11 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
         # Add text for the parameters whose value is outside the limits
         out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
         if (length(out_up) > 0) {
-            text(out_up, ymax, signif(aggregated_paths[out_up, "value"], 3) )
+            text(out_up, ymax, signif(aggregated_paths[out_up, "value"], 3), cex=1.4 )
         }
         out_down = which(apply(aggregated_paths, 1, function(X) {X["value"] < -lim}))
         if (length(out_down) > 0) {
-            text(out_down, ymin, signif(aggregated_paths[out_down, "value"], 3) )
+            text(out_down, ymin, signif(aggregated_paths[out_down, "value"], 3), cex=1.4 )
         }
         # Draw lines to separate paths
         segments(line_pos, ymin, line_pos, ymax, col="gray")
