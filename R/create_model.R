@@ -793,7 +793,7 @@ extractMIDAS <- function(to_detect) {
 #' @param structure A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.
 #' @param local_values A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input
-# @export
+#' @export
 #' @family Network graph
 plotNetworkGraph <- function(structure, expdes="", local_values="") {
     if (class(structure) == "matrix") {
@@ -810,49 +810,39 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
     }
   
   len=length(rownames(adm))
-  g1 <- graphAM(adjMat=t(adm),edgemode="directed")
-  
-# add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
-  if (class(expdes) == "Rcpp_ExperimentalDesign" && any(local_values != "")){
-    if (length(expdes$inhib_nodes)>0){
-      for (nn in rownames(adm)[1+expdes$inhib_nodes]){
-        g1 <- addNode(paste0(nn,"i"),g1)
-        g1 <- addEdge(nn,paste0(nn,"i"),g1)
-      }
-    }
-  }
+  g1 <- graph::graphAM(adjMat=t(adm),edgemode="directed")
   
   # setting of general and creation of changed properties
-  nodeRenderInfo(g1) <- list(shape="ellipse")
-  nodeRenderInfo(g1) <- list(textCol="black")
-  nodeRenderInfo(g1) <- list(lwd=1)
-  edgeRenderInfo(g1) <- list(fontsize=10)
-  edgeRenderInfo(g1) <- list(textCol="black")
-  edgeRenderInfo(g1) <- list(col="black")
+  graph::nodeRenderInfo(g1) <- list(shape="ellipse")
+  graph::nodeRenderInfo(g1) <- list(textCol="black")
+  graph::nodeRenderInfo(g1) <- list(lwd=1)
+  graph::edgeRenderInfo(g1) <- list(fontsize=10)
+  graph::edgeRenderInfo(g1) <- list(textCol="black")
+  graph::edgeRenderInfo(g1) <- list(col="black")
   
-  g1 <- layoutGraph(g1)
+  g1 <- Rgraphviz::layoutGraph(g1)
 
   # Add the experimental setup if provided
   if (class(expdes) == "Rcpp_ExperimentalDesign") {
-    nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
+    graph::nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
     
     if (length(expdes$inhib_nodes)>0){
-      nodeRenderInfo(g1)$lwd[1+expdes$inhib_nodes]=4 # Populate for perturbations
-      nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
-      nodeRenderInfo(g1)$col[(len+1):(len+length(expdes$inhib_nodes))]="white" # mask inhibitor pseudo nodes
-      nodeRenderInfo(g1)$textCol[(len+1):(len+length(expdes$inhib_nodes))]="white" 
+      graph::nodeRenderInfo(g1)$lwd[1+expdes$inhib_nodes]=4 # Populate for perturbations
+      graph::nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
+      graph::nodeRenderInfo(g1)$col[(len+1):(len+length(expdes$inhib_nodes))]="white" # mask inhibitor pseudo nodes
+      graph::nodeRenderInfo(g1)$textCol[(len+1):(len+length(expdes$inhib_nodes))]="white" 
     }
     
     if (length(expdes$stim_nodes)>0){
-      nodeRenderInfo(g1)$lwd[1+expdes$stim_nodes] = 4
-      nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
+      graph::nodeRenderInfo(g1)$lwd[1+expdes$stim_nodes] = 4
+      graph::nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
     }
   }
-  if (any(local_values != "")) {
+  if (local_values[1] != "") {
     # Add Edge Weights left justified
-    efrom = edgeRenderInfo(g1)$enamesFrom
-    eto = edgeRenderInfo(g1)$enamesTo
-    edge_spline=edgeRenderInfo(g1)$splines
+    efrom = graph::edgeRenderInfo(g1)$enamesFrom
+    eto = graph::edgeRenderInfo(g1)$enamesTo
+    edge_spline=graph::edgeRenderInfo(g1)$splines
     
     for (idx in which(adm!=0)) {
       vv = local_values$local_response[idx]
@@ -860,35 +850,32 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
       ato = rownames(adm)[ifelse(idx %% len==0,len,idx %% len)]
       cc = which(afrom==efrom & ato==eto)
       cc = ifelse(length(cc)!=0, cc, which(afrom==eto & ato==efrom)) # Link in both directions
-      edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
-      edgeRenderInfo(g1)$label[cc] = trim_num(vv)
+      graph::edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
+      graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
       
-      coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
-      edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(edgeRenderInfo(g1)$label[cc])*10/2)
-      edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
-      if (vv < 0) { edgeRenderInfo(g1)$col[cc] = "orange" }
+      coordMat=Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
+      graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(graph::edgeRenderInfo(g1)$label[cc])*10/2)
+      graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
+      if (vv < 0) { graph::edgeRenderInfo(g1)$col[cc] = "orange" }
     }
     
     # Add Inhibitor estimates
     if (length(expdes$inhib_nodes)>0){
-      for (idx in 1:length(expdes$inhib_nodes)) {
-        vv = local_values$inhibitors[idx]
-        iname = paste0(colnames(adm)[expdes$inhib_nodes[idx]+1], "i")
-        nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
-        cc = which(nname==efrom & iname==eto)
-        edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
-        edgeRenderInfo(g1)$label[cc] = trim_num(vv)
-        edgeRenderInfo(g1)$textCol[cc]="red"
-        
-        coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
-        edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
-        edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
-      }
+      nodes = names(graph::nodeRenderInfo(g1)$nodeX)
+      inhib = colnames(adm)[expdes$inhib_nodes+1]      
+      cc = which(nodes %in% inhib)
+      ix = graph::nodeRenderInfo(g1)$labelX[cc] + graph::nodeRenderInfo(g1)$lWidth[cc]
+      iy = graph::nodeRenderInfo(g1)$labelY[cc] - 0.5*graph::nodeRenderInfo(g1)$height[cc]
+      iv = local_values$inhibitors
     }
   }
-  renderGraph(g1)
+  
+  Rgraphviz::renderGraph(g1)
+  if (local_values[1] != "" & length(expdes$inhib_nodes)>0){
+  text(x = ix, y = iy, labels = trim_num(iv), col="red",cex=0.6, pos=4, offset=0.5)
+  }
   invisible(g1)
-  # TODO MARK REMOVED LINKS
+  # (1) TODO MARK REMOVED LINKS, (2) ALLOW TO GIVE CLUSTERS THAT SHOULD BE KEPT IN CLOSE VICINITY 
 }
 
 #' Extracts the data, the experimental design and the structure from the input files
