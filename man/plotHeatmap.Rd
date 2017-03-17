@@ -6,7 +6,8 @@
 \usage{
 plotHeatmap(mat, main = "", lim = Inf, fixedRange = FALSE,
   stripOut = 0.05, col = colorRampPalette(c("deepskyblue", "white",
-  "red1")), textCol = "gray10", sig_numbers = 2, show_values = TRUE)
+  "red1")), textCol = "gray10", sig_numbers = 2, show_values = TRUE,
+  scale_rows = F)
 }
 \arguments{
 \item{mat}{a numeric matrix that should be plotted}
@@ -26,6 +27,8 @@ plotHeatmap(mat, main = "", lim = Inf, fixedRange = FALSE,
 \item{sig_numbers}{number of significant parameters to display in the heatmap}
 
 \item{show_values}{Whether the values should be printed in the heatmap boxes or not.}
+
+\item{scale_rows}{Transforms color code to show differences between columns by formula: x-rowmean/abs(rowmean)}
 }
 \value{
 Nothing
