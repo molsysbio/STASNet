@@ -15,18 +15,25 @@ cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7"
 #' @param textCol string denoting the color of inset text
 #' @param sig_numbers number of significant parameters to display in the heatmap
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
+#' @param scale_rows Transforms color code to show differences between columns by formula: x-rowmean/abs(rowmean)
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE){
+plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE,scale_rows=F){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
   # cutoff and transformation of colour
-  m = mat
+  if (scale_rows){
+    m=sweep(mat,1,apply(mat,1,mean,na.rm=T),"-")
+    m=sweep(m,1,apply(mat,1,function(x) abs(mean(x,na.rm=T))),"/")
+  }else{
+    m=mat
+  }
+  
   if (stripOut >= 0.5) { stop("Cannot strip more than 50% of the data to generate the color scale") } 
   if (!is.numeric(lim)) {stop("lim should be numeric")}
   if (!fixedRange) {
-      lowLim = max(-lim,quantile(mat,stripOut, na.rm=T))
-      upLim = min(lim,quantile(mat,1-stripOut, na.rm=T))
+      lowLim = max(-lim,quantile(m,stripOut, na.rm=T))
+      upLim = min(lim,quantile(m,1-stripOut, na.rm=T))
   } else {
       lowLim = -lim
       upLim = lim
@@ -37,7 +44,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
   
   # linearized matrix order (1,1) (2,1) (3,1) (4,1)... for text inset
   ref=c(t(as.matrix(mat[nrow(mat):1,]))) 
-
+  
   # Generate heatmap with textual inset
   if (show_values) {
     panel_function <- function(...){
