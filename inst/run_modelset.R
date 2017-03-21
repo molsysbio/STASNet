@@ -234,7 +234,7 @@ if (reduction) {
 # 3.0 plot parameters
 if (relax){
   pdf(paste0(folder, "parameter_heatmap.pdf"),onefile=T,width =6+modelset$nb_models/2,height=4+(length(modelset$parameters)/modelset$nb_models)/5)  
-  mat=compareParameters(modelset)
+  mat=STASNet:::compareParameters(modelset)
   m=sweep(mat,1,apply(mat,1,mean,na.rm=T),"-")
   m=sweep(m,1,apply(mat,1,function(x) abs(mean(x,na.rm=T))),"/")
   pheatmap(m[modelset$variable_parameters,], main = "variable parameters")
