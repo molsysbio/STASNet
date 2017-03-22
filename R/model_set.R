@@ -37,13 +37,12 @@ compareParameters <- function(modelset) {
   links=matrix(modelset$parameters,ncol=modelset$nb_models,byrow = F)
   colnames(links) <- modelset$names
   rownames(links) <- unname(sapply(modelset$model$getParametersLinks(), function(x) STASNet:::simplify_path_name(x)))
-  }
 
   if (length(modelset$variable_parameters)==0){
      warning("No variable links detected, please run 'addVariableParameters()' before calling this function!")
   }
   
-  plotHeatmap(mat = links,
+  STASNet:::plotHeatmap(mat = links,
               main = "modelset parameters rowwise scaled to mean",
               stripOut = 0,
               lim = 10,
