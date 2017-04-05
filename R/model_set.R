@@ -44,7 +44,7 @@ compareParameters <- function(modelset) {
   
   STASNet:::plotHeatmap(mat = links,
               main = "modelset parameters rowwise scaled to mean",
-              stripOut = 0,
+              stripOut = 0.01,
               lim = 10,
               scale_rows = T)
   return(links)

@@ -112,6 +112,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
   order_resid = order(residuals)
   order_id = order_resid[1:min(20, length(residuals))]
+  old_topres = residuals[order_id]
   for ( i in 1:length(order_id) ) {
     p_res = residuals[order_id[i]]
     if (!is.na(p_res) && !is.infinite(p_res)) {
@@ -131,9 +132,12 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     message("Best residuals :")
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
+
   if (perform_plots) {
-    plot(1:length(order_resid), residuals[order_resid], main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l")
+    plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+    lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
   }
+  
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)
   best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
@@ -229,10 +233,40 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   
   message("setting completed")
   results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores)
-  bestid = order(results$residuals)[1]
-  parameters = results$params[bestid,]
-  bestfit = results$residuals[bestid]
+  residuals = results$residuals
+  params = results$params
   
+  # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
+  order_resid = order(residuals,na.last = T)
+  order_id = order_resid[1:min(20, length(residuals))]
+  old_topres = residuals[order_id]
+  for ( i in 1:length(order_id) ) {
+    p_res = residuals[order_id[i]]
+    if (!is.na(p_res) && !is.infinite(p_res)) {
+      repeat {
+        result = model$fitmodelset(data_, params[order_id[i],])
+        if (p_res == result$residuals) {
+          break
+        }
+        p_res = result$residuals
+      }
+      params[order_id[i],] = result$parameter
+      residuals[order_id[i]] = result$residuals
+    }
+  }
+  if (debug) {
+    # Print the 20 smallest residuals to check if the optimum has been found several times
+    message("Best residuals :")
+    message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
+  }
+  if (perform_plots) {
+    plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+    lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+  }
+  
+  bestid = order(residuals)[1]
+  parameters = params[bestid,]
+  bestfit = residuals[bestid]
   infos = generate_infos(csv_files, inits, sort(results$residuals)[1:5], method, model_links, model_name)
   self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV)
   # param_range, lower_values, upper_values defined using profile likelihood
@@ -249,10 +283,12 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #' @param nb_samples Number of samples to generate to fit the new variable parameters
 #' @param accuracy Cutoff probability for the chi^2 test
 #' @param method Name of the LHS method to use
+#' @param notVariable Parameters that should not be varied, either a numeric or character vector identifying the parameters from 'modelset$model$getParametersNames()$names', defaults to 'c()'.
 #' @return An updated MRAmodelSet with the new parameter sets
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+#' @author Bertram Klinger \email{bertram.klinger@charite.de}
+addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs",notVariable=c()) {
   # clone MRAmodelSet object to have seperate objects at hand
   modelset = cloneModel(original_modelset)
   
@@ -260,39 +296,94 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   model = modelset$model
   
-  # Look which parameters are not already variable
   total_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+  params = modelset$model$getParametersNames()$names
   nb_sub_params = length(total_parameters)
-  max_iterations = ifelse(max_iterations<=0,nb_sub_params,max_iterations)
   
-  for (it in 1:max_iterations) {
-    if (length(modelset$variable_parameters) > 0) {
-      extra_parameters = total_parameters[-modelset$variable_parameters]
+  # Determine indices of parameters which should not be varied
+  if (length(notVariable)>0){
+  if (is.numeric(notVariable)){
+    allIn = match(notVariable,total_parameters)
+    if (any(is.na(allIn))){
+      stop(paste("Numbers in 'notVariable' do not match parameter indices!","\n",
+                    "Please use indices from 1 to",nb_sub_params,"!"))
+    }
+  }else if(is.character(notVariable)){
+    allIn = match(notVariable,params)
+    if (any(is.na(allIn))){
+      stop(paste("Character strings in 'notVariable' do not match parameter names!","\n",
+                 "Please use the names from 'modelset$model$getParametersNames()$names'"))
     } else{
-      extra_parameters = total_parameters
+      notVariable = allIn
     }
-    # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
-    psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+  }  
+  }
+
+  nr_free_params = nb_sub_params-length(union(notVariable,modelset$variable_parameters))
+  
+  if (nr_free_params==0){
+    warning("No parameters left to be set variable!")
+  } else {
+    if (max_iterations <= 0 | max_iterations > nr_free_params){
+      max_iterations = nr_free_params
+    }
+
+  # Extension Phase: find the parameter which fitted separately to each model improves the performance most and if significant keep variable    
+    for (it in 1:(max_iterations)) {
+      # Look which parameters are not already variable or should be kept constant
+      if (length(modelset$variable_parameters) > 0 | length(notVariable) > 0) {
+        extra_parameters = total_parameters[-union(modelset$variable_parameters,notVariable)]
+      } else{
+        extra_parameters = total_parameters
+      }
     
-    bestres = min(unlist(psets["residuals",]))
-    deltares = modelset$bestfit - bestres
-    if (deltares > qchisq(accuracy, modelset$nb_models) ) {
-      res_id = which.min(unlist(psets["residuals",]))
-      par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
-      new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+      psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+      bestres = min(unlist(psets["residuals",]))
+      deltares = modelset$bestfit - bestres
+      if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+        res_id = which.min(unlist(psets["residuals",]))
+        par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
+        new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
       
-      message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(1-pchisq(deltares, df=modelset$nb_models)) ))
-      message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
-      message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
+        message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(1-pchisq(deltares, df=modelset$nb_models)) ))
+        message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
+        message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
        
-      var_pars = c( modelset$variable_parameters, par_id )
-      modelset = setVariableParameters(modelset, var_pars)
-      modelset$parameters = new_parameters
-      modelset$bestfit = bestres
-      get_running_time(init_time, "elapsed");
-    } else {
-      break
+        var_pars = c( modelset$variable_parameters, par_id )
+        modelset = setVariableParameters(modelset, var_pars)
+        modelset$parameters = new_parameters
+        modelset$bestfit = bestres
+        get_running_time(init_time, "elapsed");
+      } else {
+        break
+      }
     }
+  }
+  if (length(modelset$variable_parameters)>0){
+    message("-- Lumping Phase --")
+      # Lumping Phase: find the parameters which fitted together to not decrease model fits significantly
+      for (it in 1:length(modelset$variable_parameters)) {
+        psets=sapply(modelset$variable_parameters,refitWithFixedParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+        bestres = min(unlist(psets["residuals",]))
+        deltares = bestres - modelset$bestfit
+        if (deltares < qchisq(accuracy, modelset$nb_models) ) {
+          res_id = which.min(unlist(psets["residuals",]))
+          par_id = psets["removed_var",ceiling(res_id/nb_samples)][[1]]
+          new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+      
+          message(paste0("lumpable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(pchisq(deltares, df=modelset$nb_models)) ))
+          message(paste0("fitting impairment: ",round(bestres,2) , "(new) - ",round(modelset$bestfit,2) , "(old) = ", round(deltares,2))) 
+          message(paste0("old parameter:", paste0(signif(modelset$parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" "), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
+      
+          modelset = setVariableParameters(modelset, modelset$variable_parameters[-ceiling(res_id/nb_samples)])
+          modelset$parameters = new_parameters
+          modelset$bestfit = bestres
+          get_running_time(init_time, "elapsed");
+        } else {
+          message("Lumping finished")
+          break
+        }
+    }  
   }
   get_running_time(init_time, "in total");
   return(modelset)
@@ -306,10 +397,15 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 #' @param nb_cores Number of cores to use for the fitting
 #' @param nb_samples Number of samples to generate for the fitting
 #' @param method Method to use for the fitting
+#' @param reverse Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter
 #' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
-refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs"){
-  model=modelset$model
-  var_pars = unique(c( var_par, modelset$variable_parameters ))
+refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
+  model = modelset$model
+  if (reverse){
+    var_pars = modelset$variable_parameters[-match(var_par,modelset$variable_parameters)]  
+  }else {
+    var_pars = unique(c( var_par, modelset$variable_parameters ))
+  }
   model$setVariableParameters(var_pars)
   new_pset = matrix( rep(modelset$parameters, nb_samples), ncol=length(modelset$parameters), byrow=T )
   
@@ -320,6 +416,23 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   refit = parallel_initialisation(model, modelset$data, new_pset, nb_cores)
   
   return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
+}
+
+#' Refit modelset by iterative lumping of variable parameters into a single parameter
+#'
+#' @param var_par ID of the variable parameters to test
+#' @param modelset An MRAmodelSet object
+#' @param nb_sub_params Number of parameters per submodel
+#' @param nb_cores Number of cores to use for the fitting
+#' @param nb_samples Number of samples to generate for the fitting
+#' @param method Method to use for the fitting
+#' @return A list with the fields 'residuals' (fitted residuals), 'removed_var' (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
+#' @seealso refitWithVariableParameter
+refitWithFixedParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs"){
+  
+  output = refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores, nb_samples, method, reverse=T)
+  
+  return(list(residuals = output$residuals,removed_var = output$added_var, params = output$params))
 }
 
 #' Perform an initialisation of the model 

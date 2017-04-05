@@ -17,7 +17,7 @@ method = "geneticlhs"
 relax = TRUE
 extension = FALSE
 reduction = FALSE
-perform_pl = FALSE
+perform_pl = TRUE
 # Autodetection of the cores
 cores = 0
 
@@ -183,7 +183,7 @@ dir.create(folder)
 
 #### 1 FIT MODEL SET ####
 init_time = proc.time()["elapsed"];
-#pdf(paste0(folder, "distribution_", conditions, ".pdf"))
+if (perform_pl) { pdf(file.path(folder, paste0("distribution_", conditions, ".pdf"))) }
 modelset = createModelSet(model_links = network,
                           basal_file = basal_nodes,
                           csv_files = data_files,
@@ -192,7 +192,8 @@ modelset = createModelSet(model_links = network,
                           inits = inits,
                           perform_plots = perform_pl,
                           method = method)
-#dev.off()
+if (perform_pl){ dev.off() }
+
 get_running_time(init_time, paste("to build the model with", inits, "initialisations."))
 writeLines(modelset$infos[2])
 
@@ -210,7 +211,7 @@ if (extension){
                                 mc = cores,
                                 sample_range=c(10^(2:-1),0,-10^(-1:2)),
                                 print = F)
-write.table(extensionMat, paste0(folder, "extension_", conditions, ".csv"), row.names=FALSE, quote=FALSE, sep="\t")
+write.table(extensionMat, file.path(folder, paste0("extension_", conditions, ".csv")), row.names=FALSE, quote=FALSE, sep="\t")
 }
 
 if (reduction) {
@@ -233,7 +234,7 @@ if (reduction) {
 #### 3 PLOT RESULTS ####
 # 3.0 plot parameters
 if (relax){
-  pdf(paste0(folder, "parameter_heatmap.pdf"),onefile=T,width =6+modelset$nb_models/2,height=4+(length(modelset$parameters)/modelset$nb_models)/5)  
+  pdf(file.path(folder, "parameter_heatmap.pdf"),onefile=T,width =6+modelset$nb_models/2,height=4+(length(modelset$parameters)/modelset$nb_models)/5)  
   mat=STASNet:::compareParameters(modelset)
   m=sweep(mat,1,apply(mat,1,mean,na.rm=T),"-")
   m=sweep(m,1,apply(mat,1,function(x) abs(mean(x,na.rm=T))),"/")
@@ -246,13 +247,13 @@ modelgroup=extractSubmodels(modelset)
 for ( ii in 1:length(modelgroup$names)){
 model=modelgroup$models[[ii]]
 # 3.1 plot graph
-pdf(paste0(folder,"graph_",model$name,".pdf"))
+pdf(file.path(folder,paste0("graph_",model$name,".pdf")))
 plotModelGraph(model)
 dev.off()
 
 # 3.2 plot acuracy heatmap
 mat=model$data$stim_data
-pdf(paste0(folder, "accuracy_heatmap_", model$name, ".pdf"),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
+pdf(file.path(folder, paste0("accuracy_heatmap_", model$name, ".pdf")),onefile=T,width =5+ncol(mat)/3,height=4+nrow(mat)/6)
 plotModelAccuracy(model)
 plotModelScores(model, main=paste0("Global R = ", model$bestfitscore))
 dev.off()
@@ -272,7 +273,7 @@ printParameters(model)
 #plotModelSimulation(model, getCombinationMatrix(c("MEKi", "GSK3ABi", "IGF", "TGFA", "PI3Ki")))
 #dev.off()
 # Plot the simulated conditions
-pdf(paste0(folder, "model_simulation_", model$name, ".pdf"))
+pdf(file.path(folder, paste0("model_simulation_", model$name, ".pdf")))
 plotModelSimulation( model_description = model ,with_data = TRUE,log_axis = FALSE)
 dev.off()
 }
@@ -280,7 +281,7 @@ dev.off()
 #### EXPORT MODEL DATA ####
 #  export Model data
 for (ii in 1:length(modelgroup$names))
-exportModel(modelgroup$models[[ii]], paste0(folder,modelgroup$models[[ii]]$name,".mra"))
+exportModel(modelgroup$models[[ii]], file.path(folder,paste0(modelgroup$models[[ii]]$name,".mra")))
 
 print("Finished")
 
