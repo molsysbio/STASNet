@@ -402,7 +402,11 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
   model = modelset$model
   if (reverse){
-    var_pars = modelset$variable_parameters[-match(var_par,modelset$variable_parameters)]  
+    # remove from variable parameter set
+    var_pars = modelset$variable_parameters[-match(var_par,modelset$variable_parameters)]   
+    # give parameters one value (mean)
+    mean_par = rep(mean(modelset$parameters[seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)]),modelset$nb_models)
+    modelset$parameters[seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)] = mean_par
   }else {
     var_pars = unique(c( var_par, modelset$variable_parameters ))
   }
