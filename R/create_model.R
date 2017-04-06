@@ -1399,6 +1399,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   if ( any(variaPar) ){ 
     self = setVariableParameters(self, which(variaPar))
   }
+  return(self)
 }
 
 # Perform several simulated annealing, one per core
