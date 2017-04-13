@@ -374,8 +374,9 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
           message(paste0("lumpable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(pchisq(deltares, df=modelset$nb_models)) ))
           message(paste0("fitting impairment: ",round(bestres,2) , "(new) - ",round(modelset$bestfit,2) , "(old) = ", round(deltares,2))) 
           message(paste0("old parameter:", paste0(signif(modelset$parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" "), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
-      
-          modelset = setVariableParameters(modelset, modelset$variable_parameters[-ceiling(res_id/nb_samples)])
+          
+          var_pars = modelset$variable_parameters[-ceiling(res_id/nb_samples)]
+          modelset = setVariableParameters(modelset, var_pars)
           modelset$parameters = new_parameters
           modelset$bestfit = bestres
           get_running_time(init_time, "elapsed");
@@ -400,24 +401,31 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 #' @param reverse Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter
 #' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
 refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
-  model = modelset$model
+  
   if (reverse){
     # remove from variable parameter set
     var_pars = modelset$variable_parameters[-match(var_par,modelset$variable_parameters)]   
-    # give parameters one value (mean)
-    mean_par = rep(mean(modelset$parameters[seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)]),modelset$nb_models)
-    modelset$parameters[seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)] = mean_par
   }else {
     var_pars = unique(c( var_par, modelset$variable_parameters ))
   }
-  model$setVariableParameters(var_pars)
-  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol=length(modelset$parameters), byrow=T )
+
+  modelset = STASNet:::setVariableParameters(modelset,var_pars)
+  model = modelset$model
+  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol = model$nr_of_parameters(), byrow = T )
   
-  samples = getSamples(modelset$nb_models, nb_samples, method, nb_cores)
+  if (reverse){
+    samples = matrix( rep( STASNet:::getSamples( 1, nb_samples-1, method, nb_cores ), modelset$nb_models ), nrow = nb_samples-1, byrow = F )
+  }else{  
+    samples = STASNet:::getSamples( modelset$nb_models, nb_samples-1, method, nb_cores )
+  }
+  
+  # always add the mean parameter as starting parameter into the sampling
+  avgPar = rep(mean(modelset$parameters[seq(from = var_par, to = model$nr_of_parameters(), by=nb_sub_params)]), modelset$nb_models)
+  samples = rbind(avgPar,samples)
   
   new_pset[,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)] = samples
   
-  refit = parallel_initialisation(model, modelset$data, new_pset, nb_cores)
+  refit = STASNet:::parallel_initialisation(model, modelset$data, new_pset, nb_cores)
   
   return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
 }
@@ -705,9 +713,8 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     }
     
     # Reorder the results to get the same output as the non parallel function
-    results = list()
-    results$residuals = c()
-    results$params = c()
+    results=list(residuals=c(),params=c())
+    
     if (!is.list(parallel_results[[1]])) {
       stop(parallel_results[[1]])
     }
