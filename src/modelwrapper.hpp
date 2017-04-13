@@ -84,6 +84,7 @@ public:
     void setVariableParameters(std::vector<size_t> variable_parameters);
     void setModel(ExperimentalDesign exp, ModelStructure mod);
     void setNbModels(size_t nb_submodels);
+    SEXP getSubParameterIDs();
 };
 
 

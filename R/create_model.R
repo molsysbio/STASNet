@@ -272,7 +272,9 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
       extra_parameters = total_parameters
     }
     # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
+    old_variables = modelset$variable_parameters
     psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+    modelset = setVariableParameters(modelset, old_variables)
     
     bestres = min(unlist(psets["residuals",]))
     deltares = modelset$bestfit - bestres

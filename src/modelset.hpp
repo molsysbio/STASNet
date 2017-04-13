@@ -42,10 +42,10 @@ public:
     virtual size_t nr_of_parameters() const;
     size_t nr_of_parameters_per_submodel() const;
     size_t modelRank() const { return nb_submodels_ * rank_; }
+    std::vector<size_t> subparameters_ids_; // IDs of the parameters that should be fitted independently
 
 protected:
     unsigned int nb_submodels_;
-    std::vector<size_t> subparameters_ids_; // IDs of the parameters that should be fitted independently
     /*
     std::vector< std::vector<MathTree::parameter::Ptr> > subparameters_;
     std::vector<equation_matrix> submodels_eqns_;
