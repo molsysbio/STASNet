@@ -7,7 +7,8 @@ A new link found to be suitable by the modeller can then added by re-running the
 Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!}
 \usage{
 suggestExtension(original_model, parallel = F, mc = 1,
-  sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F)
+  sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F,
+  padjust_method = "BY")
 }
 \arguments{
 \item{original_model}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}
@@ -19,6 +20,8 @@ suggestExtension(original_model, parallel = F, mc = 1,
 \item{sample_range}{Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))}
 
 \item{print}{Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"}
+
+\item{padjust_method}{The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)}
 }
 \description{
 Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model

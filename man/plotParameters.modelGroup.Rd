@@ -4,7 +4,7 @@
 \alias{plotParameters.modelGroup}
 \title{Plot the parameters of the models}
 \usage{
-\method{plotParameters}{modelGroup}(model_group)
+plotParameters.modelGroup(model_group)
 }
 \arguments{
 \item{model_group}{A modelGroup object}

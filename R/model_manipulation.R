@@ -312,13 +312,14 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
 #' @param mc Number of cores that should be used for the computation
 #' @param sample_range Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))
 #' @param print Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"
+#' @param padjust_method The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)
 #' @export
 #' @seealso selectMinimalModel, createModel
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 #' @examples \dontrun{
 #' ext_list = suggestExtension(mramodel)
 #' }
-suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F){
+suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F, padjust_method="BY"){
   # Clone model object to not change original model specifications
   model_description = cloneModel(original_model)
   
@@ -374,7 +375,7 @@ suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c
   colnames(extension_mat) <- cnames  
   } 
   extension_mat=extension_mat[order(as.numeric(as.matrix(extension_mat$Res_delta)),decreasing=T),]
-  extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method="BH"))
+  extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method=padjust_method))
   
   message("Extension tests completed!")
   sig_res = sum(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)

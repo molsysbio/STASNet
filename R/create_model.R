@@ -327,7 +327,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
     if (max_iterations <= 0 | max_iterations > nr_free_params){
       max_iterations = nr_free_params
     }
-
+    
   # Extension Phase: find the parameter which fitted separately to each model improves the performance most and if significant keep variable    
     for (it in 1:(max_iterations)) {
       # Look which parameters are not already variable or should be kept constant
@@ -336,19 +336,24 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
       } else{
         extra_parameters = total_parameters
       }
-    
+      # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
+      old_variables = modelset$variable_parameters
       psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+      modelset = setVariableParameters(modelset, old_variables)
+      
       bestres = min(unlist(psets["residuals",]))
       deltares = modelset$bestfit - bestres
       if (deltares > qchisq(accuracy, modelset$nb_models) ) {
         res_id = which.min(unlist(psets["residuals",]))
         par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
         new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
-      
+        start_val=unlist(psets["start_val",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+        
         message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(1-pchisq(deltares, df=modelset$nb_models)) ))
         message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
         message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
-       
+        message(paste0("starting values:", paste0(signif(start_val[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
+        
         var_pars = c( modelset$variable_parameters, par_id )
         modelset = setVariableParameters(modelset, var_pars)
         modelset$parameters = new_parameters
@@ -363,18 +368,22 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
     message("-- Lumping Phase --")
       # Lumping Phase: find the parameters which fitted together to not decrease model fits significantly
       for (it in 1:length(modelset$variable_parameters)) {
+        old_variables = modelset$variable_parameters
         psets=sapply(modelset$variable_parameters,refitWithFixedParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+        modelset = setVariableParameters(modelset, old_variables)
         bestres = min(unlist(psets["residuals",]))
         deltares = bestres - modelset$bestfit
         if (deltares < qchisq(accuracy, modelset$nb_models) ) {
           res_id = which.min(unlist(psets["residuals",]))
           par_id = psets["removed_var",ceiling(res_id/nb_samples)][[1]]
           new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
-      
+          start_val=unlist(psets["start_val",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+              
           message(paste0("lumpable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(pchisq(deltares, df=modelset$nb_models)) ))
           message(paste0("fitting impairment: ",round(bestres,2) , "(new) - ",round(modelset$bestfit,2) , "(old) = ", round(deltares,2))) 
           message(paste0("old parameter:", paste0(signif(modelset$parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" "), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
-          
+          message(paste0("starting values:", paste0(signif(start_val[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
+        
           var_pars = modelset$variable_parameters[-ceiling(res_id/nb_samples)]
           modelset = setVariableParameters(modelset, var_pars)
           modelset$parameters = new_parameters
@@ -427,7 +436,7 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   
   refit = STASNet:::parallel_initialisation(model, modelset$data, new_pset, nb_cores)
   
-  return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
+  return(list(residuals = refit$residuals, added_var = var_par, params = refit$params, start_val = new_pset))
 }
 
 #' Refit modelset by iterative lumping of variable parameters into a single parameter
@@ -444,7 +453,7 @@ refitWithFixedParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0
   
   output = refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores, nb_samples, method, reverse=T)
   
-  return(list(residuals = output$residuals,removed_var = output$added_var, params = output$params))
+  return(list(residuals = output$residuals,removed_var = output$added_var, params = output$params, start_val = output$start_val))
 }
 
 #' Perform an initialisation of the model 
@@ -1075,11 +1084,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (length(blanks) == 0) {
     blank_values = matrix( rep(0, ncol(data_values)), nrow=1, dimnames=list(NULL, colnames(data_values)) )
   } else {
-    blank_values = colMeans(data_values[blanks,,drop=F], na.rm=T)
+    blank_values = apply(data_values[blanks,,drop=FALSE], 2, min, na.rm=TRUE)
   }
   blank_values[is.nan(blank_values)|is.na(blank_values)] = 0 # For perturbations without blank values 
   # Means of basal activity of antibodies
-  unstim_values = colMeans(data_values[controls,,drop=F], na.rm=T)
+  unstim_values = colMeans(data_values[controls,,drop=FALSE], na.rm=TRUE)
   if (any(is.nan(unstim_values)|is.na(unstim_values))) {
     stop("Unstimulated data are required to simulate the network")
   }

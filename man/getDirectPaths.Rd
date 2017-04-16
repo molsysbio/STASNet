@@ -5,17 +5,21 @@
 \alias{printDirectPaths}
 \title{Compute direct paths for a model}
 \usage{
-getDirectPaths(mra_model)
+getDirectPaths(mra_model, non_stop_nodes = c())
 
 printDirectPaths(mra_model, digits = 2)
 }
 \arguments{
 \item{mra_model}{An MRAmodel object}
 
+\item{non_stop_nodes}{A list of nodes that should not begin or end a path, usefull to compare models with different basal activities. If the node is only present as a first or last node of a path, the corresponding paths will be deleted.}
+
 \item{digits}{Number of digits to display for the confidence interval values}
 }
 \value{
 A list of lists indexed by the path name. Each sublist has fields path, value, hv and lv which represent respectively the path equation, the value of the path, the upper bound of the path and the lower bound of the path.
+
+Hidden. The direct paths
 }
 \description{
 Compute the direct paths for a model and their confidence intervals by combining the paths containing links with negative exponents with paths containing the same link with a positive exponent.

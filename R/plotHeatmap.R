@@ -49,6 +49,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
   if (show_values) {
     panel_function <- function(...){
                       arg<-list(...)
+                      panel.levelplot(arg$x, arg$y, is.na(arg$z), subscripts=which(is.na(arg$z)), col.regions="grey")
                       panel.levelplot(...)
                       panel.text(arg$x, arg$y,
                                  trim_num(ref,sig_numbers),
@@ -57,6 +58,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
   } else {
   panel_function <- function(...){
                       arg<-list(...)
+                      panel.levelplot(arg$x, arg$y, is.na(arg$z), subscripts=which(is.na(arg$z)), col.regions="grey")
                       panel.levelplot(...)
                     }
   }

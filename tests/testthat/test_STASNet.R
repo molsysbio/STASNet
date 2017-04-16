@@ -8,7 +8,14 @@ VAR_FILE = ""
 
 context("Model fitting accuracy")
 
+test_that("createModel works", {
+    expect_output( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim"), NA)
+})
 model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim") )
+test_that("createModel works with unused readouts and perturbations", {
+     expect_output( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", unused_readout=c("node2"), unused_perturbation=c("node2i")), NA )
+})
+sub_model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", unused_readout=c("node2"), unused_perturbation=c("node2i")) )
 
 test_that("All expected fields are present" ,{
     expect_equal(exists("min_cv", model), TRUE)
@@ -58,6 +65,15 @@ test_that("Export works correctly", {
 })
 test_that("Import works correctly", {
     expect_output(importModel("model.mra"), NA)
+})
+test_that("Export works correctly with unused readouts and perturbations", {
+    expect_output(exportModel(sub_model, "sub_model.mra"), NA)
+})
+test_that("Import works correctly with unused readouts and perturbations", {
+    expect_output(importModel("sub_model.mra"), NA)
+})
+test_that("Rebuild works correctly with unused readouts and perturbations", {
+    expect_output(rebuildModel("sub_model.mra", DATA_FILE), NA)
 })
 test_that("Rebuild works correctly", {
     expect_output(rebuildModel("model.mra", DATA_FILE), NA)
@@ -379,7 +395,25 @@ test_that("Product of direct paths is correct", {
 test_that("Product of direct and inverted paths is correct", {
     expect_equal(mul_path(p1, p2), c("r_C_B","r_B_A"))
 })
+# Note: This model does not have profile likelihood information
 test_that("getDirectPaths works", {
     expect_equal_to_reference(getDirectPaths(model), "model_direct_path.rds", tolerance=1e-5)
+    .GlobalEnv$direct_path = getDirectPaths(model)
+})
+test_that("getDirectPaths works with node removed", {
+    expect_equal_to_reference(getDirectPaths(model, c("node1")), "model_merged_direct_path.rds", tolerance=1e-5)
+})
+
+test_that("aggregateDirectPaths works", {
+    expect_silent( aggregateDirectPaths(list(a=direct_path, b=direct_path)) )
+})
+test_that("aggregateDirectPaths raises an error if 'direct_paths' is not a list", {
+    expect_error( aggregateDirectPaths(c("A->B")), "must be a list" )
+})
+test_that("aggregateDirectPaths raises an error if 'names(direct_paths)' is NULL", {
+    expect_error( aggregateDirectPaths(list(direct_path, direct_path)), "must be non NULL" )
+})
+test_that("plotModelParameters works", {
+    expect_silent( plotModelParameters(model) )
 })
 

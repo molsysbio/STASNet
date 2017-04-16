@@ -196,7 +196,7 @@ importModel <- function(file_name) {
     unused_readouts = c()
     if (grepl("^UR", file[lnb])) {
         unused_readouts = gsub("^UR( |\t)", "", file[lnb])
-        unused_readouts = unlist(strsplit(unused_perturbations, " |\t"))
+        unused_readouts = unlist(strsplit(unused_readouts, " |\t"))
         lnb = lnb + 1
     }
     # CV settings
@@ -391,4 +391,3 @@ checkMIDAS <- function(data_file) {
     if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS data or the field 'ID:type' is missing") }
     if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'TR' field is missing") }
 }
-

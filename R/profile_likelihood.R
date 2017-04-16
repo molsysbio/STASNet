@@ -188,6 +188,8 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
     styles = rep(c(sapply(1:6, rep, length(cbbPalette))), length.out=length(profiles))
 
     pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
+    eplot(c(0, 1), c(0, 1))
+    legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 )
     for (plid in 1:length(profiles)) {
         profile = profiles[[plid]]
         th_diff = profile$thresholds[2]-profile$thresholds[1]

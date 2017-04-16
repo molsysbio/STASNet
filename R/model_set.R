@@ -70,7 +70,7 @@ MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, ba
     class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models
     self$names = name
-    self$variable_parameters = c()
+    self$variable_parameters = numeric(0)
 
     return(self)
 }

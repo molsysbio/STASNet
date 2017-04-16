@@ -398,7 +398,6 @@ SEXP ModelSetWrapper::getSubParameterIDs() {
     return(Rcpp::wrap( ((ModelSet*)model)->subparameters_ids_ ));
 }
 
-
 RCPP_MODULE(ModelEx) {
   using namespace Rcpp ;
   class_<ModelWrapper>( "Model" )
@@ -434,7 +433,7 @@ RCPP_MODULE(ModelEx) {
         .method( "fitmodelset", &ModelSetWrapper::fitmodelset )
         .method( "setNbModels", &ModelSetWrapper::setNbModels )
         .method( "setVariableParameters", &ModelSetWrapper::setVariableParameters )
-	.method( "getSubParameterIDs", &ModelSetWrapper::getSubParameterIDs )
+        .method( "getSubParameterIDs", &ModelSetWrapper::getSubParameterIDs )
         ;
 }
 //        .method( "fitmodel" , &ModelSetWrapper::fitmodel )
