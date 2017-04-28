@@ -127,39 +127,37 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
 #' @param network_file The name of the file containing a network structure as an adjacency matrix, or an adjacency list.
 #' @return The weighted adjacency matrix corresponding to the network
 readNetworkAdj <- function(network_file) {
-    if (!is.matrix(network_file)) {
+    if (is.string(network_file)) {
         #network_file = as.matrix(read.csv(network_file, header=F))
         network_split = strsplit(readLines(network_file), ",|->|;|\\ |\t")
         network_file = t(sapply(network_split, function(X){X}))
-        # Adjacency list
-        if (ncol(network_file) <= 3) {
-            values = rep(1, nrow(network_file))
-            if (ncol(network_file) == 3) {
-                values = as.numeric(network_file[,3])
-                network_file = network_file[,1:2]
-            }
-            nodes = unique(as.character(network_file))
-            nnodes = length(nodes)
-            adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
-            for (ii in 1:nnodes) { adm[ii,ii]=-1 }
-            for (rr in 1:nrow(network_file)) {
-                adm[network_file[rr,2],network_file[rr,1]] = values[rr]
-            }
-        } else { # Adjacency matrix
-            if ( any(is.na(suppressWarnings(as.numeric(network_file)))) ) {
-                colnames(network_file) = network_file[1,]
-                network_file = matrix( as.numeric(network_file[-1,]), ncol=ncol(network_file), dimnames=list(NULL, colnames(network_file)) )
-            } else if (all( colnames(network_file) == paste0("V", 1:ncol(network_file)) )) {
-                colnames(network_file) = NULL
-            }
-            if (ncol(network_file) != nrow(network_file)) {
-                stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
-            }
-            rownames(network_file) = colnames(network_file)
-            adm = matrix( as.numeric(network_file), ncol=ncol(network_file), dimnames=list(NULL, colnames(network_file)) )
+    }
+    # Adjacency list
+    if (ncol(network_file) <= 3) {
+        values = rep(1, nrow(network_file))
+        if (ncol(network_file) == 3) {
+            values = as.numeric(network_file[,3])
+            network_file = network_file[,1:2]
         }
-    } else {
-        adm = network_file
+        nodes = unique(as.character(network_file))
+        nnodes = length(nodes)
+        adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
+        for (ii in 1:nnodes) { adm[ii,ii]=-1 }
+        for (rr in 1:nrow(network_file)) {
+            adm[network_file[rr,2],network_file[rr,1]] = values[rr]
+        }
+    } else { # Adjacency matrix
+        if ( any(is.na(suppressWarnings(as.numeric(network_file)))) ) {
+            colnames(network_file) = network_file[1,]
+            network_file = matrix( as.numeric(network_file[-1,]), ncol=ncol(network_file), dimnames=list(NULL, colnames(network_file)) )
+        } else if (all( colnames(network_file) == paste0("V", 1:ncol(network_file)) )) {
+            colnames(network_file) = NULL
+        }
+        if (ncol(network_file) != nrow(network_file)) {
+            stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
+        }
+        rownames(network_file) = colnames(network_file)
+        adm = matrix( as.numeric(network_file), ncol=ncol(network_file), dimnames=list(NULL, colnames(network_file)) )
     }
     return(adm)
 }
