@@ -143,7 +143,7 @@ readNetworkAdj <- function(network_file) {
             adm = matrix(0, ncol=nnodes, nrow=nnodes, dimnames=list(nodes, nodes))
             for (ii in 1:nnodes) { adm[ii,ii]=-1 }
             for (rr in 1:nrow(network_file)) {
-                adm[network_file[rr,1],network_file[rr,2]] = values[rr]
+                adm[network_file[rr,2],network_file[rr,1]] = values[rr]
             }
         } else { # Adjacency matrix
             if ( any(is.na(suppressWarnings(as.numeric(network_file)))) ) {
