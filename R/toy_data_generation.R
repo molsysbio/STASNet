@@ -161,7 +161,7 @@ readNetworkAdj <- function(network_file) {
     } else {
         adm = network_file
     }
-    invisible(adm)
+    return(adm)
 }
 
 #' Create simulated data
@@ -180,6 +180,7 @@ readNetworkAdj <- function(network_file) {
 createSimulation <- function(input_network, perturbations="", measured="", inhibitions=0.5, noise=0, replicates=3) {
     adm = readNetworkAdj(input_network)
     structure = extractStructure(input_network)
+    adm = adm[structure$names, structure$names]
     input_nodes = which(apply(structure$adjacencyMatrix, 1, sum)==0)
     if (length(input_nodes)==0) { input_nodes = 1 }
     output_nodes = which(apply(structure$adjacencyMatrix, 2, sum)==0)
