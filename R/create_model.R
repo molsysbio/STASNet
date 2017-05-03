@@ -408,7 +408,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 #' @param nb_cores Number of cores to use for the fitting
 #' @param nb_samples Number of samples to generate for the fitting
 #' @param method Method to use for the fitting
-#' @param reverse Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter
+#' @param reverse To revert variable to fixed parameters see reffitWithFixedParameter
 #' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
 refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
   old_variables = modelset$variable_parameters
@@ -424,9 +424,9 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   new_pset = matrix( rep(modelset$parameters, nb_samples), ncol = model$nr_of_parameters(), byrow = T )
   
   if (reverse){
-    samples = matrix( rep( STASNet:::getSamples( 1, nb_samples-1, method, nb_cores ), modelset$nb_models ), nrow = nb_samples-1, byrow = F )
+    samples = matrix( rep( getSamples( 1, nb_samples-1, method, nb_cores ), modelset$nb_models ), nrow = nb_samples-1, byrow = F )
   }else{  
-    samples = STASNet:::getSamples( modelset$nb_models, nb_samples-1, method, nb_cores )
+    samples = getSamples( modelset$nb_models, nb_samples-1, method, nb_cores )
   }
   
   # always add the mean parameter as starting parameter into the sampling
@@ -440,10 +440,10 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   # putting the old variable parameters back in place
   modelset = setVariableParameters(modelset, old_variables)
   
-  # temporary bug fix for removal
+  # temporary bug fix for removal, c-code parameter passing error to be fixed THERE
   if (reverse){
     if (!all(refit$params[,var_par]==refit$params[,var_par+nb_sub_params])){
-    message(paste("Bug for ",modelset$model$getParametersLinks()[var_par] ,"var position",which(modelset$variable_parameters == var_par),"of", length(modelset$variable_parameters) ,"found!"))
+    message(paste("Bug fixed for ",modelset$model$getParametersLinks()[var_par] ,"var position",which(modelset$variable_parameters == var_par),"of", length(modelset$variable_parameters) ,"found!"))
       for (ii in 1:nrow(refit$params)){
         refit$params[ii,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)]=refit$params[ii,var_par]
       }
@@ -544,8 +544,8 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
   idx = grep(method,valid_methods$methods,ignore.case = T)
   if (length(idx==1)){
     max_sample_stack_size=ifelse(valid_methods$methods[idx]=="optimumlhs",100,1000)
-    sample_stack_size = min(max_sample_stack_size, nb_samples)
     max_proc=ceiling(nb_samples/max_sample_stack_size)
+    sample_stack_size = ceiling(nb_samples/max_proc)
     if (nb_cores>1){
       samples=qnorm(do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc))), sd=2)
     } else {
@@ -554,6 +554,10 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
   } else {
     stop(paste0("The selected initialisation method '", method, "' does not exist, valid methods are : ",paste(valid_methods$methods,collapse=", ")))
   }
+  if (sample_stack_size*max_proc > nb_samples){
+    samples = samples[1:nb_samples,]  
+  }  
+  return(samples) 
 }
 
 # Gives a parameter vector with a value for correlated parameters and 0 otherwise
