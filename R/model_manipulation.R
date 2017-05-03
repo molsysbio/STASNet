@@ -143,7 +143,7 @@ reduceModel <- function(original_model, accuracy=0.95) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr} 
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-selectMinimalModel <- function(original_model, accuracy=0.95) {
+selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
   # Clone model object to not change original model specifications
   model_description = cloneModel(original_model)
   
@@ -164,7 +164,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
     if (length(model_description$variable_parameters)>0){
       variable_links = model$getParametersLinks()[model_description$variable_parameters]
     }else{
-      variable_links=c()
+      variable_links=numeric()
     }
   } else {
     initial_response = model$getLocalResponseFromParameter( init_params )
@@ -184,7 +184,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
     ranks=c()
     newadj=adj
     c=0
-    
+  
     # Each link is removed and the best of those networks is compared to the previous model
     for (ii in links.to.test) {
       c=c+1
@@ -194,16 +194,15 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
       
       if (class(model)== "Rcpp_ModelSet"){
         model$setNbModels(model_description$nb_models)
-        if (length(variable_links)>0 & any(model$getParametersLinks() %in% variable_links)){
-          leftVar=match(variable_links, model$getParametersLinks())
-          model$setVariableParameters(leftVar[!is.na(leftVar)]) 
-        }
         paramstmp = unlist(lapply(1:length(models), function(x) model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
+        # detect the parameter values that are fixed in the new network by having the exact same value in all following parameters
+        leftVar = which( apply(matrix(paramstmp,ncol=model_description$nb_models,byrow=F), 1, not_duplicated) )
+        model$setVariableParameters(leftVar) 
         result = model$fitmodelset(data, paramstmp) 
         n_par=model$nr_of_parameters()/model_description$nb_models
         response.matrix = lapply(1:model_description$nb_models, function(x) model$getLocalResponseFromParameter( rep(result$parameter[(1+(x-1)*n_par):(x*n_par)], model_description$nb_models) ))
         params[[c]] = c(response.matrix)
-        new_rank = model$modelRank()/model_description$nb_models + length(model_description$variable_parameters)*(model_description$nb_models-1)
+        new_rank = model$modelRank()/model_description$nb_models + length(leftVar)*(model_description$nb_models-1)
       }else{
         paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
         result = model$fitmodel(data, paramstmp)
@@ -220,7 +219,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
         message(paste("old :", rank, ", new : ", new_rank))
         new_residual = residuals[length(residuals)]
         deltares = new_residual - init_residual
-        message(paste(model_structure$names[(i-1) %/% dim(adj)[1]+1], "->", model_structure$names[(i-1) %% dim(adj)[1]+1], ": Delta residual = ", trim_num(deltares), "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
+        message(paste(model_structure$names[(ii-1) %/% dim(adj)[1]+1], "->", model_structure$names[(ii-1) %% dim(adj)[1]+1], ": Delta residual = ", trim_num(deltares), "; Delta rank = ", dr, ", p-value = ", pchisq(deltares, df=dr) ))
       }
       
       newadj[ii]=1 ## Slightly accelerate the computation
@@ -284,11 +283,10 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
   model_description$model$setModel(expdes, model_description$structure)
   if ("MRAmodelSet" %in% class(model_description)) {
     model_description$model$setNbModels(model_description$nb_models)
-    if (length(variable_links)>0 & any(model_description$model$getParametersLinks() %in% variable_links)){
-      leftVar=match(variable_links, model_description$model$getParametersLinks())
-      model_description = setVariableParameters(model_description, leftVar[!is.na(leftVar)]) 
-    }
-    model_description$parameters = unlist(lapply(1:length(models), function(x) model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
+    model_description$parameters = unlist(lapply(1:length(models), function(x) model_description$model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
+    # detect the parameter values that are fixed in the new network by having the exact same value in all following parameters
+    leftVar = which( apply(matrix(model_description$parameters,ncol=model_description$nb_models,byrow=F), 1, not_duplicated) )
+    model_description = setVariableParameters(model_description, leftVar) 
   } else {
     model_description$parameters = model_description$model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)
   }
@@ -319,7 +317,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95) {
 #' @examples \dontrun{
 #' ext_list = suggestExtension(mramodel)
 #' }
-suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F, padjust_method="BY"){
+suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F, padjust_method="bonferroni"){
   # Clone model object to not change original model specifications
   model_description = cloneModel(original_model)
   
@@ -419,7 +417,14 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   model$setModel ( expdes, model_structure )
   if (class(model) == "Rcpp_ModelSet"){
     model$setNbModels(length(initial_response))
-    if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersLinks())) }
+    if (length(variable_links)>0) {  
+      for (ii in 1:length(initial_response)){ initial_response[[ii]]$local_response[new_link]=1} # set new link to one to preserve constant verus variable links
+      paramstmp = unlist(lapply(1:length(initial_response), function(x) model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
+      leftVar = which( apply(matrix(paramstmp,ncol=length(initial_response),byrow=F), 1, not_duplicated) )
+      model$setVariableParameters(leftVar)
+    }else{
+        leftVar=numeric()
+        }
     }
   best_res = Inf
   for (jj in sample_range){
@@ -444,7 +449,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   }
   response_matrix = model$getLocalResponseFromParameter( result$parameter )
   if (class(model) == "Rcpp_ModelSet"){
-    new_rank = model$modelRank()/length(initial_response)+length(variable_links)*(length(initial_response)-1)
+    new_rank = model$modelRank()/length(initial_response)+length(leftVar)*(length(initial_response)-1)
   }else{
   new_rank = model$modelRank()
   }
@@ -465,7 +470,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   model$setModel ( expdes, model_structure )
   if (class(model)== "Rcpp_ModelSet"){
     model$setNbModels(length(initial_response))
-    if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersLinks())) }
+    if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersNames()$names))}
     for (ii in 1:length(initial_response)){
       initial_response[[ii]]$local_response[new_link]=0
     }

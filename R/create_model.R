@@ -54,6 +54,12 @@ if (is.null(dim(x))){
 }
 }
 
+# helper function to determine variable links
+not_duplicated <- function(x){
+  tmp = duplicated(x)
+  return(!all(tmp[-1]))
+}
+
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
@@ -323,7 +329,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
   
   if (nr_free_params==0){
     warning("No parameters left to be set variable!")
-  } else {
+  } else{ 
     if (max_iterations <= 0 | max_iterations > nr_free_params){
       max_iterations = nr_free_params
     }
@@ -337,10 +343,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
         extra_parameters = total_parameters
       }
       # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
-      old_variables = modelset$variable_parameters
       psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
-      modelset = setVariableParameters(modelset, old_variables)
-      
       bestres = min(unlist(psets["residuals",]))
       deltares = modelset$bestfit - bestres
       if (deltares > qchisq(accuracy, modelset$nb_models) ) {
@@ -368,9 +371,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
     message("-- Lumping Phase --")
       # Lumping Phase: find the parameters which fitted together to not decrease model fits significantly
       for (it in 1:length(modelset$variable_parameters)) {
-        old_variables = modelset$variable_parameters
         psets=sapply(modelset$variable_parameters,refitWithFixedParameter,modelset,nb_sub_params,nb_cores,nb_samples)
-        modelset = setVariableParameters(modelset, old_variables)
         bestres = min(unlist(psets["residuals",]))
         deltares = bestres - modelset$bestfit
         if (deltares < qchisq(accuracy, modelset$nb_models) ) {
@@ -410,9 +411,9 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 #' @param reverse Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter
 #' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
 refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
+  old_variables = modelset$variable_parameters
   
   if (reverse){
-    # remove from variable parameter set
     var_pars = modelset$variable_parameters[-match(var_par,modelset$variable_parameters)]   
   }else {
     var_pars = unique(c( var_par, modelset$variable_parameters ))
@@ -436,6 +437,18 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   
   refit = STASNet:::parallel_initialisation(model, modelset$data, new_pset, nb_cores)
   
+  # putting the old variable parameters back in place
+  modelset = setVariableParameters(modelset, old_variables)
+  
+  # temporary bug fix for removal
+  if (reverse){
+    if (!all(refit$params[,var_par]==refit$params[,var_par+nb_sub_params])){
+    message(paste("Bug for ",modelset$model$getParametersLinks()[var_par] ,"var position",which(modelset$variable_parameters == var_par),"of", length(modelset$variable_parameters) ,"found!"))
+      for (ii in 1:nrow(refit$params)){
+        refit$params[ii,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)]=refit$params[ii,var_par]
+      }
+    }
+  }
   return(list(residuals = refit$residuals, added_var = var_par, params = refit$params, start_val = new_pset))
 }
 

@@ -251,7 +251,7 @@ test_that("Prediction of new conditions", {
 
 context("ModelSet")
 
-DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv") 
+DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv")#,"test_model_no_error_midas_3.csv") 
 VAR_FILES = c()
 
 modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
