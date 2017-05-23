@@ -1017,7 +1017,9 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
       coordMat=Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
       graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(graph::edgeRenderInfo(g1)$label[cc])*10/2)
       graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
+      if (!is.na(vv)){
       if (vv < 0) { graph::edgeRenderInfo(g1)$col[cc] = "orange" }
+      }
     }
     
     # Add Inhibitor estimates
