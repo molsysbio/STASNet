@@ -945,6 +945,7 @@ extractMIDAS <- function(to_detect) {
 #' @param local_values A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input
 #' @export
 #' @family Network graph
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plotNetworkGraph <- function(structure, expdes="", local_values="") {
     if (class(structure) == "matrix") {
         names = unique(as.vector(structure))
@@ -961,6 +962,16 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
   
   len=length(rownames(adm))
   g1 <- graph::graphAM(adjMat=t(adm),edgemode="directed")
+  
+  # add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
+  if (class(expdes) == "Rcpp_ExperimentalDesign" && any(local_values != "")){
+    if (length(expdes$inhib_nodes)>0){
+      for (nn in rownames(adm)[1+expdes$inhib_nodes]){
+        g1 <- graph::addNode(paste0(nn,"i"),g1)
+        g1 <- graph::addEdge(nn,paste0(nn,"i"),g1)
+      }
+    }
+  }
   
   # setting of general and creation of changed properties
   graph::nodeRenderInfo(g1) <- list(shape="ellipse")
@@ -992,7 +1003,7 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
     # Add Edge Weights left justified
     efrom = graph::edgeRenderInfo(g1)$enamesFrom
     eto = graph::edgeRenderInfo(g1)$enamesTo
-    edge_spline=graph::edgeRenderInfo(g1)$splines
+    edge_spline = graph::edgeRenderInfo(g1)$splines
     
     for (idx in which(adm!=0)) {
       vv = local_values$local_response[idx]
@@ -1011,19 +1022,35 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
     
     # Add Inhibitor estimates
     if (length(expdes$inhib_nodes)>0){
-      nodes = names(graph::nodeRenderInfo(g1)$nodeX)
-      inhib = colnames(adm)[expdes$inhib_nodes+1]      
-      cc = which(nodes %in% inhib)
-      ix = graph::nodeRenderInfo(g1)$labelX[cc] + graph::nodeRenderInfo(g1)$lWidth[cc]
-      iy = graph::nodeRenderInfo(g1)$labelY[cc] - 0.5*graph::nodeRenderInfo(g1)$height[cc]
-      iv = local_values$inhibitors
+      for (idx in 1:length(expdes$inhib_nodes)) {
+        vv = local_values$inhibitors[idx]
+        iname = paste0(colnames(adm)[expdes$inhib_nodes[idx]+1], "i")
+        nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
+        cc = which(nname==efrom & iname==eto)
+        graph::edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
+        graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
+        graph::edgeRenderInfo(g1)$textCol[cc]="red"
+        
+        coordMat = Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
+        graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
+        graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
+      }
     }
   }
   
   Rgraphviz::renderGraph(g1)
-  if (local_values[1] != "" & length(expdes$inhib_nodes)>0){
-  text(x = ix, y = iy, labels = trim_num(iv), col="red",cex=0.6, pos=4, offset=0.5)
-  }
+# other options to use the width and height howver the coordinates are not thes same in the generated graph!!  
+#  if (length(expdes$inhib_nodes)>0){
+#      nodes = names(graph::nodeRenderInfo(g1)$nodeX)
+#      inhib = colnames(adm)[expdes$inhib_nodes+1]      
+#      cc = which(nodes %in% inhib)
+#      ix = graph::nodeRenderInfo(g1)$labelX[cc] + graph::nodeRenderInfo(g1)$lWidth[cc]
+#      iy = graph::nodeRenderInfo(g1)$labelY[cc] - 0.5*graph::nodeRenderInfo(g1)$height[cc]
+#      iv = local_values$inhibitors  
+#      if (local_values[1] != "" & length(expdes$inhib_nodes)>0){
+#       text(x = ix, y = iy, labels = trim_num(iv), col="red",cex=0.6, pos=4, offset=0.5)
+#      }
+#   }
   invisible(g1)
   # (1) TODO MARK REMOVED LINKS, (2) ALLOW TO GIVE CLUSTERS THAT SHOULD BE KEPT IN CLOSE VICINITY 
 }
