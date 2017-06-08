@@ -73,9 +73,11 @@ cloneModel <- function(old_model){
     stop(paste0("Wrong input class '",type,",' must be of class 'MRAmodel' or 'MRAmodelSet'!")) 
   }
   
-  links = old_model$model$getParametersLinks()
-  tmp_links = unlist(strsplit(gsub("^r_|\\^\\(-1\\)","",links[grep("^r_",links)]),"\\*r_"))
-  links_list = do.call("rbind",strsplit(unique(tmp_links),"_"))[,c(2,1)]
+  idx = which(old_model$structure$adjacencyMatrix==1)
+  names = old_model$structure$names
+  from = names[1+((idx-1) %/% length(names))]
+  to = names[ifelse(idx %% length(names)==0, length(names), idx %% length(names))]
+  links_list = cbind(from,to)
   structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
   design = STASNet:::getExperimentalDesign(model.structure = structure,
                                            stim.nodes = structure$names[old_model$design$stim_nodes+1],
