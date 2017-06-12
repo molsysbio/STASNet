@@ -7,7 +7,7 @@
 \alias{extractMIDAS}
 \title{Extraction of object from file or object}
 \usage{
-extractStructure(to_detect, names = "")
+extractStructure(to_detect, names = "", adj = FALSE)
 
 extractBasalActivity(to_detect)
 
@@ -15,6 +15,8 @@ extractMIDAS(to_detect)
 }
 \arguments{
 \item{to_detect}{An object to check or a string. A string is interpreted as a path to a file containing a matrix compatible with the target object.}
+
+\item{adj}{Boolean, whether a 2 or 3 columns matrix in to_detect should be interpreted as an adjacency matrix}
 
 \item{name}{Name for the structure. Extracted automatically from the file name if used.}
 }
@@ -28,7 +30,7 @@ extractMIDAS(to_detect)
 \description{
 Extraction of object from file or object
 
-'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 columns (adjacency list) or an square matrix (adjacency matrix)
+'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 or 3 columns (adjacency list) or a square matrix (adjacency matrix)
 
 'extractBasalActivity' detects if the a list of names or a file perform the extraction if necessary. It expects a vector or an object convertible to a vector.
 
@@ -48,5 +50,5 @@ A MIDAS format matrix is a matrix with specific column names:
 }
 }
 \seealso{
-\code{link{readMIDAS}}
+\code{\link{readMIDAS}}
 }

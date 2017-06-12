@@ -807,12 +807,13 @@ NULL
 
 #' Extract a ModelStructure
 #'
-#' 'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 columns (adjacency list) or an square matrix (adjacency matrix)
+#' 'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 or 3 columns (adjacency list) or a square matrix (adjacency matrix)
 #' @param name Name for the structure. Extracted automatically from the file name if used.
+#' @param adj Boolean, whether a 2 or 3 columns matrix in to_detect should be interpreted as an adjacency matrix
 #' @return 'extractStructure' returns a C++ object of class 'ModelStructure'
 #' @rdname extraction
 #' @export
-extractStructure <- function(to_detect, names="") {
+extractStructure <- function(to_detect, names="", adj=FALSE) {
   model_links = to_detect
   struct_name = paste0(names, collapse="_")
   if (is.string(model_links)) {
@@ -841,9 +842,9 @@ extractStructure <- function(to_detect, names="") {
   }
   
   # Detect if it is a list of links or an adjacency matrix
-  if (ncol(struct_matrix) == 2) {
+  if (ncol(struct_matrix) == 2 && !adj) {
     links_list = struct_matrix
-  } else if (ncol(struct_matrix) == 3) {
+  } else if (ncol(struct_matrix) == 3 && !adj) {
     links_list = struct_matrix[,1:2] # Values are given, do not use them
   } else {
     # Remove the number of nodes (used for C inputs for example)
@@ -919,7 +920,7 @@ extractBasalActivity <- function(to_detect) {
 #' @return 'extractMIDAS' returns a matrix or a data.frame under MIDAS format
 #' @rdname extraction
 #' @export
-#' @seealso \code{link{readMIDAS}}
+#' @seealso \code{\link{readMIDAS}}
 extractMIDAS <- function(to_detect) {
   if (is.string(to_detect)) {
     if (nchar(to_detect)==0) {
@@ -948,11 +949,9 @@ extractMIDAS <- function(to_detect) {
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plotNetworkGraph <- function(structure, expdes="", local_values="") {
     if (class(structure) == "matrix") {
-        names = unique(as.vector(structure))
-        adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-        for (ii in 1:nrow(structure)) {
-            adm[match(structure[ii,2],rownames(adm)), structure[ii,1]] = 1
-        }
+      ss = extractStructure(structure)
+      adm = ss$adjacencyMatrix
+      colnames(adm) = rownames(adm) = ss$names
     } else if (class(structure) == "Rcpp_ModelStructure") {
         adm = structure$adjacencyMatrix
         colnames(adm) = rownames(adm) = structure$names
