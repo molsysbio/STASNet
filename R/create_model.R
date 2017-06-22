@@ -408,7 +408,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 #' @param nb_cores Number of cores to use for the fitting
 #' @param nb_samples Number of samples to generate for the fitting
 #' @param method Method to use for the fitting
-#' @param reverse Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter
+#' @param reverse To revert variable to fixed parameters see reffitWithFixedParameter
 #' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
 refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
   old_variables = modelset$variable_parameters
@@ -424,9 +424,9 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   new_pset = matrix( rep(modelset$parameters, nb_samples), ncol = model$nr_of_parameters(), byrow = T )
   
   if (reverse){
-    samples = matrix( rep( STASNet:::getSamples( 1, nb_samples-1, method, nb_cores ), modelset$nb_models ), nrow = nb_samples-1, byrow = F )
+    samples = matrix( rep( getSamples( 1, nb_samples-1, method, nb_cores ), modelset$nb_models ), nrow = nb_samples-1, byrow = F )
   }else{  
-    samples = STASNet:::getSamples( modelset$nb_models, nb_samples-1, method, nb_cores )
+    samples = getSamples( modelset$nb_models, nb_samples-1, method, nb_cores )
   }
   
   # always add the mean parameter as starting parameter into the sampling
@@ -440,10 +440,10 @@ refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_core
   # putting the old variable parameters back in place
   modelset = setVariableParameters(modelset, old_variables)
   
-  # temporary bug fix for removal
+  # temporary bug fix for removal, c-code parameter passing error to be fixed THERE
   if (reverse){
     if (!all(refit$params[,var_par]==refit$params[,var_par+nb_sub_params])){
-    message(paste("Bug for ",modelset$model$getParametersLinks()[var_par] ,"var position",which(modelset$variable_parameters == var_par),"of", length(modelset$variable_parameters) ,"found!"))
+    message(paste("Bug fixed for ",modelset$model$getParametersLinks()[var_par] ,"var position",which(modelset$variable_parameters == var_par),"of", length(modelset$variable_parameters) ,"found!"))
       for (ii in 1:nrow(refit$params)){
         refit$params[ii,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)]=refit$params[ii,var_par]
       }
@@ -544,8 +544,8 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
   idx = grep(method,valid_methods$methods,ignore.case = T)
   if (length(idx==1)){
     max_sample_stack_size=ifelse(valid_methods$methods[idx]=="optimumlhs",100,1000)
-    sample_stack_size = min(max_sample_stack_size, nb_samples)
     max_proc=ceiling(nb_samples/max_sample_stack_size)
+    sample_stack_size = ceiling(nb_samples/max_proc)
     if (nb_cores>1){
       samples=qnorm(do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc))), sd=2)
     } else {
@@ -554,6 +554,10 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
   } else {
     stop(paste0("The selected initialisation method '", method, "' does not exist, valid methods are : ",paste(valid_methods$methods,collapse=", ")))
   }
+  if (sample_stack_size*max_proc > nb_samples){
+    samples = samples[1:nb_samples,]  
+  }  
+  return(samples) 
 }
 
 # Gives a parameter vector with a value for correlated parameters and 0 otherwise
@@ -803,12 +807,13 @@ NULL
 
 #' Extract a ModelStructure
 #'
-#' 'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 columns (adjacency list) or an square matrix (adjacency matrix)
+#' 'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 or 3 columns (adjacency list) or a square matrix (adjacency matrix)
 #' @param name Name for the structure. Extracted automatically from the file name if used.
+#' @param adj Boolean, whether a 2 or 3 columns matrix in to_detect should be interpreted as an adjacency matrix
 #' @return 'extractStructure' returns a C++ object of class 'ModelStructure'
 #' @rdname extraction
 #' @export
-extractStructure <- function(to_detect, names="") {
+extractStructure <- function(to_detect, names="", adj=FALSE) {
   model_links = to_detect
   struct_name = paste0(names, collapse="_")
   if (is.string(model_links)) {
@@ -837,9 +842,9 @@ extractStructure <- function(to_detect, names="") {
   }
   
   # Detect if it is a list of links or an adjacency matrix
-  if (ncol(struct_matrix) == 2) {
+  if (ncol(struct_matrix) == 2 && !adj) {
     links_list = struct_matrix
-  } else if (ncol(struct_matrix) == 3) {
+  } else if (ncol(struct_matrix) == 3 && !adj) {
     links_list = struct_matrix[,1:2] # Values are given, do not use them
   } else {
     # Remove the number of nodes (used for C inputs for example)
@@ -915,7 +920,7 @@ extractBasalActivity <- function(to_detect) {
 #' @return 'extractMIDAS' returns a matrix or a data.frame under MIDAS format
 #' @rdname extraction
 #' @export
-#' @seealso \code{link{readMIDAS}}
+#' @seealso \code{\link{readMIDAS}}
 extractMIDAS <- function(to_detect) {
   if (is.string(to_detect)) {
     if (nchar(to_detect)==0) {
@@ -941,13 +946,12 @@ extractMIDAS <- function(to_detect) {
 #' @param local_values A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input
 #' @export
 #' @family Network graph
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plotNetworkGraph <- function(structure, expdes="", local_values="") {
     if (class(structure) == "matrix") {
-        names = unique(as.vector(structure))
-        adm=matrix(0,length(names),length(names),dimnames = list(names,names))
-        for (ii in 1:nrow(structure)) {
-            adm[match(structure[ii,2],rownames(adm)), structure[ii,1]] = 1
-        }
+      ss = extractStructure(structure)
+      adm = ss$adjacencyMatrix
+      colnames(adm) = rownames(adm) = ss$names
     } else if (class(structure) == "Rcpp_ModelStructure") {
         adm = structure$adjacencyMatrix
         colnames(adm) = rownames(adm) = structure$names
@@ -957,6 +961,16 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
   
   len=length(rownames(adm))
   g1 <- graph::graphAM(adjMat=t(adm),edgemode="directed")
+  
+  # add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
+  if (class(expdes) == "Rcpp_ExperimentalDesign" && any(local_values != "")){
+    if (length(expdes$inhib_nodes)>0){
+      for (nn in rownames(adm)[1+expdes$inhib_nodes]){
+        g1 <- graph::addNode(paste0(nn,"i"),g1)
+        g1 <- graph::addEdge(nn,paste0(nn,"i"),g1)
+      }
+    }
+  }
   
   # setting of general and creation of changed properties
   graph::nodeRenderInfo(g1) <- list(shape="ellipse")
@@ -988,7 +1002,7 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
     # Add Edge Weights left justified
     efrom = graph::edgeRenderInfo(g1)$enamesFrom
     eto = graph::edgeRenderInfo(g1)$enamesTo
-    edge_spline=graph::edgeRenderInfo(g1)$splines
+    edge_spline = graph::edgeRenderInfo(g1)$splines
     
     for (idx in which(adm!=0)) {
       vv = local_values$local_response[idx]
@@ -1002,24 +1016,42 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
       coordMat=Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
       graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(graph::edgeRenderInfo(g1)$label[cc])*10/2)
       graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
+      if (!is.na(vv)){
       if (vv < 0) { graph::edgeRenderInfo(g1)$col[cc] = "orange" }
+      }
     }
     
     # Add Inhibitor estimates
     if (length(expdes$inhib_nodes)>0){
-      nodes = names(graph::nodeRenderInfo(g1)$nodeX)
-      inhib = colnames(adm)[expdes$inhib_nodes+1]      
-      cc = which(nodes %in% inhib)
-      ix = graph::nodeRenderInfo(g1)$labelX[cc] + graph::nodeRenderInfo(g1)$lWidth[cc]
-      iy = graph::nodeRenderInfo(g1)$labelY[cc] - 0.5*graph::nodeRenderInfo(g1)$height[cc]
-      iv = local_values$inhibitors
+      for (idx in 1:length(expdes$inhib_nodes)) {
+        vv = local_values$inhibitors[idx]
+        iname = paste0(colnames(adm)[expdes$inhib_nodes[idx]+1], "i")
+        nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
+        cc = which(nname==efrom & iname==eto)
+        graph::edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
+        graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
+        graph::edgeRenderInfo(g1)$textCol[cc]="red"
+        
+        coordMat = Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
+        graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
+        graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
+      }
     }
   }
   
   Rgraphviz::renderGraph(g1)
-  if (local_values[1] != "" & length(expdes$inhib_nodes)>0){
-  text(x = ix, y = iy, labels = trim_num(iv), col="red",cex=0.6, pos=4, offset=0.5)
-  }
+# other options to use the width and height howver the coordinates are not thes same in the generated graph!!  
+#  if (length(expdes$inhib_nodes)>0){
+#      nodes = names(graph::nodeRenderInfo(g1)$nodeX)
+#      inhib = colnames(adm)[expdes$inhib_nodes+1]      
+#      cc = which(nodes %in% inhib)
+#      ix = graph::nodeRenderInfo(g1)$labelX[cc] + graph::nodeRenderInfo(g1)$lWidth[cc]
+#      iy = graph::nodeRenderInfo(g1)$labelY[cc] - 0.5*graph::nodeRenderInfo(g1)$height[cc]
+#      iv = local_values$inhibitors  
+#      if (local_values[1] != "" & length(expdes$inhib_nodes)>0){
+#       text(x = ix, y = iy, labels = trim_num(iv), col="red",cex=0.6, pos=4, offset=0.5)
+#      }
+#   }
   invisible(g1)
   # (1) TODO MARK REMOVED LINKS, (2) ALLOW TO GIVE CLUSTERS THAT SHOULD BE KEPT IN CLOSE VICINITY 
 }
