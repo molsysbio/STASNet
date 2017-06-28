@@ -13,7 +13,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# The MRA package
+# STASNet
 ---------
 
 ## Package flowchart
@@ -27,6 +27,7 @@ diagram="@startuml
     }
     (ModelSet) << S3 Class >>
     (MRAmodel) << S3 Class >>
+    (profileLikelihoodResults) << List >>
     (getCombinationMatrix) << Helper Functions >>
 
     (importModel) --> MRAmodel
@@ -43,11 +44,18 @@ diagram="@startuml
     (extractSubmodels) --> (MRAmodel)
     (simulateModel)-->(plotModelSimulation)
     (getCombinationMatrix)-->(simulateModel)
+    (MRAmodel)-->(profileLikelihood)
+    (profileLikelihood)-->(profileLikelihoodResults)
+    (profileLikelihoodResults)-->(addPLinfos)
+    (MRAmodel)-->(addPLinfos)
+    (addPLinfos)-->(MRAmodel)
     @enduml"
 write(diagram, "use_diagram.uml")
 system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
 ```
 ![Use diagram](use_diagram.png)
+
+**NOTE: Various scripts are available in the inst/ folder of STASNet to run the fitting procedure from the command line**
 
 Loading the library:
 ```{r}
@@ -102,6 +110,32 @@ plotModelScores(model)
 simulation = plotModelSimulation(model, "all", "all", with_data= TRUE,log_axis = T)
 print(simulation)
 ```
+
+## Profile likelihood
+
+Profile likelihood aims at providing confidence intervals for the parameters. `niplotPL` provides a convenient way to plot the likelihood and parameters profiles.
+
+```{r}
+profiles = profileLikelihood(model, 100, nb_cores=8)
+model = addPLinfos(model, profiles)
+niplotPL(profiles, file_plots=FALSE)
+```
+
+Note the correlation between N2->N3 and N2->N4->N5 which indicates a structural non identifiability, i.e. the experimental design does not allow to differentiate between them.
+Note also the symmetry around 0 for the inhibitor iN2 due to the fact that it is always considered negative for the fit.
+
+The parameters confidence intervals can be visualised.
+
+```{r}
+plotModelParameters(model)
+```
+
+We can then simulate with confidence intervals.
+
+```{r}
+simulation = plotModelSimulation(model, "all", "all", with_data= TRUE,log_axis = T)
+```
+
 
 ## Creation of a Model set
 

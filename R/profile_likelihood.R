@@ -165,7 +165,7 @@ addPLinfos <- function(model_description, profiles) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @seealso \code{\link{profileLikelihood}}
-niplotPL <- function(profiles, data_name="default", folder="./") {
+niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE) {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
     for (pmain in 1:length(profiles)) {
         # Scale the other parameters profiles
@@ -187,7 +187,9 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
     colors = rep(cbbPalette, length.out=length(profiles))
     styles = rep(c(sapply(1:6, rep, length(cbbPalette))), length.out=length(profiles))
 
-    pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
+    if (file_plots) {
+        pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
+    }
     eplot(c(0, 1), c(0, 1))
     legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 )
     for (plid in 1:length(profiles)) {
@@ -231,8 +233,9 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
         }
         title(main=profile$path, outer=T)
     }
-
-    dev.off()
+    if (file_plots) {
+        dev.off()
+    }
 }
 
 # Separates the profiles whether they are identifiables or not
