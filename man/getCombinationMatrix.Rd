@@ -22,11 +22,10 @@ A perturbation matrix with the names of the nodes as columnnames
 \description{
 Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions.
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 Other simulation: \code{\link{plotSimulation}},
   \code{\link{simulateModel}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

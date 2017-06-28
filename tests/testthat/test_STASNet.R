@@ -251,7 +251,7 @@ test_that("Prediction of new conditions", {
 
 context("ModelSet")
 
-DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv") 
+DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv")#,"test_model_no_error_midas_3.csv") 
 VAR_FILES = c()
 
 modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
@@ -331,6 +331,29 @@ test_that("variable parameters are kept when cloned", {
   expect_equal(tmp_modelset$parameters,relax_modelset$parameters)
 })
 
+test_that("exclusion of parameters from relaxation works",{
+  expect_error(addVariableParameters(modelset,1,0,10,0.95,"geneticlhs",notVariable = c("notThere")))
+  expect_error(addVariableParameters(modelset,1,0,10,0.95,"geneticlhs",notVariable = c(1,17)))
+  no5set = addVariableParameters(modelset,1,0,10,0.95,"geneticlhs",notVariable = 5)
+  expect_false(no5set$variable_parameters==5)
+  no3_5set = addVariableParameters(modelset,1,0,10,0.95,"geneticlhs",notVariable = c(3,5))
+  expect_equal(length(no3_5set$variable_parameters),0)
+  expect_warning(addVariableParameters(modelset,1,0,10,0.95,"geneticlhs",notVariable =c(1:5)))
+})
+
+
+context("ModelSet rebuild")
+MODEL_FILES=c("var_model1.mra","var_model2.mra")
+
+test_that("Rebuild of variable modelset works correctly", {
+  expect_error(rebuildModelSet(MODEL_FILES,DATA_FILES[1]))
+  expect_error(rebuildModelSet(MODEL_FILES))
+  expect_error(rebuildModelSet(MODEL_FILES[1],DATA_FILES))
+  expect_error(rebuildModelSet(MODEL_FILES,DATA_FILES,DATA_FILES[1]))
+  expect_output(rebuildModelSet(MODEL_FILES, DATA_FILES), NA)
+  reb_modelset <- rebuildModelSet(MODEL_FILES, DATA_FILES)
+  expect_equal(reb_modelset$variable_parameters,relax_modelset$variable_parameters)
+})
 
 context("ModelSet extension")
 

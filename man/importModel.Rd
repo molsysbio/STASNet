@@ -15,10 +15,9 @@ An MRAmodel object
 \description{
 Import an MRAmodel object from a .mra file
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 exportModel, rebuildModel
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

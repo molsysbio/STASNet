@@ -31,4 +31,3 @@ Possibility to use different sampling methods
 \seealso{
 Other Model initialisation: \code{\link{createModel}}
 }
-

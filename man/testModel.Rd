@@ -19,4 +19,3 @@ An objet of class MRAmodel
 \description{
 Test the model with the provided parameter set and returns the fit, the scores and the (possibly updated) parameter set
 }
-

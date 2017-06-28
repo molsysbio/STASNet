@@ -15,4 +15,3 @@ A list with the simulation, the mismatch between the simulation and the data, an
 \description{
 Compute the error of the model
 }
-

@@ -54,6 +54,12 @@ if (is.null(dim(x))){
 }
 }
 
+# helper function to determine variable links
+not_duplicated <- function(x){
+  tmp = duplicated(x)
+  return(!all(tmp[-1]))
+}
+
 #' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
@@ -71,7 +77,7 @@ if (is.null(dim(x))){
 #'      genetic : Genetic algorithm with mutation only. \emph{inits} is the total number of points sampled.
 #'      annealing : Simulated annealing and gradient descent on the best result. \emph{inits} is the maximum number of iteration without any change before the algorithm decides it reached the best value. Use not recommended.
 #' @param unused_perturbations Perturbations in the dataset that should not be used
-#' @param unused_readouts Readouts in the dataset that should not be used
+#' @param unused_readouts Measured nodes in the datasets that should not be used
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
 #' @param model_name The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.
@@ -112,6 +118,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
   order_resid = order(residuals)
   order_id = order_resid[1:min(20, length(residuals))]
+  old_topres = residuals[order_id]
   for ( i in 1:length(order_id) ) {
     p_res = residuals[order_id[i]]
     if (!is.na(p_res) && !is.infinite(p_res)) {
@@ -131,9 +138,12 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     message("Best residuals :")
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
+
   if (perform_plots) {
-    plot(1:length(order_resid), residuals[order_resid], main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l")
+    plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+    lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
   }
+  
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
   paths = sapply(model$getParametersLinks(), simplify_path_name)
   best_sets = order_resid[signif(residuals[order_resid], 4) == signif(residuals[order_resid[1]], 4)]
@@ -229,10 +239,40 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   
   message("setting completed")
   results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores)
-  bestid = order(results$residuals)[1]
-  parameters = results$params[bestid,]
-  bestfit = results$residuals[bestid]
+  residuals = results$residuals
+  params = results$params
   
+  # Refit the best residuals to make sure it converged # TODO WITH A MORE PRECISE DESCENT (more max steps and better delta-p)
+  order_resid = order(residuals,na.last = T)
+  order_id = order_resid[1:min(20, length(residuals))]
+  old_topres = residuals[order_id]
+  for ( i in 1:length(order_id) ) {
+    p_res = residuals[order_id[i]]
+    if (!is.na(p_res) && !is.infinite(p_res)) {
+      repeat {
+        result = model$fitmodelset(data_, params[order_id[i],])
+        if (p_res == result$residuals) {
+          break
+        }
+        p_res = result$residuals
+      }
+      params[order_id[i],] = result$parameter
+      residuals[order_id[i]] = result$residuals
+    }
+  }
+  if (debug) {
+    # Print the 20 smallest residuals to check if the optimum has been found several times
+    message("Best residuals :")
+    message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
+  }
+  if (perform_plots) {
+    plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+    lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+  }
+  
+  bestid = order(residuals)[1]
+  parameters = params[bestid,]
+  bestfit = residuals[bestid]
   infos = generate_infos(csv_files, inits, sort(results$residuals)[1:5], method, model_links, model_name)
   self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV)
   # param_range, lower_values, upper_values defined using profile likelihood
@@ -249,10 +289,12 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #' @param nb_samples Number of samples to generate to fit the new variable parameters
 #' @param accuracy Cutoff probability for the chi^2 test
 #' @param method Name of the LHS method to use
+#' @param notVariable Parameters that should not be varied, either a numeric or character vector identifying the parameters from 'modelset$model$getParametersNames()$names', defaults to 'c()'.
 #' @return An updated MRAmodelSet with the new parameter sets
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs") {
+#' @author Bertram Klinger \email{bertram.klinger@charite.de}
+addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs",notVariable=c()) {
   # clone MRAmodelSet object to have seperate objects at hand
   modelset = cloneModel(original_modelset)
   
@@ -260,45 +302,99 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
   if (nb_cores == 0) { nb_cores = detectCores()-1 }
   model = modelset$model
   
-  # Look which parameters are not already variable
   total_parameters = 1:(model$nr_of_parameters()/modelset$nb_models)
+  params = modelset$model$getParametersNames()$names
   nb_sub_params = length(total_parameters)
-  max_iterations = ifelse(max_iterations<=0,nb_sub_params,max_iterations)
   
-  for (it in 1:max_iterations) {
-    if (length(modelset$variable_parameters) > 0) {
-      extra_parameters = total_parameters[-modelset$variable_parameters]
+  # Determine indices of parameters which should not be varied
+  if (length(notVariable)>0){
+  if (is.numeric(notVariable)){
+    allIn = match(notVariable,total_parameters)
+    if (any(is.na(allIn))){
+      stop(paste("Numbers in 'notVariable' do not match parameter indices!","\n",
+                    "Please use indices from 1 to",nb_sub_params,"!"))
+    }
+  }else if(is.character(notVariable)){
+    allIn = match(notVariable,params)
+    if (any(is.na(allIn))){
+      stop(paste("Character strings in 'notVariable' do not match parameter names!","\n",
+                 "Please use the names from 'modelset$model$getParametersNames()$names'"))
     } else{
-      extra_parameters = total_parameters
+      notVariable = allIn
     }
-    # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
-    old_variables = modelset$variable_parameters
-    psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
-    modelset = setVariableParameters(modelset, old_variables)
+  }  
+  }
+
+  nr_free_params = nb_sub_params-length(union(notVariable,modelset$variable_parameters))
+  
+  if (nr_free_params==0){
+    warning("No parameters left to be set variable!")
+  } else{ 
+    if (max_iterations <= 0 | max_iterations > nr_free_params){
+      max_iterations = nr_free_params
+    }
     
-    bestres = min(unlist(psets["residuals",]))
-    deltares = modelset$bestfit - bestres
-    df1 = modelset$nb_models-1 # Extra parameters
-    data_count = sum(!is.na(modelset$data$stim_data) & !is.nan(modelset$data$stim_data))
-    df2 = data_count - (length(modelset$parameters) + df1) # Degrees of freedom of the augmented model
-    f_score = (deltares/df1) / (bestres/df2)
-    if (f_score > qf(accuracy, df1, df2)) {
-      res_id = which.min(unlist(psets["residuals",]))
-      par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
-      new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
-      
-      message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", signif(1-pf(f_score, df1, df2),2) ))
-      message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
-      message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
-       
-      var_pars = c( modelset$variable_parameters, par_id )
-      modelset = setVariableParameters(modelset, var_pars)
-      modelset$parameters = new_parameters
-      modelset$bestfit = bestres
-      get_running_time(init_time, "elapsed");
-    } else {
-      break
+  # Extension Phase: find the parameter which fitted separately to each model improves the performance most and if significant keep variable    
+    for (it in 1:(max_iterations)) {
+      # Look which parameters are not already variable or should be kept constant
+      if (length(modelset$variable_parameters) > 0 | length(notVariable) > 0) {
+        extra_parameters = total_parameters[-union(modelset$variable_parameters,notVariable)]
+      } else{
+        extra_parameters = total_parameters
+      }
+      # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
+      psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+      bestres = min(unlist(psets["residuals",]))
+      deltares = modelset$bestfit - bestres
+      if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+        res_id = which.min(unlist(psets["residuals",]))
+        par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
+        new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+        start_val=unlist(psets["start_val",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+        
+        message(paste0("variable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(1-pchisq(deltares, df=modelset$nb_models)) ))
+        message(paste0("fitting improvement: ", round(modelset$bestfit,2), "(old) - ", round(bestres,2), "(new) = ", round(deltares,2))) 
+        message(paste0("old parameter:", signif(modelset$parameters[par_id],4), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " ) ))
+        message(paste0("starting values:", paste0(signif(start_val[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
+        
+        var_pars = c( modelset$variable_parameters, par_id )
+        modelset = setVariableParameters(modelset, var_pars)
+        modelset$parameters = new_parameters
+        modelset$bestfit = bestres
+        get_running_time(init_time, "elapsed");
+      } else {
+        break
+      }
     }
+  }
+  if (length(modelset$variable_parameters)>0){
+    message("-- Lumping Phase --")
+      # Lumping Phase: find the parameters which fitted together to not decrease model fits significantly
+      for (it in 1:length(modelset$variable_parameters)) {
+        psets=sapply(modelset$variable_parameters,refitWithFixedParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+        bestres = min(unlist(psets["residuals",]))
+        deltares = bestres - modelset$bestfit
+        if (deltares < qchisq(accuracy, modelset$nb_models) ) {
+          res_id = which.min(unlist(psets["residuals",]))
+          par_id = psets["removed_var",ceiling(res_id/nb_samples)][[1]]
+          new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+          start_val=unlist(psets["start_val",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
+              
+          message(paste0("lumpable parameter found: ",model$getParametersLinks()[par_id], "; p-value: ", trim_num(pchisq(deltares, df=modelset$nb_models)) ))
+          message(paste0("fitting impairment: ",round(bestres,2) , "(new) - ",round(modelset$bestfit,2) , "(old) = ", round(deltares,2))) 
+          message(paste0("old parameter:", paste0(signif(modelset$parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" "), " new parameters: ", paste0(signif(new_parameters[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
+          message(paste0("starting values:", paste0(signif(start_val[seq(from=par_id, to=model$nr_of_parameters(), by=nb_sub_params)],4),collapse=" " )))
+        
+          var_pars = modelset$variable_parameters[-ceiling(res_id/nb_samples)]
+          modelset = setVariableParameters(modelset, var_pars)
+          modelset$parameters = new_parameters
+          modelset$bestfit = bestres
+          get_running_time(init_time, "elapsed");
+        } else {
+          message("Lumping finished")
+          break
+        }
+    }  
   }
   get_running_time(init_time, "in total");
   return(modelset)
@@ -312,20 +408,65 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
 #' @param nb_cores Number of cores to use for the fitting
 #' @param nb_samples Number of samples to generate for the fitting
 #' @param method Method to use for the fitting
+#' @param reverse To revert variable to fixed parameters see reffitWithFixedParameter
 #' @return A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
-refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs"){
-  model=modelset$model
-  var_pars = unique(c( var_par, modelset$variable_parameters ))
-  model$setVariableParameters(var_pars)
-  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol=length(modelset$parameters), byrow=T )
+refitWithVariableParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs",reverse=F){
+  old_variables = modelset$variable_parameters
   
-  samples = getSamples(modelset$nb_models, nb_samples, method, nb_cores)
+  if (reverse){
+    var_pars = modelset$variable_parameters[-match(var_par,modelset$variable_parameters)]   
+  }else {
+    var_pars = unique(c( var_par, modelset$variable_parameters ))
+  }
+
+  modelset = STASNet:::setVariableParameters(modelset,var_pars)
+  model = modelset$model
+  new_pset = matrix( rep(modelset$parameters, nb_samples), ncol = model$nr_of_parameters(), byrow = T )
+  
+  if (reverse){
+    samples = matrix( rep( getSamples( 1, nb_samples-1, method, nb_cores ), modelset$nb_models ), nrow = nb_samples-1, byrow = F )
+  }else{  
+    samples = getSamples( modelset$nb_models, nb_samples-1, method, nb_cores )
+  }
+  
+  # always add the mean parameter as starting parameter into the sampling
+  avgPar = rep(mean(modelset$parameters[seq(from = var_par, to = model$nr_of_parameters(), by=nb_sub_params)]), modelset$nb_models)
+  samples = rbind(avgPar,samples)
   
   new_pset[,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)] = samples
   
-  refit = parallel_initialisation(model, modelset$data, new_pset, nb_cores)
+  refit = STASNet:::parallel_initialisation(model, modelset$data, new_pset, nb_cores)
   
-  return(list(residuals = refit$residuals, added_var = var_par, params = refit$params))
+  # putting the old variable parameters back in place
+  modelset = setVariableParameters(modelset, old_variables)
+  
+  # temporary bug fix for removal, c-code parameter passing error to be fixed THERE
+  if (reverse){
+    if (!all(refit$params[,var_par]==refit$params[,var_par+nb_sub_params])){
+    message(paste("Bug fixed for ",modelset$model$getParametersLinks()[var_par] ,"var position",which(modelset$variable_parameters == var_par),"of", length(modelset$variable_parameters) ,"found!"))
+      for (ii in 1:nrow(refit$params)){
+        refit$params[ii,seq(from=var_par, to=model$nr_of_parameters(), by=nb_sub_params)]=refit$params[ii,var_par]
+      }
+    }
+  }
+  return(list(residuals = refit$residuals, added_var = var_par, params = refit$params, start_val = new_pset))
+}
+
+#' Refit modelset by iterative lumping of variable parameters into a single parameter
+#'
+#' @param var_par ID of the variable parameters to test
+#' @param modelset An MRAmodelSet object
+#' @param nb_sub_params Number of parameters per submodel
+#' @param nb_cores Number of cores to use for the fitting
+#' @param nb_samples Number of samples to generate for the fitting
+#' @param method Method to use for the fitting
+#' @return A list with the fields 'residuals' (fitted residuals), 'removed_var' (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
+#' @seealso refitWithVariableParameter
+refitWithFixedParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0, nb_samples=5, method="geneticlhs"){
+  
+  output = refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores, nb_samples, method, reverse=T)
+  
+  return(list(residuals = output$residuals,removed_var = output$added_var, params = output$params, start_val = output$start_val))
 }
 
 #' Perform an initialisation of the model 
@@ -403,8 +544,8 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
   idx = grep(method,valid_methods$methods,ignore.case = T)
   if (length(idx==1)){
     max_sample_stack_size=ifelse(valid_methods$methods[idx]=="optimumlhs",100,1000)
-    sample_stack_size = min(max_sample_stack_size, nb_samples)
     max_proc=ceiling(nb_samples/max_sample_stack_size)
+    sample_stack_size = ceiling(nb_samples/max_proc)
     if (nb_cores>1){
       samples=qnorm(do.call(rbind,mclapply(1:max_proc,function(x) eval(parse(text=valid_methods$calls[idx])),mc.cores = min(nb_cores,max_proc))), sd=2)
     } else {
@@ -413,6 +554,10 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
   } else {
     stop(paste0("The selected initialisation method '", method, "' does not exist, valid methods are : ",paste(valid_methods$methods,collapse=", ")))
   }
+  if (sample_stack_size*max_proc > nb_samples){
+    samples = samples[1:nb_samples,]  
+  }  
+  return(samples) 
 }
 
 # Gives a parameter vector with a value for correlated parameters and 0 otherwise
@@ -577,7 +722,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
   
   fitmodelset_wrapper <- function(params, data, model) {
     # TODO add keep_constant control
-    if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a fitmodel::DataSet object") }
+    if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a STASNet::DataSet object") }
     init = proc.time()[3]
     result = model$fitmodelset(data, params)
     if (verbose) {
@@ -594,9 +739,8 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     }
     
     # Reorder the results to get the same output as the non parallel function
-    results = list()
-    results$residuals = c()
-    results$params = c()
+    results=list(residuals=c(),params=c())
+    
     if (!is.list(parallel_results[[1]])) {
       stop(parallel_results[[1]])
     }
@@ -804,6 +948,7 @@ extractMIDAS <- function(to_detect) {
 #' @param local_values A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input
 #' @export
 #' @family Network graph
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plotNetworkGraph <- function(structure, expdes="", local_values="") {
     if (class(structure) == "matrix") {
       ss = extractStructure(structure)
@@ -817,49 +962,49 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
     }
   
   len=length(rownames(adm))
-  g1 <- graphAM(adjMat=t(adm),edgemode="directed")
+  g1 <- graph::graphAM(adjMat=t(adm),edgemode="directed")
   
-# add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
+  # add inhibitors as pseudo nodes downstream of inhibited nodes in order to depict their strength  
   if (class(expdes) == "Rcpp_ExperimentalDesign" && any(local_values != "")){
     if (length(expdes$inhib_nodes)>0){
       for (nn in rownames(adm)[1+expdes$inhib_nodes]){
-        g1 <- addNode(paste0(nn,"i"),g1)
-        g1 <- addEdge(nn,paste0(nn,"i"),g1)
+        g1 <- graph::addNode(paste0(nn,"i"),g1)
+        g1 <- graph::addEdge(nn,paste0(nn,"i"),g1)
       }
     }
   }
   
   # setting of general and creation of changed properties
-  nodeRenderInfo(g1) <- list(shape="ellipse")
-  nodeRenderInfo(g1) <- list(textCol="black")
-  nodeRenderInfo(g1) <- list(lwd=1)
-  edgeRenderInfo(g1) <- list(fontsize=10)
-  edgeRenderInfo(g1) <- list(textCol="black")
-  edgeRenderInfo(g1) <- list(col="black")
+  graph::nodeRenderInfo(g1) <- list(shape="ellipse")
+  graph::nodeRenderInfo(g1) <- list(textCol="black")
+  graph::nodeRenderInfo(g1) <- list(lwd=1)
+  graph::edgeRenderInfo(g1) <- list(fontsize=10)
+  graph::edgeRenderInfo(g1) <- list(textCol="black")
+  graph::edgeRenderInfo(g1) <- list(col="black")
   
-  g1 <- layoutGraph(g1)
+  g1 <- Rgraphviz::layoutGraph(g1)
 
   # Add the experimental setup if provided
   if (class(expdes) == "Rcpp_ExperimentalDesign") {
-    nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
+    graph::nodeRenderInfo(g1)$fill[1+expdes$measured_nodes] = "#ffff66"
     
     if (length(expdes$inhib_nodes)>0){
-      nodeRenderInfo(g1)$lwd[1+expdes$inhib_nodes]=4 # Populate for perturbations
-      nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
-      nodeRenderInfo(g1)$col[(len+1):(len+length(expdes$inhib_nodes))]="white" # mask inhibitor pseudo nodes
-      nodeRenderInfo(g1)$textCol[(len+1):(len+length(expdes$inhib_nodes))]="white" 
+      graph::nodeRenderInfo(g1)$lwd[1+expdes$inhib_nodes]=4 # Populate for perturbations
+      graph::nodeRenderInfo(g1)$col[1+expdes$inhib_nodes] = "red"
+      graph::nodeRenderInfo(g1)$col[(len+1):(len+length(expdes$inhib_nodes))]="white" # mask inhibitor pseudo nodes
+      graph::nodeRenderInfo(g1)$textCol[(len+1):(len+length(expdes$inhib_nodes))]="white" 
     }
     
     if (length(expdes$stim_nodes)>0){
-      nodeRenderInfo(g1)$lwd[1+expdes$stim_nodes] = 4
-      nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
+      graph::nodeRenderInfo(g1)$lwd[1+expdes$stim_nodes] = 4
+      graph::nodeRenderInfo(g1)$col[1+expdes$stim_nodes] = "blue"
     }
   }
-  if (any(local_values != "")) {
+  if (local_values[1] != "") {
     # Add Edge Weights left justified
-    efrom = edgeRenderInfo(g1)$enamesFrom
-    eto = edgeRenderInfo(g1)$enamesTo
-    edge_spline=edgeRenderInfo(g1)$splines
+    efrom = graph::edgeRenderInfo(g1)$enamesFrom
+    eto = graph::edgeRenderInfo(g1)$enamesTo
+    edge_spline = graph::edgeRenderInfo(g1)$splines
     
     for (idx in which(adm!=0)) {
       vv = local_values$local_response[idx]
@@ -867,13 +1012,15 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
       ato = rownames(adm)[ifelse(idx %% len==0,len,idx %% len)]
       cc = which(afrom==efrom & ato==eto)
       cc = ifelse(length(cc)!=0, cc, which(afrom==eto & ato==efrom)) # Link in both directions
-      edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
-      edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
+      graph::edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
+      graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
       
-      coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
-      edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(edgeRenderInfo(g1)$label[cc])*10/2)
-      edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
-      if (vv < 0) { edgeRenderInfo(g1)$col[cc] = "orange" }
+      coordMat=Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
+      graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(graph::edgeRenderInfo(g1)$label[cc])*10/2)
+      graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
+      if (!is.na(vv)){
+      if (vv < 0) { graph::edgeRenderInfo(g1)$col[cc] = "orange" }
+      }
     }
     
     # Add Inhibitor estimates
@@ -883,19 +1030,32 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
         iname = paste0(colnames(adm)[expdes$inhib_nodes[idx]+1], "i")
         nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
         cc = which(nname==efrom & iname==eto)
-        edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
-        edgeRenderInfo(g1)$label[cc] = ifelse(vv>=10, round(vv,0),signif(vv, 2))
-        edgeRenderInfo(g1)$textCol[cc]="red"
+        graph::edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
+        graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
+        graph::edgeRenderInfo(g1)$textCol[cc]="red"
         
-        coordMat=bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
-        edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
-        edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
+        coordMat = Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
+        graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
+        graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
       }
     }
   }
-  renderGraph(g1)
+  
+  Rgraphviz::renderGraph(g1)
+# other options to use the width and height howver the coordinates are not thes same in the generated graph!!  
+#  if (length(expdes$inhib_nodes)>0){
+#      nodes = names(graph::nodeRenderInfo(g1)$nodeX)
+#      inhib = colnames(adm)[expdes$inhib_nodes+1]      
+#      cc = which(nodes %in% inhib)
+#      ix = graph::nodeRenderInfo(g1)$labelX[cc] + graph::nodeRenderInfo(g1)$lWidth[cc]
+#      iy = graph::nodeRenderInfo(g1)$labelY[cc] - 0.5*graph::nodeRenderInfo(g1)$height[cc]
+#      iv = local_values$inhibitors  
+#      if (local_values[1] != "" & length(expdes$inhib_nodes)>0){
+#       text(x = ix, y = iy, labels = trim_num(iv), col="red",cex=0.6, pos=4, offset=0.5)
+#      }
+#   }
   invisible(g1)
-  # TODO MARK REMOVED LINKS
+  # (1) TODO MARK REMOVED LINKS, (2) ALLOW TO GIVE CLUSTERS THAT SHOULD BE KEPT IN CLOSE VICINITY 
 }
 
 #' Extracts the data, the experimental design and the structure from the input files
@@ -1175,7 +1335,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   return(core)
 }
 
-#' Import a save model with data files
+#' Import a saved model with data files
 #'
 #' Build a fitted model from a .mra file, and import data for this model
 #' Does NOT perform any initialisation
@@ -1201,6 +1361,112 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
   return(model)
+}
+
+#' Import a saved set of models with data files to construct a modelSet object
+#'
+#' Build a fitted modelSet object from the individual .mra files, and import data for this modelSet
+#' Does NOT perform any initialisation
+#' @param model_files A list of .mra files containing the information on the models
+#' @param data_files A list of .csv files with the data for the models
+#' @param var_files A list of .var files with the variation of the data
+#' @return An MRAmodelSet object describing the modelSet and its best fit, containing the data
+#' @export
+#' @seealso rebuildModel, createModelSet
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
+#' @examples \dontrun{
+#' rebuildModelSet(c("model1.mra",model2.mra), c("data1.csv","data2.csv"), c("data1.var","data2.var"))
+#' }
+rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="no") {
+  # check size
+  if (length(model_files)!= length(data_files)){ stop("Number of model files and data files is not equal!") }
+  # check for bijection and rearrange if needed
+  mod = sapply(model_files,function(x) gsub("\\.mra$","",rev(unlist(strsplit(x,"/")))[1]))
+  dat = sapply(data_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.csv$","",rev(unlist(strsplit(x,"/")))[1]))))
+  dpos = match(dat,mod)
+  if (sum(is.na(dpos)) == 0){
+    data_files = data_files[dpos]  
+  }else{
+    message("names of model_files and data_files can not be matched... using given order.")
+  }
+  
+  if (length(var_files) > 0){
+    if (length(model_files) != length(var_files)){ stop("var files are given, but do not match the number of model files!") }
+    
+    var = sapply(var_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.var$","",rev(unlist(strsplit(x,"/")))[1]))))
+    vpos = match(var,mod)
+    if (sum(is.na(vpos)) == 0){
+      var_files = var_files[vpos]  
+    }else{
+      message("names of model_files and var_files can not be matched... using given order.")
+    }
+  }
+  
+  # rebuild single models
+  nb_models = length(model_files)
+  data_ = new(STASNet:::DataSet)
+  
+  model1 = rebuildModel(model_files[1],data_files[1],ifelse(length(var_files>0),var_files[1],""),rearrange)
+  data_$addData(model1$data, FALSE)
+  params = model1$parameters
+  stim_data = model1$data$stim_data
+  unstim_data = model1$data$unstim_data
+  error = model1$data$error
+  offset = model1$data$scale
+  cv = model1$cv
+  
+  for (ii in 2:nb_models){
+    model=rebuildModel(model_files[ii],data_files[ii],ifelse(length(var_files>0),var_files[ii],""),rearrange)
+    data_$addData(model$data, FALSE)
+    if (!all( dim(model1$data$unstim_data) == dim(model$data$unstim_data) )) {
+      stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
+    } else if (!all( dim(model1$data$error) == dim(model$data$error) )) {
+      stop(paste0("dimension of 'error' from model ", ii, " do not match those of model 1"))
+    } else if (!all( dim(model1$data$stim_data) == dim(model$data$stim_data) )) {
+      stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
+    } else if (!all( dim(model1$cv) == dim(model$cv) )) {
+      stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
+    }
+    params = cbind(params, model$parameters)
+    stim_data = rbind(stim_data, model$data$stim_data)
+    unstim_data = rbind(unstim_data, model$data$unstim_data)
+    error = rbind(error, model$data$error)
+    offset = rbind(offset, model$data$scale)
+    cv = rbind(cv, model$cv)
+  }
+  
+  data_$set_unstim_data ( unstim_data )
+  data_$set_scale( offset )
+  data_$set_stim_data( stim_data )
+  data_$set_error( error )
+  
+  # populate MRAmodelSet
+  modelSet = new(STASNet:::ModelSet)
+  modelSet$setModel(design = model1$design, structure = model1$structure)
+  modelSet$setNbModels(nb_models)
+  
+  bestfit = as.numeric(unlist(strsplit(model1$infos[3]," "))[4])
+  self = STASNet:::MRAmodelSet(nb_models = nb_models,
+                               model = modelSet, 
+                               design = model1$design, 
+                               structure = model1$structure,
+                               basal = model1$basal,
+                               data = data_,
+                               cv = cv,
+                               parameters = c(params),
+                               bestfit = bestfit,
+                               name = unname(mod),
+                               infos = model1$infos[2:5],
+                               unused_perturbations = model1$unused_perturbations,
+                               unused_readouts = model1$unused_readouts,
+                               min_cv = model1$min_cv, 
+                               default_cv = model1$default_cv)
+  
+  variaPar = rowSums(abs(sweep(params,1,params[,1],"-"))) > 0   
+  if ( any(variaPar) ){ 
+    self = setVariableParameters(self, which(variaPar))
+  }
+  return(self)
 }
 
 # Perform several simulated annealing, one per core

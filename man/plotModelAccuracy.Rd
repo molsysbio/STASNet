@@ -19,9 +19,6 @@ Nothing
 \description{
 Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 createModel, importModel
 
@@ -30,4 +27,6 @@ Other Model plots: \code{\link{plotModelGraph}},
   \code{\link{plotModelScores}},
   \code{\link{plotParameters.modelGroup}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

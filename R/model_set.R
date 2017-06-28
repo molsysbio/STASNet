@@ -26,28 +26,27 @@ createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=100
 
 #' Compare networks
 #'
-#' Compare the parameters of one network for different conditions (cell line, perturbations, ...)
-#' Missing links are indicated by NA.
-#' @param files A list of '.mra' files
+#' Compile the parameters of a model set in one matrix and plot the results.
+#' highlights the variable links by scaling to it
+#' @param modelset A MRAmodelSet object
 #' @return matrix of parameters
+#' @export
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-compareModels <- function(files) {
-  models = vector("list",length(files))
-  for (ii in 1:length(files)) { models[[ii]] = importModel(files[ii]) }
+compareParameters <- function(modelset) {
   
-  parameter=unique(unlist(lapply(1:length(models),function(x) models[[x]]$model$getParametersLinks())))
-  links = matrix(NA, nrow=length(parameter), ncol=0) 
-  rownames(links) = parameter
+  links=matrix(modelset$parameters,ncol=modelset$nb_models,byrow = F)
+  colnames(links) <- modelset$names
+  rownames(links) <- unname(sapply(modelset$model$getParametersLinks(), function(x) STASNet:::simplify_path_name(x)))
+
+  if (length(modelset$variable_parameters)==0){
+     warning("No variable links detected, please run 'addVariableParameters()' before calling this function!")
+  }
   
-  for (model in models) { 
-    links = cbind(links, NA)
-    links[match(model$model$getParametersLinks(),parameter),ncol(links)] = model$parameters
-    }
-  
-  colnames(links) = sapply(1:length(models),function(x) models[[x]]$name)
-  plotHeatmap(mat = links,
-              main = "model parameter comparison",
-              lim = 10)
+  STASNet:::plotHeatmap(mat = links,
+              main = "modelset parameters rowwise scaled to mean",
+              stripOut = 0.01,
+              lim = 10,
+              scale_rows = T)
   return(links)
 }
 

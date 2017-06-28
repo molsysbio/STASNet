@@ -12,4 +12,3 @@ readMIDAS(fname)
 \description{
 Read a MIDAS file and returns it as a matrix containing the experiments as rows and the readouts as colums
 }
-

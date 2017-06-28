@@ -2,6 +2,7 @@
 % Please edit documentation in R/compare_models.R, R/parameters_comparison.R
 \name{plotParameters}
 \alias{plotParameters}
+\alias{plotParameters}
 \title{Plot parameters}
 \usage{
 plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE,
@@ -35,4 +36,3 @@ plotParameters.modelGroup
 
 \code{\link{aggregateDirectPaths}}
 }
-

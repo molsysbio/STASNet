@@ -26,4 +26,3 @@ Aggregate the paths values for plotting
 
 Extract the subset of paths aggregated from multiple models that match a gived regex
 }
-

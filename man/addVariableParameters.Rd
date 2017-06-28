@@ -5,7 +5,8 @@
 \title{Extend a MRAmodelSet with relevant variable parameters}
 \usage{
 addVariableParameters(original_modelset, nb_cores = 0, max_iterations = 0,
-  nb_samples = 100, accuracy = 0.95, method = "geneticlhs")
+  nb_samples = 100, accuracy = 0.95, method = "geneticlhs",
+  notVariable = c())
 }
 \arguments{
 \item{original_modelset}{An MRAmodelSet object}
@@ -19,6 +20,8 @@ addVariableParameters(original_modelset, nb_cores = 0, max_iterations = 0,
 \item{accuracy}{Cutoff probability for the chi^2 test}
 
 \item{method}{Name of the LHS method to use}
+
+\item{notVariable}{Parameters that should not be varied, either a numeric or character vector identifying the parameters from 'modelset$model$getParametersNames()$names', defaults to 'c()'.}
 }
 \value{
 An updated MRAmodelSet with the new parameter sets
@@ -28,5 +31,6 @@ See if a MRAmodelSet requires some parameters to be variable among models to exp
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 
+Bertram Klinger \email{bertram.klinger@charite.de}
+}

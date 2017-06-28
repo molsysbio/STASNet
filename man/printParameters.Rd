@@ -20,10 +20,9 @@ Print the value of each path from the model, with the profile likelihood infos i
 \details{
 The print function is 'message' and thus produces an output in stderr
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 \code{\link{message}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

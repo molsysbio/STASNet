@@ -17,4 +17,3 @@ See \code{\link{base::barplot}}
 \description{
 Plot the scores for each measured node fitting as a barplot with a bar for each model for each measurement
 }
-

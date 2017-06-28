@@ -31,4 +31,3 @@ Other toy data generation: \code{\link{addLayerLinks}},
   \code{\link{createSimulation}},
   \code{\link{generateToyNetwork}}
 }
-

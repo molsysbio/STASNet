@@ -49,9 +49,13 @@ getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, meas
 #' Clone an MRAmodel or MRAmodelSet object 
 #'
 #' Copy a MRAmodel or MRAmodelSet object into a new independent variable
-#' @param old_model A MRAmodel/MRAmodelSet object.
-#' @return An MRAmodel/MRAmodelSet object with the same properties as old_model
+#' @param old_model A MRAmodel or MRAmodelSet object.
+#' @return An MRAmodel/MRAmodelSet object with the same properties but separated from the old model
+#' @export
 #' @author Bertram Klinger \email{bertram.klinger@charite.de}
+#' #' @examples \dontrun{
+#' clonedModel = cloneModel(mramodel)
+#' }
 cloneModel <- function(old_model){
   
   type = class(old_model)
@@ -69,9 +73,11 @@ cloneModel <- function(old_model){
     stop(paste0("Wrong input class '",type,",' must be of class 'MRAmodel' or 'MRAmodelSet'!")) 
   }
   
-  links = old_model$model$getParametersLinks()
-  tmp_links = unlist(strsplit(gsub("^r_|\\^\\(-1\\)","",links[grep("^r_",links)]),"\\*r_"))
-  links_list = do.call("rbind",strsplit(unique(tmp_links),"_"))[,c(2,1)]
+  idx = which(old_model$structure$adjacencyMatrix==1)
+  names = old_model$structure$names
+  from = names[1+((idx-1) %/% length(names))]
+  to = names[ifelse(idx %% length(names)==0, length(names), idx %% length(names))]
+  links_list = cbind(from,to)
   structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
   design = STASNet:::getExperimentalDesign(model.structure = structure,
                                            stim.nodes = structure$names[old_model$design$stim_nodes+1],
@@ -99,7 +105,7 @@ cloneModel <- function(old_model){
                                       cv = old_model$cv,
                                       parameters = old_model$parameters,
                                       bestfit = old_model$bestfit,
-                                      name = old_model$name,
+                                      name = old_model$names,
                                       infos = old_model$infos,
                                       param_range = old_model$param_range,
                                       lower_values = old_model$lower_values,

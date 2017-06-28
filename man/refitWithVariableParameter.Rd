@@ -5,7 +5,7 @@
 \title{Refit modelset by iterative relaxation of single parameters}
 \usage{
 refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores = 0,
-  nb_samples = 5, method = "geneticlhs")
+  nb_samples = 5, method = "geneticlhs", reverse = F)
 }
 \arguments{
 \item{var_par}{ID of the variable parameter to test}
@@ -19,6 +19,8 @@ refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores = 0,
 \item{nb_samples}{Number of samples to generate for the fitting}
 
 \item{method}{Method to use for the fitting}
+
+\item{reverse}{Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter}
 }
 \value{
 A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)
@@ -26,4 +28,3 @@ A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 
 \description{
 Refit modelset by iterative relaxation of single parameters
 }
-

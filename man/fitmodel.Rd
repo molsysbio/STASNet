@@ -4,6 +4,7 @@
 \name{fitmodel}
 \alias{fitmodel}
 \alias{fitmodel-package}
+\alias{fitmodel-package}
 \title{Fit and simulate model from perturbation data}
 \description{
 Fits and simulates network model derived from perturbation data using Modular Response Analysis and Profile Likelihood
@@ -15,10 +16,9 @@ For a complete list of functions and classes, use 'library(help=fitmodel)'.
 
 For a walk-through as to how the package can be used to fit a model, see the vignette.
 }
-\author{
-Bertram Klinger \email{bertram.klinger@charite.de}, Mathurin Dorel \email{dorel@horus.ens.fr}, Nils Bluethgen \email{nils.bluethgen@charite.de}
-}
 \references{
 Klinger et al. (2013) Network quantification of EGFR signaling unveils potential for targeted combination therapy. Molecular Systems Biology.
 }
-
+\author{
+Bertram Klinger \email{bertram.klinger@charite.de}, Mathurin Dorel \email{dorel@horus.ens.fr}, Nils Bluethgen \email{nils.bluethgen@charite.de}
+}

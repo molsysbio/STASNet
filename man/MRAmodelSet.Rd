@@ -50,10 +50,9 @@ An MRAmodelSet object
 \description{
 Build an MRAmodelSet, which contains all the information required to simulate a set of MRAmodels, ensuring that the sets of parameters are similar for all models
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 \code{\link{createModel}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

@@ -15,4 +15,3 @@ Invisibly, the residuals (chi-2)
 \description{
 Display the residuals of the models as a barplot
 }
-

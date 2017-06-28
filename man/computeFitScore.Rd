@@ -18,4 +18,3 @@ A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
 Compute 2 fitting scores for the model, the fraction of the variation in the data explained by the network, and the improvement compared to a model with no links
 Do the computation for each measured node and for the network
 }
-

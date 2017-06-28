@@ -33,4 +33,3 @@ Extracts the data, the experimental design and the structure from the input file
 \seealso{
 \code{\link{extractMIDAS}}
 }
-

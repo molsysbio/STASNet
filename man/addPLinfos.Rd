@@ -19,10 +19,9 @@ An MRAmodel object with the profile likelihood information integrated to it
 Add the information provided by the profile likelihood in the model_description object
 ie the limits of the confidence interval and the corresponding sets of parameters
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 \code{\link{profileLikelihood}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

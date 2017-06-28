@@ -19,4 +19,3 @@ Plot a graph from an adjacency list
 \seealso{
 Other Network graph: \code{\link{plotModelGraph}}
 }
-

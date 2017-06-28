@@ -15,4 +15,3 @@ A matrix containing the simulation with the names of the measured nodes as colum
 \description{
 Simulate the model for the experimental design used for the fitting
 }
-

@@ -24,4 +24,3 @@ Get LHS samples
 \author{
 Bertram Klinger \email{klinger@charite.de}
 }
-

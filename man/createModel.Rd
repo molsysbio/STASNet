@@ -35,7 +35,7 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 
 \item{unused_perturbations}{Perturbations in the dataset that should not be used}
 
-\item{unused_readouts}{Readouts in the dataset that should not be used}
+\item{unused_readouts}{Measured nodes in the datasets that should not be used}
 
 \item{MIN_CV}{Minimum coefficient of variation.}
 
@@ -59,12 +59,11 @@ model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", nb_cores = detec
 model = createModel("links.tab", "basal.dat", "data_MIDAS.csv", inits = 1000000) # Uses more initialisations for a complex network
 }
 }
-\author{
-Mathurin Dorel \email{dorel@horus.ens.fr}
-}
 \seealso{
 importModel, exportModel, rebuildModel
 
 Other Model initialisation: \code{\link{initModel}}
 }
-
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

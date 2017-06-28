@@ -15,4 +15,3 @@ A vector containing the names of the parameters
 \description{
 Return the paths corresponding to each parameter
 }
-
