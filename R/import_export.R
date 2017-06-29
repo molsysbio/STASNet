@@ -125,12 +125,25 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
     }
 
     # Write the raw data used for the model in the file
-    if (export_data) {
-        # CV matrix
-        if (length(model_description$cv) > 1) {
-            for (r in 1:nrow(model_description$cv)) {
-                writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
-            }
+    if (length(model_description$data$stim_data) > 1) {
+        for (rr in 1:nrow(model_description$data$stim_data)) {
+            writeLines(paste0("SD ", paste0(model_description$data$stim_data[rr,], collapse=",")), handle)
+        }
+    }
+    if (length(model_description$data$error) > 1) {
+        for (rr in 1:nrow(model_description$data$error)) {
+            writeLines(paste0("ER ", paste0(model_description$data$error[rr,], collapse=",")), handle)
+        }
+    }
+    if (length(model_description$data$scale) > 1) {
+        for (rr in 1:nrow(model_description$data$scale)) {
+            writeLines(paste0("SC ", paste0(model_description$data$scale[rr,], collapse=",")), handle)
+        }
+    }
+    # CV matrix
+    if (length(model_description$cv) > 1) {
+        for (r in 1:nrow(model_description$cv)) {
+            writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
         }
     }
 
@@ -340,22 +353,50 @@ importModel <- function(file_name) {
     }
 
     # Set up the experimental design and the model
-    expDes = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
-    design = expDes
+    design = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
     model = new(STASNet:::Model)
-    model$setModel( expDes, structure )
+    model$setModel( design, structure )
 
     # Get the unstimulated data
     data = new(STASNet:::Data)
     data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
 
+    # Get the data values
+    stim_data = c()
+    while(grepl("^SD ", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;|,"))
+        lnb = lnb + 1
+        stim_data = rbind(stim_data, as.numeric(line[2:length(line)]))
+    }
+    if (!is.null(stim_data)) {
+        data$set_stim_data(stim_data)
+    }
+    error = c()
+    while(grepl("^ER ", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;|,"))
+        lnb = lnb + 1
+        error = rbind(error, as.numeric(line[2:length(line)]))
+    }
+    if (!is.null(error)) {
+        data$set_error(error)
+    }
+    scale = c()
+    while(grepl("^SC ", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;|,"))
+        lnb = lnb + 1
+        scale = rbind(scale, as.numeric(line[2:length(line)]))
+    }
+    if (!is.null(scale)) {
+        data$set_scale(scale)
+    }
     # Get the cv values if they are present
     cv_values = c()
-    while(grepl("^CV", file[lnb])) {
+    while(grepl("^CV ", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;"))
         lnb = lnb + 1
 
-        cv_values = rbind(cv_values, line[2:length(line)])
+        cv_values = rbind(cv_values, as.numeric(line[2:length(line)]))
+        colnames(cv_values) = structure$names[design$measured_nodes+1]
     }
     cv = cv_values
 # TODO import the data, and calculate the base fit
