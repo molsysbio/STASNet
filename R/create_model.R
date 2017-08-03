@@ -896,11 +896,13 @@ extractStructure <- function(to_detect, names="", adj=FALSE) {
 # TODO extraction of the basal activity with different format
 extractBasalActivity <- function(to_detect) {
   if (is.string(to_detect) && to_detect != "") {
-    return(as.character(read.delim(to_detect,header=FALSE)[,1]))
+    basal = as.character(read.delim(to_detect,header=FALSE)[,1])
     #unlist(read.delim(to_detect,header = F,colClasses = "character"))
   } else {
-    return( as.character(as.vector(to_detect)) )
+    basal = as.character(as.vector(to_detect))
   }
+  basal = gsub(" ", "_", basal)
+  return(basal)
 }
 
 #' Extract a MIDAS dataset
