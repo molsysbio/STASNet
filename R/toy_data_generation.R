@@ -157,7 +157,7 @@ readNetworkAdj <- function(network_file) {
             stop("The adjacency matrix has incorrect dimensions, number of lines and columns do not match")
         }
         rownames(network_file) = colnames(network_file)
-        adm = matrix( as.numeric(network_file), ncol=ncol(network_file), dimnames=list(NULL, colnames(network_file)) )
+        adm = matrix( as.numeric(network_file), ncol=ncol(network_file), dimnames=list(rownames(network_file), colnames(network_file)) )
     }
     return(adm)
 }
