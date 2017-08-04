@@ -1,3 +1,4 @@
+
 ###################### profile_likelihood.R ###############################
 # Functions associated with the profile likelihood
 
@@ -191,7 +192,7 @@ niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE
         pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
     }
     eplot(c(0, 1), c(0, 1))
-    legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 )
+    legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 , bty = "n")
     for (plid in 1:length(profiles)) {
         profile = profiles[[plid]]
         th_diff = profile$thresholds[2]-profile$thresholds[1]
@@ -216,7 +217,7 @@ niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE
             for (pid in (1:length(profiles))[-plid]) {
                 lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2)
             }
-            title(main="Other paths profiles", xpd=NA)
+            title(main="Other paths", xpd=NA)
         } else { # Separate identifiable and non identifiable profiles
             plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
             for (pid in sorted_profiles$niid) {
@@ -224,12 +225,12 @@ niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE
                     lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2 )
                 }
             }
-            title(main="Other non identifiable paths profiles", xpd=NA)
+            title(main="Other non identifiable paths", xpd=NA)
             plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
             for (pid in sorted_profiles$iid) {
                 lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2 )
             }
-            title(main="Identifiable paths profiles", xpd=NA)
+            title(main="Identifiable paths", xpd=NA)
         }
         title(main=profile$path, outer=T)
     }
