@@ -155,7 +155,7 @@ In the model two links are found to be neglectable and the thusly reduced model 
 
 After haveing reduce th model it is also of interest to search for missing links that would improve the overall fit.
 In contrast to the reduction this is done by returning a list which contains teh statistics of each link so that the extension can be then manually curated and compared to available biological insights from previous experiments or literature.
-```{r,eval =F}
+```{r,eval =T}
 #TODO make ModelStructure to accept a list of all names to always preserve unconnected nodes in the network
 ext_mat = suggestExtension(red_model)
 ```
