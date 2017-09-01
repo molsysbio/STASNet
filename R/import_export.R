@@ -472,3 +472,32 @@ controlFC <- function(idata) {
     }
     return(fcdata)
 }
+
+#' Write a MIDAS file from a human readable dataset
+#'
+#' Write a MIDAS file from a human readable dataset
+#' @param data Matrix where the rownames are the treatment separated by + signs and the column names are the readouts
+#' @export
+midasFromData <- function(data, fname) {
+    treatments = unique(unlist(lapply( rownames(data), function(tt) { unlist(strsplit(tt, "\\+")) } )))
+    control_blank = which(grepl("control|^c$|blank", treatments))
+    if (length(control_blank) > 0) { treatments = treatments[-control_blank] }
+    midas_data = matrix(nrow=0, ncol=2+length(treatments)+ncol(data))
+
+    colnames(midas_data) = c( "ID:type", paste0("TR:", treatments), "DA:ALL", paste0("DV:", colnames(data)) )
+    for (rr in 1:nrow(data)) {
+        if (rownames(data)[rr] == "blank") {
+            midas_data = rbind( midas_data, c("blank", rep(0,length(treatments)+1), data[rr,]) )
+        } else if (grepl("^c$|control", rownames(data)[rr])) {
+            midas_data = rbind( midas_data, c("control", rep(0,length(treatments)+1), data[rr,]) )
+        } else {
+            midas_data = rbind( midas_data, c("t", rep(0,length(treatments)+1), data[rr,]) )
+            combination = strsplit(rownames(data)[rr], "\\+")
+            for (tr in combination) {
+                midas_data[rr, paste0("TR:", tr)] = 1
+            }
+        }
+    }
+    write.csv(midas_data, file=fname, row.names=FALSE, quote=FALSE)
+    invisible(midas_data)
+}
