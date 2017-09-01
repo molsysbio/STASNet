@@ -427,8 +427,48 @@ readMIDAS <- function(fname) {
 
     return(measures[order(rownames(measures)),])
 }
-checkMIDAS <- function(data_file) {
-    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'DV' field is missing") }
-    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS data or the field 'ID:type' is missing") }
-    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'TR' field is missing") }
+#' @param data_file A matrix to be checked for MIDAS compliance
+#' @param handler Function to use to handle the error message. Should be 'stop', 'warning', 'print' or 'message'
+checkMIDAS <- function(data_file, handler=stop) {
+    if (!any(grepl("^DV", colnames(data_file)))) { handler("This is not a MIDAS data, the mandatory 'DV' field is missing") }
+    if (!any(grepl("^ID", colnames(data_file)))) { handler("This is not a MIDAS data or the field 'ID:type' is missing") }
+    if (!any(grepl("^TR", colnames(data_file)))) { handler("This is not a MIDAS data, the mandatory 'TR' field is missing") }
+}
+
+#' Compute the log-fold change to control
+#'
+#' Compute the log-fold change to control, remove the blank and control lines
+#' @export
+controlFC <- function(idata) {
+    midas_format = FALSE
+    if ( any(grepl("^ID.type$", colnames(idata))) ) {
+        midas_format = TRUE
+        full_datas = idata[,grepl("^DV", colnames(idata))]
+        control_selection = which(grepl("c$|control", idata[,"ID.type"]))
+        blank_selection = which(idata[,"ID.type"]=="blank")
+    } else {
+        full_datas = idata
+        control_selection = grep("^c$|control", rownames(full_datas))
+        blank_selection = which(rownames(full_datas)=="blank")
+    }
+    control=full_datas[control_selection,,drop=FALSE]
+    if (!is.null(nrow(control)) && nrow(control) > 0) {
+        control_line = colMeans(control)
+    } else {
+        control_line = rep(1, ncol(full_datas))
+    }
+    blank=full_datas[blank_selection,]
+    if (length(blank_selection) > 0 || length(control_selection) > 0) {
+        datas=full_datas[-c( blank_selection, control_selection ),]
+    } else {
+        datas = full_datas
+    }
+    control = matrix(rep(control_line, nrow(datas)), nrow=nrow(datas), byrow=T)
+    fcdata = log( datas / control )
+    if (midas_format) {
+        idata = idata[-c(control_selection, blank_selection),]
+        idata[grepl("^DV", colnames(idata))] = fcdata
+        fcdata = idata
+    }
+    return(fcdata)
 }
