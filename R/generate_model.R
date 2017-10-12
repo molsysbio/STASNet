@@ -1,6 +1,6 @@
-getModelStructure <- function(links, struct_name="") {
+getModelStructure <- function(links, struct_name="",names=c()) {
   ModelStructure <- STASNet:::ModelStructure
-  modelStructure =new(ModelStructure, as.character(links[,1]),as.character(links[,2]), struct_name)
+  modelStructure =new(ModelStructure, as.character(links[,1]),as.character(links[,2]),as.character(names), struct_name)
   return(modelStructure);
 }
 
@@ -78,7 +78,7 @@ cloneModel <- function(old_model){
   from = names[1+((idx-1) %/% length(names))]
   to = names[ifelse(idx %% length(names)==0, length(names), idx %% length(names))]
   links_list = cbind(from,to)
-  structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title)
+  structure = STASNet:::getModelStructure(links = links_list, struct_name = old_model$structure$title, names)
   design = STASNet:::getExperimentalDesign(model.structure = structure,
                                            stim.nodes = structure$names[old_model$design$stim_nodes+1],
                                            inhib.nodes = structure$names[old_model$design$inhib_nodes+1],

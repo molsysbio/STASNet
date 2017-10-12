@@ -320,10 +320,11 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
 #' @return Invisibly the aggregated direct paths
 #' @export
 #' @seealso \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code{\link{aggregateDirectPaths}}
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelParameters <- function(models, non_stop_nodes=c(), lim=2) {
     if ("MRAmodel" %in% class(models)) {
         model_list = list()
-        model_list[["_"]] = models
+        model_list[[models$name]] = models
         models = model_list
     }
     if (!is.list(models)) { stop("'models' must be a list") }

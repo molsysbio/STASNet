@@ -27,8 +27,8 @@ extern bool debug;
 
 ModelStructure::ModelStructure() : names(), adjacencymatrix() {} 
 
-ModelStructure::ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2, std::string title) : names(), adjacencymatrix(), title(title) {
-  set(names1,names2);
+ModelStructure::ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2, std::vector<std::string> namesAll, std::string title) : names(), adjacencymatrix(), title(title) {
+  set(names1,names2,namesAll);
 } 
 
 std::vector<std::string> ModelStructure::getNames() const { return names ; }
@@ -93,11 +93,13 @@ void ModelStructure::swap_symbols(size_t ii, size_t jj) {
     }
 }
 
-void ModelStructure::set(std::vector<std::string> names1,std::vector<std::string> names2) {
+void ModelStructure::set(std::vector<std::string> names1, std::vector<std::string> names2, std::vector<std::string> namesAll) {
     if (names1.size()!=names2.size()) 
       throw( std::invalid_argument("outgoing and incoming node names need to have the same size!") );
+    
     names=names1;
     names.insert(names.end(), names2.begin(), names2.end());
+    names.insert(names.end(),namesAll.begin(),namesAll.end()); 	
     std::sort (names.begin(), names.end());
     std::vector<std::string>::iterator it = std::unique(names.begin(),names.end());
     names.resize( std::distance(names.begin(),it) );
@@ -141,7 +143,7 @@ RCPP_MODULE(ModelStructureEx){
 
     class_<ModelStructure>( "ModelStructure" )
       .default_constructor()
-      .constructor<std::vector<std::string>,std::vector<std::string>, std::string >()
+      .constructor<std::vector<std::string>,std::vector<std::string>, std::vector<std::string>, std::string >()
       .method( "set", &ModelStructure::set )
       .property( "adjacencyMatrix", &ModelStructure::getAdjacencyMatrix )
       .method("setAdjacencyMatrix", &ModelStructure::setAdjacencyMatrix )

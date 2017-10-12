@@ -480,10 +480,11 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
   if (!is.list(prediction) || !is.matrix(prediction$bestfit) ) {
     stop("Invalid type for argument 'prediction', see 'simulateModel' return value")
   }
-  
+
   ratio = 2/3 # Display height ratio between the plot and its annotation
   layout(matrix(1:2, nrow=2, byrow=T), heights=c(ratio, 1-ratio))
   old_mar = par()$mar
+  # plot the data
   for (node in 1:ncol(prediction$bestfit)) {
     # Collects the positions of the bars
     par(mar = c(1, 6, 4, 4))
@@ -567,10 +568,14 @@ plotSimulation <- function(prediction, log_axis=FALSE, with_data=TRUE, data_colo
       text(bars, y_coord, legend_line)
       text(pert_name_x, y_coord, colnames(prediction$conditions)[pert], pos=2)
     }
-    eplot( xlim=c(0, 1), ylim=c(0, 1) )
+    STASNet:::eplot( xlim=c(0, 1), ylim=c(0, 1) )
   }
   par(mar=old_mar, xpd=T)
   layout(1)
+  
+  # plot the legend in a separate plot
+  eplot(c(0, 1),c(0, 1))
+  legend("center", legend=legend, col=colors, lwd=2, horiz =F, bty="n")
   
   # Invisibly returns the prediction
   return(invisible(prediction))

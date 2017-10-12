@@ -29,9 +29,9 @@ class ModelStructure {
 public:
   ModelStructure();
 
-  ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2, std::string title="");
+  ModelStructure(std::vector<std::string> names1,std::vector<std::string> names2, std::vector<std::string> namesAll, std::string title="");
 
-  void set(std::vector<std::string> names1,std::vector<std::string> names2);
+  void set(std::vector<std::string> names1,std::vector<std::string> names2, std::vector<std::string> namesAll);
 
   void buildLinks();
 
