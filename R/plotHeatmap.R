@@ -21,6 +21,7 @@ cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7"
 plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE,scale_rows=F){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
+  mat[is.infinite(as.matrix(mat))] = NA
   # cutoff and transformation of colour
   if (scale_rows){
     m=sweep(mat,1,apply(mat,1,mean,na.rm=T),"-")

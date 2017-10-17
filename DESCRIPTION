@@ -20,7 +20,8 @@ Depends:
     RhpcBLASctl
 LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign
-RoxygenNote: 6.0.1
-Suggests: knitr,
+RoxygenNote: 5.0.1
+Suggests:
+    knitr,
     testthat
 VignetteBuilder: knitr

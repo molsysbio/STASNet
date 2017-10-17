@@ -66,7 +66,9 @@ simplify_path_name <- function (path_name) {
     # Look for the node(s) without predecessor (i.e the first node of the path(s))
     selected=which(elements[,1]=="")
     if (is.na(selected[1])){
-      stop(paste0(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
+      message(paste0(c("The following path appears to be circular: ", path_name, ". A random node is chosen as the path simplification starting point")))
+      selected = 1
+      elements[selected,1]=""
     }
 
     # Build the most simple sub path(s)

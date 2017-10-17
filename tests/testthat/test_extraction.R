@@ -142,3 +142,9 @@ midas_data[,c(2,3)] = cbind(c(0,1,1,0), c(0,0,1,1)) # Perturbations
 midas_data[,c(5:7)] = cbind(c(1, 2, 2, 1), c(1, 2, 1.4, 0.7), c(1, 4, 2, 0.5)) # Experimental values
 test_that("uncorrelatable condition is tolerated",{expect_message(createModel(structure, basal, midas_data, inits=100))})
 
+cfc_test = matrix( c(2,2,2,2, 4,4,4,4, 8,8,8,8), nrow=3, dimnames=list(c("control", "A", "B")), byrow=TRUE )
+test_that("controlFC works as expected", {
+    expect_equal(controlFC(cfc_test), matrix( c(rep(log(2),4), rep(log(4), 4) ), nrow=2, byrow=TRUE, dimnames=list(c("A", "B"))) )
+})
+
+
