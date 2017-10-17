@@ -158,6 +158,7 @@ readNetworkAdj <- function(network_file) {
         }
         rownames(network_file) = colnames(network_file)
         adm = matrix( as.numeric(network_file), ncol=ncol(network_file), dimnames=list(colnames(network_file), colnames(network_file)) )
+    }
     return(adm)
 }
 
