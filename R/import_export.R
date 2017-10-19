@@ -425,7 +425,7 @@ readMIDAS <- function(fname) {
     rownames(measures)[rownames(measures)==""] = as.character(data_file[,"ID.type"])[rownames(measures)==""]
     colnames(measures) = gsub("DV.", "", colnames(measures))
 
-    return(measures[order(rownames(measures)),])
+    return(measures[order(rownames(measures)),,drop=FALSE])
 }
 #' @param data_file A matrix to be checked for MIDAS compliance
 #' @param handler Function to use to handle the error message. Should be 'stop', 'warning', 'print' or 'message'
