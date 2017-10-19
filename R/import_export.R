@@ -152,19 +152,25 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
 
 #' Import model from a file
 #'
-#' Import an MRAmodel object from a .mra file
+#' Import an MRAmodel object from a .mra file or from an .mra file that has been read in with readLines.
 #' @param file_name Name of the .mra file
+#' @param file R object from an .mra file that has been read in by readLines
 #' @return An MRAmodel object
 #' @export
 #' @seealso exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-importModel <- function(file_name) {
+importModel <- function(file_name=NULL,file=NULL) {
 
-    if (!grepl(".mra", file_name)) {
-        warning("This file does not have the expected .mra extension. Trying to extract a model anyway...")
+  if (is.null(file_name)){
+    if(is.null(file)){stop("no input was given either 'file_name' or 'file' required")
     }
-
+  }else{
+    if (!grepl(".mra", file_name)) {
+      warning("This file does not have the expected .mra extension. Trying to extract a model anyway...")
+    }
+    
     file = readLines(file_name)
+  }
     lnb = 1
     if (!grepl("^[NH]", file[lnb])) {
         stop("This is not a valid mra model file.")

@@ -1339,7 +1339,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #'
 #' Build a fitted model from a .mra file, and import data for this model
 #' Does NOT perform any initialisation
-#' @param model_file A .mra file containing the information on the model
+#' @param model_file A .mra file containing the information on the model, or an R object derived by reading in an .mra file by readLines
 #' @param data_file A .csv file with the data for the model
 #' @param var_file A .var file with the variation of the data
 #' @return An MRAmodel object describing the model and its best fit, containing the data
@@ -1350,10 +1350,14 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
 rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
-  if (!grepl(".mra$", model_file)) {
-    stop("The model file does not have the mra extension")
+  if(length(model_file)>1){
+    model = importModel(file=model_file) # import R object of an read in mra file 
+  }else{
+    if (!grepl(".mra$", model_file)) {
+      stop("The model file does not have the mra extension")
+    }
+    model = importModel(model_file)
   }
-  model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
   core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
   
