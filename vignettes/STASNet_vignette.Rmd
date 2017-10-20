@@ -1,11 +1,12 @@
 ---
 title: "Using the STASNet package"
-author: "Mathurin Dorel"
+author: "Mathurin Dorel, Bertram Klinger"
 date: "`r Sys.Date()`"
 output: 
     html_vignette:
         toc: yes
         toc_depth: 3
+        css: custom.css
 theme: united
 vignette: >
   %\VignetteIndexEntry{Using the STASNet package}
@@ -13,7 +14,9 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-# The MRA package
+  
+# `STASNet`  
+
 ---------
 
 ## Package flowchart
@@ -27,6 +30,7 @@ diagram="@startuml
     }
     (ModelSet) << S3 Class >>
     (MRAmodel) << S3 Class >>
+    (profileLikelihoodResults) << List >>
     (getCombinationMatrix) << Helper Functions >>
 
     (importModel) --> MRAmodel
@@ -43,18 +47,27 @@ diagram="@startuml
     (extractSubmodels) --> (MRAmodel)
     (simulateModel)-->(plotModelSimulation)
     (getCombinationMatrix)-->(simulateModel)
+    (MRAmodel)-->(profileLikelihood)
+    (profileLikelihood)-->(profileLikelihoodResults)
+    (profileLikelihoodResults)-->(addPLinfos)
+    (MRAmodel)-->(addPLinfos)
+    (addPLinfos)-->(MRAmodel)
+    (MRAmodel)-->(suggestExtension)
+    (MRAmodel)-->(selectMinimalModel)
     @enduml"
 write(diagram, "use_diagram.uml")
 system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
 ```
 ![Use diagram](use_diagram.png)
 
+**NOTE** Various scripts are available in the inst/ folder of `STASNet` to run the fitting procedure from the command line
+
 Loading the library:
 ```{r}
 library(STASNet)
 ```
 
-## Test dataset
+## Example dataset
 ```{r, eval=T}
 # Structure as adjacency list
 structure = rbind(c("N1", "N2"), c("N2", "N3"), c("N2", "N5"), c("N5", "N4"), c("N3", "N4"))
@@ -69,25 +82,26 @@ print(midas_data)
 
 ## Creation of the model
 
-Create the model using the data and the network layout as previous knowledge.
+Create the model using the data and the network layout as prior knowledge.
 
-NOTE: Depending on the number of initialisations ('inits') and the size of the network it is possible that
-the global optimum is not reached. Results can thus vary between runs of createModel for big network with an
-insufficient number of initialisations.
-
+**NOTE** Depending on the number of initialisations ('inits') and the size of the network it is possible that the global optimum is not reached. Results can thus vary between runs of `createModel()` for big networks with an insufficient number of initialisations.
 
 ```{r}
+model = createModel(model_links = structure,
+                    basal_file = basal,
+                    data.stimulation = midas_data,
+                    inits = 100,
+                    model_name = "example")
+```
+```{r, echo=F}
 #setwd(system.file("extdata", package="STASNet"))
 #model = createModel("network.tab", "basal.dat", "HCT116_MIDAS.csv", inits=100, perform_plots=T,
 #                    method="randomlhs");
-model = createModel(structure, basal, midas_data, inits=100)
-```
-```{r, echo=F}
 #TODO: replace the HCT116 dataset with the trimed dataset used in the package
 ```
 
 We can then visualise the resulting network. Be aware that the fitted values are paths and not directly link,
-thus the values displayed on a link should not be taken as is (use printParameters to get the actual paths).
+thus the values displayed on a link should not be taken as is (use `printParameters()` to get the actual paths).
 
 ```{r}
 printParameters(model)
@@ -96,16 +110,59 @@ plotModelGraph(model)
 
 We can the evaluate how the simulation compares to the data.
 
-```{r}
+```{r,fig.width=4}
 plotModelAccuracy(model)
 plotModelScores(model)
-simulation = plotModelSimulation(model, "all", "all", with_data= TRUE,log_axis = T)
+simulation = plotModelSimulation(model, with_data= TRUE,log_axis = T)
 print(simulation)
+```
+
+## Profile likelihood
+
+Profile likelihood aims at providing confidence intervals for the parameters. `niplotPL()` provides a convenient way to plot the likelihood and profiles of parameters.
+
+```{r,fig.width =4.9}
+profiles = profileLikelihood(model, nb_points = 1000, nb_cores = 8)
+model = addPLinfos(model, profiles)
+niplotPL(profiles, file_plots = FALSE)
+```
+
+Note the correlation between N2->N3 and N2->N4->N5 which indicates a structural non identifiability, i.e. the experimental design does not allow to differentiate between them.
+Note also the symmetry around 0 for the inhibitor iN2 due to the fact that it is always considered negative for the fit.
+
+The parameter confidence intervals can be visualised.
+
+```{r,fig.width=10,fig.height=6}
+
+plotModelParameters(model)
+```
+
+We can then simulate with confidence intervals.
+
+```{r,fig.width =4}
+simulation = plotModelSimulation(model, with_data= TRUE,log_axis = T)
+```
+
+## Network structure alteration
+Next to the parameterisation also the structural sanity of the network can be assessed by searching for superfluous or missing connections.
+
+First we try to reduce the network in oder to test for links that do not significantly contribute to the overall fit
+```{r}
+red_model = selectMinimalModel(model)
+```
+
+In the model two links are found to be neglectable and the thusly reduced model is returned as output of `selectMinimalModel()`
+
+After haveing reduce th model it is also of interest to search for missing links that would improve the overall fit.
+In contrast to the reduction this is done by returning a list which contains teh statistics of each link so that the extension can be then manually curated and compared to available biological insights from previous experiments or literature.
+```{r,eval =T}
+#TODO make ModelStructure to accept a list of all names to always preserve unconnected nodes in the network
+ext_mat = suggestExtension(red_model)
 ```
 
 ## Creation of a Model set
 
-A model set is a join fitting of several dataset with the same model and some links varying independently between models.
+A model set is a joint fitting of several dataset with the same model and some links varying independently between models.
 
 ```{r, eval=F}
 mset = createModelSet("network.tab", "basal.tab", c("Widr_"))

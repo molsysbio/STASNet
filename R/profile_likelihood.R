@@ -1,3 +1,4 @@
+
 ###################### profile_likelihood.R ###############################
 # Functions associated with the profile likelihood
 
@@ -65,7 +66,9 @@ simplify_path_name <- function (path_name) {
     # Look for the node(s) without predecessor (i.e the first node of the path(s))
     selected=which(elements[,1]=="")
     if (is.na(selected[1])){
-      stop(paste0(c("Error:  the following path appears to be circular: ", path_name, "Consider a different network structure!!!")))
+      message(paste0(c("The following path appears to be circular: ", path_name, ". A random node is chosen as the path simplification starting point")))
+      selected = 1
+      elements[selected,1]=""
     }
 
     # Build the most simple sub path(s)
@@ -165,7 +168,7 @@ addPLinfos <- function(model_description, profiles) {
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @seealso \code{\link{profileLikelihood}}
-niplotPL <- function(profiles, data_name="default", folder="./") {
+niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE) {
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
     for (pmain in 1:length(profiles)) {
         # Scale the other parameters profiles
@@ -187,9 +190,11 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
     colors = rep(cbbPalette, length.out=length(profiles))
     styles = rep(c(sapply(1:6, rep, length(cbbPalette))), length.out=length(profiles))
 
-    pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
+    if (file_plots) {
+        pdf(paste0(folder, "NIplot_", data_name, ".pdf"), height=dimension, width=dimension)
+    }
     eplot(c(0, 1), c(0, 1))
-    legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 )
+    legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 , bty = "n")
     for (plid in 1:length(profiles)) {
         profile = profiles[[plid]]
         th_diff = profile$thresholds[2]-profile$thresholds[1]
@@ -214,7 +219,7 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
             for (pid in (1:length(profiles))[-plid]) {
                 lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2)
             }
-            title(main="Other paths profiles", xpd=NA)
+            title(main="Other paths", xpd=NA)
         } else { # Separate identifiable and non identifiable profiles
             plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
             for (pid in sorted_profiles$niid) {
@@ -222,17 +227,18 @@ niplotPL <- function(profiles, data_name="default", folder="./") {
                     lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2 )
                 }
             }
-            title(main="Other non identifiable paths profiles", xpd=NA)
+            title(main="Other non identifiable paths", xpd=NA)
             plot(0, type="n", xlim=range(profile$explored), ylim=c(-1.1, 1.1), yaxt="n", xlab=xlabel)
             for (pid in sorted_profiles$iid) {
                 lines( profile$explored, profile$residuals[pid,], col=colors[pid], lty=styles[pid], lwd=2 )
             }
-            title(main="Identifiable paths profiles", xpd=NA)
+            title(main="Identifiable paths", xpd=NA)
         }
         title(main=profile$path, outer=T)
     }
-
-    dev.off()
+    if (file_plots) {
+        dev.off()
+    }
 }
 
 # Separates the profiles whether they are identifiables or not

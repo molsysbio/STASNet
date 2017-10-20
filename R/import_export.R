@@ -125,12 +125,25 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
     }
 
     # Write the raw data used for the model in the file
-    if (export_data) {
-        # CV matrix
-        if (length(model_description$cv) > 1) {
-            for (r in 1:nrow(model_description$cv)) {
-                writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
-            }
+    if (length(model_description$data$stim_data) > 1) {
+        for (rr in 1:nrow(model_description$data$stim_data)) {
+            writeLines(paste0("SD ", paste0(model_description$data$stim_data[rr,], collapse=",")), handle)
+        }
+    }
+    if (length(model_description$data$error) > 1) {
+        for (rr in 1:nrow(model_description$data$error)) {
+            writeLines(paste0("ER ", paste0(model_description$data$error[rr,], collapse=",")), handle)
+        }
+    }
+    if (length(model_description$data$scale) > 1) {
+        for (rr in 1:nrow(model_description$data$scale)) {
+            writeLines(paste0("SC ", paste0(model_description$data$scale[rr,], collapse=",")), handle)
+        }
+    }
+    # CV matrix
+    if (length(model_description$cv) > 1) {
+        for (r in 1:nrow(model_description$cv)) {
+            writeLines(paste0("CV ", paste0(model_description$cv[r,], collapse=" ")), handle)
         }
     }
 
@@ -139,19 +152,25 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
 
 #' Import model from a file
 #'
-#' Import an MRAmodel object from a .mra file
+#' Import an MRAmodel object from a .mra file or from an .mra file that has been read in with readLines.
 #' @param file_name Name of the .mra file
+#' @param file R object from an .mra file that has been read in by readLines
 #' @return An MRAmodel object
 #' @export
 #' @seealso exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-importModel <- function(file_name) {
+importModel <- function(file_name=NULL,file=NULL) {
 
-    if (!grepl(".mra", file_name)) {
-        warning("This file does not have the expected .mra extension. Trying to extract a model anyway...")
+  if (is.null(file_name)){
+    if(is.null(file)){stop("no input was given either 'file_name' or 'file' required")
     }
-
+  }else{
+    if (!grepl(".mra", file_name)) {
+      warning("This file does not have the expected .mra extension. Trying to extract a model anyway...")
+    }
+    
     file = readLines(file_name)
+  }
     lnb = 1
     if (!grepl("^[NH]", file[lnb])) {
         stop("This is not a valid mra model file.")
@@ -340,22 +359,50 @@ importModel <- function(file_name) {
     }
 
     # Set up the experimental design and the model
-    expDes = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
-    design = expDes
+    design = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
     model = new(STASNet:::Model)
-    model$setModel( expDes, structure )
+    model$setModel( design, structure )
 
     # Get the unstimulated data
     data = new(STASNet:::Data)
     data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
 
+    # Get the data values
+    stim_data = c()
+    while(grepl("^SD ", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;|,"))
+        lnb = lnb + 1
+        stim_data = rbind(stim_data, as.numeric(line[2:length(line)]))
+    }
+    if (!is.null(stim_data)) {
+        data$set_stim_data(stim_data)
+    }
+    error = c()
+    while(grepl("^ER ", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;|,"))
+        lnb = lnb + 1
+        error = rbind(error, as.numeric(line[2:length(line)]))
+    }
+    if (!is.null(error)) {
+        data$set_error(error)
+    }
+    scale = c()
+    while(grepl("^SC ", file[lnb])) {
+        line = unlist(strsplit(file[lnb], " +|\t|;|,"))
+        lnb = lnb + 1
+        scale = rbind(scale, as.numeric(line[2:length(line)]))
+    }
+    if (!is.null(scale)) {
+        data$set_scale(scale)
+    }
     # Get the cv values if they are present
     cv_values = c()
-    while(grepl("^CV", file[lnb])) {
+    while(grepl("^CV ", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;"))
         lnb = lnb + 1
 
-        cv_values = rbind(cv_values, line[2:length(line)])
+        cv_values = rbind(cv_values, as.numeric(line[2:length(line)]))
+        colnames(cv_values) = structure$names[design$measured_nodes+1]
     }
     cv = cv_values
 # TODO import the data, and calculate the base fit
@@ -386,8 +433,77 @@ readMIDAS <- function(fname) {
 
     return(measures[order(rownames(measures)),])
 }
-checkMIDAS <- function(data_file) {
-    if (!any(grepl("^DV", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'DV' field is missing") }
-    if (!any(grepl("^ID", colnames(data_file)))) { stop("This is not a MIDAS data or the field 'ID:type' is missing") }
-    if (!any(grepl("^TR", colnames(data_file)))) { stop("This is not a MIDAS data, the mandatory 'TR' field is missing") }
+#' @param data_file A matrix to be checked for MIDAS compliance
+#' @param handler Function to use to handle the error message. Should be 'stop', 'warning', 'print' or 'message'
+checkMIDAS <- function(data_file, handler=stop) {
+    if (!any(grepl("^DV", colnames(data_file)))) { handler("This is not a MIDAS data, the mandatory 'DV' field is missing") }
+    if (!any(grepl("^ID", colnames(data_file)))) { handler("This is not a MIDAS data or the field 'ID:type' is missing") }
+    if (!any(grepl("^TR", colnames(data_file)))) { handler("This is not a MIDAS data, the mandatory 'TR' field is missing") }
+}
+
+#' Compute the log-fold change to control
+#'
+#' Compute the log-fold change to control, remove the blank and control lines
+#' @export
+controlFC <- function(idata) {
+    midas_format = FALSE
+    if ( any(grepl("^ID.type$", colnames(idata))) ) {
+        midas_format = TRUE
+        full_datas = idata[,grepl("^DV", colnames(idata))]
+        control_selection = which(grepl("c$|control", idata[,"ID.type"]))
+        blank_selection = which(idata[,"ID.type"]=="blank")
+    } else {
+        full_datas = idata
+        control_selection = grep("^c$|control", rownames(full_datas))
+        blank_selection = which(rownames(full_datas)=="blank")
+    }
+    control=full_datas[control_selection,,drop=FALSE]
+    if (!is.null(nrow(control)) && nrow(control) > 0) {
+        control_line = colMeans(control)
+    } else {
+        control_line = rep(1, ncol(full_datas))
+    }
+    blank=full_datas[blank_selection,]
+    if (length(blank_selection) > 0 || length(control_selection) > 0) {
+        datas=full_datas[-c( blank_selection, control_selection ),]
+    } else {
+        datas = full_datas
+    }
+    control = matrix(rep(control_line, nrow(datas)), nrow=nrow(datas), byrow=T)
+    fcdata = log( datas / control )
+    if (midas_format) {
+        idata = idata[-c(control_selection, blank_selection),]
+        idata[grepl("^DV", colnames(idata))] = fcdata
+        fcdata = idata
+    }
+    return(fcdata)
+}
+
+#' Write a MIDAS file from a human readable dataset
+#'
+#' Write a MIDAS file from a human readable dataset
+#' @param data Matrix where the rownames are the treatment separated by + signs and the column names are the readouts
+#' @export
+midasFromData <- function(data, fname) {
+    treatments = unique(unlist(lapply( rownames(data), function(tt) { unlist(strsplit(tt, "\\+")) } )))
+    control_blank = which(grepl("control|^c$|blank", treatments))
+    if (length(control_blank) > 0) { treatments = treatments[-control_blank] }
+    midas_data = matrix(nrow=0, ncol=2+length(treatments)+ncol(data))
+
+    colnames(midas_data) = c( "ID:type", paste0("TR:", treatments), "DA:ALL", paste0("DV:", colnames(data)) )
+    for (rr in 1:nrow(data)) {
+        if (rownames(data)[rr] == "blank") {
+            midas_data = rbind( midas_data, c("blank", rep(0,length(treatments)+1), data[rr,]) )
+        } else if (grepl("^c$|control", rownames(data)[rr])) {
+            midas_data = rbind( midas_data, c("control", rep(0,length(treatments)+1), data[rr,]) )
+        } else {
+            midas_data = rbind( midas_data, c("t", rep(0,length(treatments)+1), data[rr,]) )
+            combination = strsplit(rownames(data)[rr], "\\+")
+            for (tr in combination) {
+                midas_data[rr, paste0("TR:", tr)] = 1
+            }
+        }
+    }
+    write.csv(midas_data, file=fname, row.names=FALSE, quote=FALSE)
+    invisible(midas_data)
 }

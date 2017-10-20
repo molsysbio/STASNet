@@ -896,11 +896,13 @@ extractStructure <- function(to_detect, names="", adj=FALSE) {
 # TODO extraction of the basal activity with different format
 extractBasalActivity <- function(to_detect) {
   if (is.string(to_detect) && to_detect != "") {
-    return(as.character(read.delim(to_detect,header=FALSE)[,1]))
+    basal = as.character(read.delim(to_detect,header=FALSE)[,1])
     #unlist(read.delim(to_detect,header = F,colClasses = "character"))
   } else {
-    return( as.character(as.vector(to_detect)) )
+    basal = as.character(as.vector(to_detect))
   }
+  basal = gsub(" ", "_", basal)
+  return(basal)
 }
 
 #' Extract a MIDAS dataset
@@ -1337,7 +1339,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #'
 #' Build a fitted model from a .mra file, and import data for this model
 #' Does NOT perform any initialisation
-#' @param model_file A .mra file containing the information on the model
+#' @param model_file A .mra file containing the information on the model, or an R object derived by reading in an .mra file by readLines
 #' @param data_file A .csv file with the data for the model
 #' @param var_file A .var file with the variation of the data
 #' @return An MRAmodel object describing the model and its best fit, containing the data
@@ -1348,10 +1350,14 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
 rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
-  if (!grepl(".mra$", model_file)) {
-    stop("The model file does not have the mra extension")
+  if(length(model_file)>1){
+    model = importModel(file=model_file) # import R object of an read in mra file 
+  }else{
+    if (!grepl(".mra$", model_file)) {
+      stop("The model file does not have the mra extension")
+    }
+    model = importModel(model_file)
   }
-  model = importModel(model_file)
   #links = matrix(rep(model$structure$names, 2), ncol=2)
   core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
   
@@ -1365,9 +1371,9 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
 #'
 #' Build a fitted modelSet object from the individual .mra files, and import data for this modelSet
 #' Does NOT perform any initialisation
-#' @param model_files A list of .mra files containing the information on the models
-#' @param data_files A list of .csv files with the data for the models
-#' @param var_files A list of .var files with the variation of the data
+#' @param model_files A list of .mra files containing the information on the models, or a named list of read in mra Files with readLines
+#' @param data_files A list of .csv files with the data for the models or a named list of read in data files with extractMIDAS
+#' @param var_files A list of .var files with the variation of the data or a named list of read in var files with extractMIDAS
 #' @return An MRAmodelSet object describing the modelSet and its best fit, containing the data
 #' @export
 #' @seealso rebuildModel, createModelSet
@@ -1379,8 +1385,17 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   # check size
   if (length(model_files)!= length(data_files)){ stop("Number of model files and data files is not equal!") }
   # check for bijection and rearrange if needed
-  mod = sapply(model_files,function(x) gsub("\\.mra$","",rev(unlist(strsplit(x,"/")))[1]))
-  dat = sapply(data_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.csv$","",rev(unlist(strsplit(x,"/")))[1]))))
+  
+  if (is.list(model_files)){
+    mod = names(model_files)  
+  }else{
+    mod = sapply(model_files,function(x) gsub("\\.mra$","",rev(unlist(strsplit(x,"/")))[1]))
+  }
+  if (is.list(data_files)){
+    dat = names(data_files)  
+  }else{
+    dat = sapply(data_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.csv$","",rev(unlist(strsplit(x,"/")))[1]))))
+  }
   dpos = match(dat,mod)
   if (sum(is.na(dpos)) == 0){
     data_files = data_files[dpos]  
@@ -1391,7 +1406,11 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   if (length(var_files) > 0){
     if (length(model_files) != length(var_files)){ stop("var files are given, but do not match the number of model files!") }
     
-    var = sapply(var_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.var$","",rev(unlist(strsplit(x,"/")))[1]))))
+    if (is.list(var_files)){
+      var =names(var_files)
+    }else{
+      var = sapply(var_files,function(x) gsub("\\midas$","",gsub("\\_MIDAS$","",gsub("\\.var$","",rev(unlist(strsplit(x,"/")))[1]))))
+    }
     vpos = match(var,mod)
     if (sum(is.na(vpos)) == 0){
       var_files = var_files[vpos]  
@@ -1403,8 +1422,11 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   # rebuild single models
   nb_models = length(model_files)
   data_ = new(STASNet:::DataSet)
-  
-  model1 = rebuildModel(model_files[1],data_files[1],ifelse(length(var_files>0),var_files[1],""),rearrange)
+  if (length(var_files)>0){
+    model1 = rebuildModel(model_files[[1]], data_files[[1]], var_files[[1]], rearrange)  
+  }else{
+    model1 = rebuildModel(model_files[[1]], data_files[[1]], "", rearrange)
+  }
   data_$addData(model1$data, FALSE)
   params = model1$parameters
   stim_data = model1$data$stim_data
@@ -1414,7 +1436,11 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   cv = model1$cv
   
   for (ii in 2:nb_models){
-    model=rebuildModel(model_files[ii],data_files[ii],ifelse(length(var_files>0),var_files[ii],""),rearrange)
+    if(length(var_files)>0){
+    model=rebuildModel(model_files[[ii]], data_files[[ii]], var_files[[ii]], rearrange)
+    }else{
+      model=rebuildModel(model_files[[ii]], data_files[[ii]], "", rearrange)  
+    }
     data_$addData(model$data, FALSE)
     if (!all( dim(model1$data$unstim_data) == dim(model$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
