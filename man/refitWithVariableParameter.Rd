@@ -20,7 +20,7 @@ refitWithVariableParameter(var_par, modelset, nb_sub_params, nb_cores = 0,
 
 \item{method}{Method to use for the fitting}
 
-\item{reverse}{Opposite effect to revert variable to fixed parameters see reffitWithFixedParameter}
+\item{reverse}{To revert variable to fixed parameters see reffitWithFixedParameter}
 }
 \value{
 A list with the fields 'residuals' (fitted residuals), added_var (=var_par) and 'params' (the fitted parameter sets corresponding to the residuals)

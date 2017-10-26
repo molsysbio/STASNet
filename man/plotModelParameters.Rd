@@ -22,3 +22,6 @@ Plot the parameters for a model or a list of models
 \seealso{
 \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code{\link{aggregateDirectPaths}}
 }
+\author{
+Mathurin Dorel \email{dorel@horus.ens.fr}
+}

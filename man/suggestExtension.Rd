@@ -8,7 +8,7 @@ Note that valöues assigned to be exactly 1 inidicate almost always an non-ident
 \usage{
 suggestExtension(original_model, parallel = F, mc = 1,
   sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F,
-  padjust_method = "BY")
+  padjust_method = "bonferroni")
 }
 \arguments{
 \item{original_model}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}

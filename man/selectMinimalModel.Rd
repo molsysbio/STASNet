@@ -7,7 +7,7 @@
 \usage{
 reduceModel(original_model, accuracy = 0.95)
 
-selectMinimalModel(original_model, accuracy = 0.95)
+selectMinimalModel(original_model, accuracy = 0.95, verbose = F)
 }
 \arguments{
 \item{original_model}{An MRAmodel object, as the one produced by createModel or importModel}
