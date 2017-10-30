@@ -4,16 +4,18 @@
 \alias{importModel}
 \title{Import model from a file}
 \usage{
-importModel(file_name)
+importModel(file_name = NULL, file = NULL)
 }
 \arguments{
 \item{file_name}{Name of the .mra file}
+
+\item{file}{R object from an .mra file that has been read in by readLines}
 }
 \value{
 An MRAmodel object
 }
 \description{
-Import an MRAmodel object from a .mra file
+Import an MRAmodel object from a .mra file or from an .mra file that has been read in with readLines.
 }
 \seealso{
 exportModel, rebuildModel

@@ -45,7 +45,7 @@ if (any(grepl("--help|-h", cargs))) {
     message("    --ext | --extension          Compute possible extensions to the network")
     message("    -m<string>                   Method to apply for the initialisation")
     message("    --pl                       Enable profile likelihood")
-    message("    -s<int>                      Number of steps for the profile likelihood")
+    message("    -s<int>                      Number of samples used in the parameter relaxation")
     message("    --noplots                    Cancel plot generation")
     message("    -v                           Activate debug")
     message("    -D<float>                    Default coefficient of variation")
