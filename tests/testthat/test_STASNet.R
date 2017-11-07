@@ -105,12 +105,19 @@ test_that("Rebuild works correctly", {
 test_that("The rebuilt model is consistent", {
     expect_equal(reb_model$bestfit, model$bestfit)
 })
+test_that("Rebuild works correctly with appropriate R objects as input", {
+  mra_file = readLines("sub_model.mra")
+  expect_output(rebuildModel(mra_file, DATA_FILE), NA)
+  data_file = STASNet:::extractMIDAS(DATA_FILE)
+  expect_output(rebuildModel(mra_file,data_file),NA)
+})
+
 
 context("Simulation helper functions")
 
 test_that("getCombinationMatrix works properly", {
     expect_equal(getCombinationMatrix(c("N1", "N2i", "N3i"), 1, 1), matrix(c(0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1), ncol=3, dimnames=list(NULL, c("N1", "N2i", "N3i")))) # Example case
-    expect_equal(getCombinationMatrix(c("N1", "N2", "N2i", "N3i"), 1, 1), matrix(c(0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1), ncol=4, dimnames=list(NULL, c("N1", "N2", "N2i", "N3i")))) 
+    expect_equal(getCombinationMatrix(c("N1", "N2", "N2i", "N3i"), 1, 1), matrix(c(0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1), ncol=4, dimnames=list(NULL, c("N1", "N2", "N2i", "N3i"))))
 })
 # With stimulation missing
 test_that("getCombinationMatrix without stimulation", {
@@ -171,7 +178,7 @@ test_that("Cloned model is independent", {
   tmp_adj[4,3] = 0
   alt_model$structure$setAdjacencyMatrix(tmp_adj)
   alt_model$model$setModel(alt_model$design, alt_model$structure)
-  expect_gt(model$model$modelRank(), alt_model$model$modelRank()) 
+  expect_gt(model$model$modelRank(), alt_model$model$modelRank())
 })
 
 context("Model reduction")
@@ -255,7 +262,7 @@ test_that("Message when inexistant stimulation is required", {
 })
 test_that("The final matrix is correctly reduced with false stimulation", {
     expect_equal( nrow(nostim_sim$bestfit), 2)
-}) 
+})
 test_that("Message when inexistant inhibition is required", {
     expect_message( simulateModel(refit, getCombinationMatrix(c("N1", "N1i"), 1)), "not inhibited" )
     .GlobalEnv$noinhib_sim = simulateModel(refit, getCombinationMatrix(c("N1", "N1i"), 1))
@@ -274,7 +281,7 @@ test_that("Prediction of new conditions", {
 
 context("ModelSet")
 
-DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv")#,"test_model_no_error_midas_3.csv") 
+DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv")#,"test_model_no_error_midas_3.csv")
 VAR_FILES = c()
 
 modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
@@ -376,6 +383,15 @@ test_that("Rebuild of variable modelset works correctly", {
   expect_output(rebuildModelSet(MODEL_FILES, DATA_FILES), NA)
   reb_modelset <- rebuildModelSet(MODEL_FILES, DATA_FILES)
   expect_equal(reb_modelset$variable_parameters,relax_modelset$variable_parameters)
+})
+
+test_that("Rebuild of modelset works with appropriate R objects as inputs", {
+  celline = c("cell1","cell2")
+  data_list = sapply(celline, function(x) STASNet::extractMIDAS(DATA_FILES[celline == x]),simplify = F)
+  mra_list = sapply(celline, function(x) readLines(MODEL_FILES[celline == x]), simplify =F)
+  expect_output(rebuildModelSet(MODEL_FILES, data_list),NA)
+  expect_output(rebuildModelSet(mra_list, DATA_FILES),NA)
+  expect_output(rebuildModelSet(mra_list, data_list),NA)
 })
 
 context("ModelSet extension")
