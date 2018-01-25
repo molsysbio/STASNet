@@ -18,7 +18,7 @@ cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7"
 #' @param scale_rows Transforms color code to show differences between columns by formula: x-rowmean/abs(rowmean)
 #' @return Nothing
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE,scale_rows=F){
+plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE,scale_rows=FALSE){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
   mat[is.infinite(as.matrix(mat))] = NA
@@ -76,10 +76,16 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
   print(p) # Plot the heatmap
 }
 
-define_breaks <- function(m,lim = Inf,fixedRange = F) {
+define_breaks <- function(m,lim = Inf,fixedRange = FALSE) {
   if (!fixedRange) {
-      limit = min(lim,(max(abs(m),na.rm = T)))
-      return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
+      if (all(m==0, na.rm=TRUE)) {
+      return(seq(-1, 1, length.out=22))
+      } else {
+          limit = min(lim,(max(abs(m),na.rm = T)))
+          return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
+      }
+  } else if (all(m==0, na.rm=TRUE)) {
+      return(seq(-lim, lim, length.out=22))
   } else {
       if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
           stop("'lim' is invalid, cannot generate breaks within a fixed range")
