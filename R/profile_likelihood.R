@@ -52,7 +52,7 @@ simplify_path_name <- function (path_name) {
   simplify_sub_path <- function (sub_path) {
     
     # Prepare a matrix 2*nb_nodes indexed by node names
-    entries=unique(unlist(strsplit(sub_path, "\\*|_|^r|\\^|\\(-1\\)")))
+    entries=unique(unlist(strsplit(sub_path, "\\*|^r_|_|\\^|\\(-1\\)")))
     elements=matrix("",nrow=sum(entries!=""),ncol=2)
     rownames(elements)<-entries[entries!=""]
     
