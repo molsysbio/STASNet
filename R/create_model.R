@@ -633,6 +633,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
     first = TRUE
     node_name = model_structure$names[node]
     condition = paste(node_name, "and")
+    sender_name = c()
     for (sender in upstreams[[node]] ) {
       mes_index = which(measured_nodes==sender)
       measurements = cbind(measurements, log(data$stim_data[use, mes_index,drop=F] / mean(data$unstim_data[1,mes_index],na.rm=T)))
@@ -640,12 +641,11 @@ correlate_parameters <- function(model, core, perform_plot=F) {
         first = FALSE
       } else {
         regression = paste0(regression, "+")
-        condition = paste(condition, "+")
       }
       regression = paste0(regression, "measurements[,", 1+which(upstreams[[node]] == sender), "]")
-      sender_name = model_structure$names[sender]
-      condition = paste(condition, sender_name)
+      sender_name = c(sender_name, model_structure$names[sender])
     }
+    condition = paste(condition, paste0(sender_name, collapse="+"))
     # Perform the regression and put the values in the adjacency matrix
     regression = paste0(regression, ")")
     result = eval(parse(text=regression))
@@ -657,18 +657,19 @@ correlate_parameters <- function(model, core, perform_plot=F) {
     if (perform_plot) {
       # Plot the data and the fit, directly plot the correlation curve if there is only one upstream node, or plot the distance between each measurements and the hyperplane
       if (length(upstreams[[node]]) == 1) {
-        plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name)
+        plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name, sub=paste0(node_name, "=", signif(result$coefficients[1],2), "+", signif(result$coefficients[2],2), "*", sender_name))
         lines(measurements[,2], result$coefficients[1] + result$coefficients[2] * measurements[,2])
       } else {
-        plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name, xlab="Conditions")
+        ord_measure = order(measurements[,2])
+        fitted = rep(0, nrow(measurements))
         for (measure in 1:nrow(measurements)) {
-          fitted = result$coefficients[1]
+          fitted[measure] = result$coefficients[1]
           for (sender in 2:ncol(measurements)) {
-            fitted = fitted + result$coefficients[sender] * measurements[measure, sender]
+            fitted[measure] = fitted[measure] + result$coefficients[sender] * measurements[measure, sender]
           }
-          points(measure, fitted, col="blue", pch=20)
-          lines(rep(measure, 2), c(fitted, measurements[measure,1]), col="red")
         }
+        plot( measurements[ord_measure,1], fitted[ord_measure], pch=20, main=condition, ylab=paste0(node_name, " fitted value"), xlab=paste0(node_name, " measured value"), sub=paste0(node_name, "=", signif(result$coefficients[1],2), "+", paste0(signif(result$coefficients[2:ncol(measurements)],2), "*", sender_name, collapse="+")) )
+        lines(seq(-5, 5, 0.1), seq(-5, 5, 0.1))
       }
     }
   }
