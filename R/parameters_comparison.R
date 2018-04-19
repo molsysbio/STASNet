@@ -271,6 +271,7 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
         plot(aggregated_paths[,"value"], 1:nrow(aggregated_paths), yaxt="n", ylab="", pch=20, xlim=c(xmin, xmax), xlab="Path value", lwd=4, ylim=c(-1, nrow(aggregated_paths)))
         lines(rep(0, nrow(aggregated_paths)), 1:nrow(aggregated_paths), col="grey", lty=2)
         segments(aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], 1:nrow(aggregated_paths), xlab="", lwd=4, col=colors)
+        segments(aggregated_paths[,"value"], 1:nrow(aggregated_paths)-0.1, aggregated_paths[,"value"], 1:nrow(aggregated_paths)+0.1, pch=20) # Vertical bars for the value of the parameter
         #text(par("usr")[4] - (xmax-xmin)/10, 1:nrow(aggregated_paths), adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
         #axis(2, 1:nrow(aggregated_paths), label=rownames(aggregated_paths), xpd=TRUE, cex=0.7, las=1)
         axis(2, path_pos, label=path_names, xpd=TRUE, cex=0.7, las=1)
@@ -295,17 +296,17 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
         plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax), ylab="Path value", xlim=c(-1, nrow(aggregated_paths)))
         lines(1:nrow(aggregated_paths), rep(0, nrow(aggregated_paths)), col="grey", lty=2)
         segments(1:nrow(aggregated_paths), aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], xlab="", lwd=4, col=colors)
-        segments(1:nrow(aggregated_paths)-0.1, aggregated_paths[,"value"], 1:nrow(aggregated_paths)+0.1, aggregated_paths[,"value"], pch=20)
-        text(1:nrow(aggregated_paths), par("usr")[3] - (ymax-ymin)/30, srt = 45, adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=1)
-        axis(1, 1:nrow(aggregated_paths), label=F)
+        segments(1:nrow(aggregated_paths)-0.1, aggregated_paths[,"value"], 1:nrow(aggregated_paths)+0.1, aggregated_paths[,"value"], pch=20) # Horizontal bars for the value of the parameter
+        text(path_pos, par("usr")[3] - (ymax-ymin)/30, srt = 45, adj = 1, labels = path_names, xpd = TRUE, cex=1)
+        axis(1, path_pos, label=F)
         # Add text for the parameters whose value is outside the limits
         out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
         if (length(out_up) > 0) {
-            text(out_up, ymax, signif(aggregated_paths[out_up, "value"], 3), cex=1.4 )
+            text(out_up, ymax, signif(aggregated_paths[out_up, "value"], 3), cex=1.2 )
         }
         out_down = which(apply(aggregated_paths, 1, function(X) {X["value"] < -lim}))
         if (length(out_down) > 0) {
-            text(out_down, ymin, signif(aggregated_paths[out_down, "value"], 3), cex=1.4 )
+            text(out_down, ymin, signif(aggregated_paths[out_down, "value"], 3), cex=1.2 )
         }
         # Draw lines to separate paths
         segments(line_pos, ymin, line_pos, ymax, col="gray")
