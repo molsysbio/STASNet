@@ -289,13 +289,14 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
         # Get enough margin in the bottom for the long path names
         if (repar) {
             opar = par()
-            par(mar=c(max(LABEL_MARGIN/2, opar$mar[1]), max(4, opar$mar[2]), max(opar$mar[3], 4), min(opar$mar[4], 1)) + 0.1)
+            par(mar=c(max(LABEL_MARGIN/2, opar$mar[1]), max(2, opar$mar[2]), max(opar$mar[3], 4), min(opar$mar[4], 1)) + 0.1)
         }
         # Plot the parameters with error bars
-        plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax), ylab="Path value", lxw=4, xlim=c(-1, nrow(aggregated_paths)))
+        plot(aggregated_paths[,"value"], xaxt="n", xlab="", pch=20, ylim=c(ymin, ymax), ylab="Path value", xlim=c(-1, nrow(aggregated_paths)))
         lines(1:nrow(aggregated_paths), rep(0, nrow(aggregated_paths)), col="grey", lty=2)
         segments(1:nrow(aggregated_paths), aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], xlab="", lwd=4, col=colors)
-        text(1:nrow(aggregated_paths), par("usr")[3] - (ymax-ymin)/18, srt = 45, adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
+        segments(1:nrow(aggregated_paths)-0.1, aggregated_paths[,"value"], 1:nrow(aggregated_paths)+0.1, aggregated_paths[,"value"], pch=20)
+        text(1:nrow(aggregated_paths), par("usr")[3] - (ymax-ymin)/30, srt = 45, adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=1)
         axis(1, 1:nrow(aggregated_paths), label=F)
         # Add text for the parameters whose value is outside the limits
         out_up = which(apply(aggregated_paths, 1, function(X) {X["value"] > lim}))
