@@ -7,7 +7,7 @@
 plotHeatmap(mat, main = "", lim = Inf, fixedRange = FALSE,
   stripOut = 0.05, col = colorRampPalette(c("deepskyblue", "white",
   "red1")), textCol = "gray10", sig_numbers = 2, show_values = TRUE,
-  scale_rows = F)
+  scale_rows = FALSE)
 }
 \arguments{
 \item{mat}{a numeric matrix that should be plotted}
