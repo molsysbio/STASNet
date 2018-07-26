@@ -1140,12 +1140,13 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     stop("Unstimulated data are required to simulate the network")
   }
   # Calculate statistics for variation data
+  sem <- function(xx) { sd(xx)/sqrt(len(xx)) }
   if (length(c(rm_rows,blanks))>0){
     mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
-    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], semm, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
   } else {
     mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values, by=perturbations, sem, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
   }
   # Delete the perturbations that cannot be used, blank and controls from the dataset
   rm_rows = c(rm_rows, controls, blanks) 
@@ -1202,8 +1203,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
-  error = blank_values + cv_values * mean_values
-  error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt
+  error = cv_values * mean_values
+  error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
 
   # Extract experimental design
   perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
