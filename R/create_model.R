@@ -1140,13 +1140,12 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     stop("Unstimulated data are required to simulate the network")
   }
   # Calculate statistics for variation data
-  sem <- function(xx) { sd(xx)/sqrt(len(xx)) }
   if (length(c(rm_rows,blanks))>0){
     mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
-    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], semm, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
   } else {
     mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-    sd_stat = aggregate(data_values, by=perturbations, sem, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
   }
   # Delete the perturbations that cannot be used, blank and controls from the dataset
   rm_rows = c(rm_rows, controls, blanks) 
