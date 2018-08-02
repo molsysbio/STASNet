@@ -139,7 +139,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
 
-  if (perform_plots) {
+  if (perform_plots) { # Best residuals to check the convergence of the fitting procedure
     plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
     lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
   }
@@ -1203,7 +1203,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
   error = cv_values * mean_values
-  error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
+  # Normalise by the number of replicates for each measurement (standard error of the mean)
+  replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum)
+  error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
+
+  error[error<0.001] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
 
   # Extract experimental design
   perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
