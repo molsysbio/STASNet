@@ -142,6 +142,10 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   if (perform_plots) { # Best residuals to check the convergence of the fitting procedure
     plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
     lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+    if (length(order_resid) > 100) {
+        plot(1:100, order_resid[1:100], main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+        lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+    }
   }
   
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
