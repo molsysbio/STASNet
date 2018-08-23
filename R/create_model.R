@@ -167,7 +167,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   best_id = order(residuals)[1]
   init_params = params[best_id,]
   init_residual = residuals[best_id]
-  if (verbose) {
+  if (verbose > 6) {
     message("Model simulation with optimal parameters :")
     message(model$simulateWithOffset(data, init_params)$prediction)
   }
@@ -503,9 +503,9 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
   samples = getSamples(model$nr_of_parameters()-nr_known_par, inits, method, nb_cores)
   
   # assign sampled and precorrelated samples to the respective parameter positions
-  if(precorrelate){
+  if (precorrelate){
     for (ii in correlated$list){
-      inset=rep(correlated$values[correlated$list==ii], times=nrow(samples))
+      inset = as.matrix(rep(correlated$values[correlated$list==ii], times=nrow(samples)))
       if (ii==1){
         samples=cbind(inset,samples)
       } else {
@@ -559,7 +559,7 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
     stop(paste0("The selected initialisation method '", method, "' does not exist, valid methods are : ",paste(valid_methods$methods,collapse=", ")))
   }
   if (sample_stack_size*max_proc > nb_samples){
-    samples = samples[1:nb_samples,]  
+    samples = samples[1:nb_samples,,drop=FALSE]  
   }  
   return(samples) 
 }
@@ -604,7 +604,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
           senders = c(senders, sender)
         } else {
           valid = FALSE
-          if (verbose > 6) { message(paste(model_structure$names[node], "excluded because", model_structure$names[sender], "is not measured")) }
+          if (verbose >= 6) { message(paste(model_structure$names[node], "excluded because", model_structure$names[sender], "is not measured")) }
           break
         }
       }
@@ -614,8 +614,8 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       valid_nodes = c(valid_nodes, node)
     }
   }
-  if (verbose > 5){
-  message(paste0(length(valid_nodes), " target node",ifelse(length(valid_nodes)>1,"s","") ,"found correlatable with inputs")) 
+  if (verbose >= 6){
+  message(paste0(length(valid_nodes), " target node",ifelse(length(valid_nodes)>1,"s","") ," found correlatable with inputs")) 
   }
   # Collect the values and perform the correlation
   params_matrix = matrix(0, ncol=length(model_structure$names), nrow=length(model_structure$names)) # To store the values
@@ -676,9 +676,11 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       }
     }
   }
-  if (verbose > 7) {
-    message(model_structure$names)
-    message(params_matrix)
+  if (debug && verbose >= 8) {
+    message(paste0(model_structure$names, collapse=" "))
+    for (rr in 1:nrow(params_matrix)) {
+        message(paste0(signif(params_matrix[rr,], 3), collapse="\t"))
+    }
   }
   
   # Each link identified by correlation will correspond to one parameter
@@ -770,14 +772,14 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
       
       # Only keep the best fits
       best = order(results$residuals)[1:best_keep]
-      if (verbose > 10) { message(paste(sum(is.na(results$residuals)), "NAs"), stderr()) }
+      if (verbose >= 4) { message(paste(sum(is.na(results$residuals)), "NAs"), stderr()) }
       best_results$residuals = c(best_results$residuals, results$residuals[best])
       best_results$params = rbind(best_results$params, results$params[best,])
     }
     
   } else {
     best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant)
-    if (verbose > 10) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
+    if (verbose >= 4) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
   }
   
   return(best_results)
@@ -1323,9 +1325,13 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   
   if (verbose > 3) {
     message("Stimulated nodes")
-    message(stim_sort)
+    for (rr in 1:nrow(stim_sort)) {
+        message(stim_sort[rr,])
+    }
     message("Inhibited nodes")
-    message(inh_sort)
+    for (rr in 1:nrow(inh_sort)) {
+        message(inh_sort[rr,])
+    }
   }
   
   expdes=getExperimentalDesign(model_structure, stim_nodes, inhib_nodes, measured_nodes, stim_sort, inh_sort, basal_activity)
