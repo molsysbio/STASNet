@@ -500,10 +500,11 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
     correlated = correlate_parameters(model, core, perform_plot=perform_plots)
     nr_known_par=length(correlated$list)
   }
+  if (verbose >= 1) { message("Generating initial samples") }
   samples = getSamples(model$nr_of_parameters()-nr_known_par, inits, method, nb_cores)
-  
   # assign sampled and precorrelated samples to the respective parameter positions
   if (precorrelate){
+    if (verbose >= 1) { message("Assigning precorrelated parameters") }
     for (ii in correlated$list){
       inset = as.matrix(rep(correlated$values[correlated$list==ii], times=nrow(samples)))
       if (ii==1){
@@ -513,11 +514,11 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
       }
     }
   }
-  message("Sampling terminated.")
+  if (verbose >= 1) { message("Sampling terminated.") }
   
   #  fit all samples to the model
   results = parallel_initialisation(model, data, samples, nb_cores)
-  message("Fitting completed")
+  if (verbose >= 1) { message("Fitting completed.") }
   return(results)
 }
 
@@ -705,6 +706,9 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 # Parallel initialisation of the parameters
 # @family Model initialisation
 parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c()) {
+  if (verbose >= 1) {
+      message("Setup parallel initialisation")
+  }
   if (NB_CORES == 0) {
     NB_CORES = detectCores()-1
   }
@@ -758,13 +762,18 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
   }
   # Since the aggregation in the end of the parallel calculations takes a lot of time for a big list, we calculate by block and take the best result of each block
   if (nb_samples > 10000) {
+    if (verbose >= 1) {
+        message("Define blocks for parallel initialization")
+    }
     
     # chop the data into optimal number of pieces
     nb_blocks = nb_samples %/% 10000 + 1
     block_size = NB_CORES * ((nb_samples %/% nb_blocks) %/% NB_CORES)
     best_keep = 10000 %/% nb_blocks
     best_results = list( residuals=c(), params=c() )
-    message(paste0("Parallel initialization using block sizes of ", block_size, " samples"))
+    if (verbose >= 1) {
+      message(paste0("Parallel initialization using block sizes of ", block_size, " samples"))
+    }
     
     for (i in 1:nb_blocks) {
       seq = (block_size*(i-1)+1) : ifelse(block_size*(i+1) <= nb_samples, block_size*i, nb_samples)
