@@ -74,11 +74,11 @@ computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
     }
     if (refit_model) {
         refit = parallel_initialisation(mra_model$model, mra_model$data, matrix(mra_model$parameters, nrow=1), NB_CORES=1)
-        mra_model$bestfit = refit$residual[1]
+        mra_model$bestfit = refit$residual[1] # Get the residual from the C++ code
         mra_model$parameters = refit$params[1,]
     } else {
         simulation = simulateModel(mra_model, with_offset=with_offset)
-        mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/simulation$error^2, na.rm=T )
+        mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/(simulation$error*sqrt(2))^2, na.rm=T ) # Compute the residual ourselves
     }
     prediction = getSimulation(mra_model, with_offset=with_offset)
     Rscores = c()
