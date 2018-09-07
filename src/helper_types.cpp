@@ -318,7 +318,7 @@ void Data::computeDataVector() {
                 if (std::isnan(error[j][i]) || std::isnan(stim_data[j][i])) {
                     dataVector[i*stim_data.shape()[0]+j]=0;
                 } else {
-                    dataVector[i*stim_data.shape()[0]+j]=stim_data[j][i]/error[j][i];
+                    dataVector[i*stim_data.shape()[0]+j]=stim_data[j][i]/(sqrt(2)*error[j][i]);
                 }
             }
         }

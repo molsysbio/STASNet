@@ -460,7 +460,7 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
                 if (verbosity > 6) {
                     std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << model_eqns_[i*rows+j][0]->eval() << std::endl;
                 }
-                datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
+                datax[i*rows+j]=5*data->stim_data[j][i]/(sqrt(2)*data->error[j][i]);
             } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
                 // to exclude extreme values, where the algorithm can't find a way out somehow 
                 datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
