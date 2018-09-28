@@ -113,7 +113,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
 #' @return A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
 getModelError <- function(mra_model) {
     simulation = simulateModel(mra_model)
-    mismatch = (mra_model$data$stim_data - simulation) / mra_model$data$error
+    mismatch = (mra_model$data$stim_data - simulation) / (mra_model$data$error*sqrt(2))
     residual = sum(mismatch^2, na.rm=T)
     return(list(simulation=simulation, mismatch=mismatch, residual=residual))
 }
