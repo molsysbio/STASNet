@@ -22,7 +22,5 @@ subsetDirectPathsAggregation(aggregated_paths, regex, not = FALSE)
 A list with two entries. 'paths' is a matrix with the path and the models names as rownames, and columns 'value', 'hv' and 'lv' representing the value with confidence interval of the path. 'model_names' is the name of the models.
 }
 \description{
-Aggregate the paths values for plotting
-
 Extract the subset of paths aggregated from multiple models that match a gived regex
 }

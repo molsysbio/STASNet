@@ -29,3 +29,4 @@ Other simulation: \code{\link{plotSimulation}},
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
+\concept{simulation}

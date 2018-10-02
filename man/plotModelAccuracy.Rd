@@ -4,7 +4,8 @@
 \alias{plotModelAccuracy}
 \title{Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction}
 \usage{
-plotModelAccuracy(model_description, limit = Inf, show_values = TRUE)
+plotModelAccuracy(model_description, limit = Inf, show_values = TRUE,
+  graphs = c("accuracy", "diff", "data", "simulation", "prediction"))
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
@@ -12,6 +13,8 @@ plotModelAccuracy(model_description, limit = Inf, show_values = TRUE)
 \item{limit}{An integer to force the limit of the heatmaps}
 
 \item{show_values}{Whether the values should be printed in the heatmap boxes or not.}
+
+\item{graphs}{Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.}
 }
 \value{
 Nothing
@@ -30,3 +33,4 @@ Other Model plots: \code{\link{plotModelGraph}},
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
+\concept{Model plots}

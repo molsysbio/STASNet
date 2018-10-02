@@ -4,9 +4,9 @@
 \alias{addVariableParameters}
 \title{Extend a MRAmodelSet with relevant variable parameters}
 \usage{
-addVariableParameters(original_modelset, nb_cores = 0, max_iterations = 0,
-  nb_samples = 100, accuracy = 0.95, method = "geneticlhs",
-  notVariable = c())
+addVariableParameters(original_modelset, nb_cores = 0,
+  max_iterations = 0, nb_samples = 100, accuracy = 0.95,
+  method = "geneticlhs", notVariable = c())
 }
 \arguments{
 \item{original_modelset}{An MRAmodelSet object}

@@ -4,7 +4,6 @@
 \name{fitmodel}
 \alias{fitmodel}
 \alias{fitmodel-package}
-\alias{fitmodel-package}
 \title{Fit and simulate model from perturbation data}
 \description{
 Fits and simulates network model derived from perturbation data using Modular Response Analysis and Profile Likelihood

@@ -1,7 +1,8 @@
 Package: STASNet
 Type: Package
 Title: Fit and Simulate Model from Perturbation Data
-Version: 0.9
+Version: 1.1
+Encoding: UTF-8
 Date: 2016-08-01
 Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
     email="bertram.klinger@charite.de"), person("Mathurin", "Dorel",
@@ -20,7 +21,7 @@ Depends:
     RhpcBLASctl
 LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
 Suggests:
     knitr,
     testthat

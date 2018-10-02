@@ -28,8 +28,6 @@ extractMIDAS(to_detect)
 'extractMIDAS' returns a matrix or a data.frame under MIDAS format
 }
 \description{
-Extraction of object from file or object
-
 'extractStructure' detects the format of the structure file and extract the structure of the network. It expects a matrix with 2 or 3 columns (adjacency list) or a square matrix (adjacency matrix)
 
 'extractBasalActivity' detects if the a list of names or a file perform the extraction if necessary. It expects a vector or an object convertible to a vector.

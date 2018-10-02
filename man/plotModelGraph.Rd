@@ -23,3 +23,5 @@ Other Network graph: \code{\link{plotNetworkGraph}}
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
+\concept{Model plots}
+\concept{Network graph}

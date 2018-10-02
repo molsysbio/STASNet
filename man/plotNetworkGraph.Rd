@@ -22,3 +22,4 @@ Other Network graph: \code{\link{plotModelGraph}}
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}
 }
+\concept{Network graph}

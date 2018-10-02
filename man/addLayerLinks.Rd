@@ -25,3 +25,4 @@ Other toy data generation: \code{\link{createSimulation}},
   \code{\link{generateToyDesign}},
   \code{\link{generateToyNetwork}}
 }
+\concept{toy data generation}

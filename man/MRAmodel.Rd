@@ -7,8 +7,8 @@
 MRAmodel(model, design, structure, basal = matrix(), data = matrix(),
   cv = matrix(), parameters = vector(), bestfit = NA, name = "",
   infos = c(), param_range = list(), lower_values = c(),
-  upper_values = c(), unused_perturbations = c(), unused_readouts = c(),
-  min_cv = 0.1, default_cv = 0.3)
+  upper_values = c(), unused_perturbations = c(),
+  unused_readouts = c(), min_cv = 0.1, default_cv = 0.3)
 }
 \arguments{
 \item{model}{An object of class Model}

@@ -42,3 +42,4 @@ Other simulation: \code{\link{getCombinationMatrix}},
 \author{
 Mathurin Dorel \email{mathurin.dorel@charite.de}
 }
+\concept{simulation}

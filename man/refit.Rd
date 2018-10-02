@@ -6,11 +6,11 @@
 \alias{fitFromModel}
 \title{Refit the model}
 \usage{
-refitModel(mra_model, parameter_set = c(), vary_param = c(), inits = 100,
-  nb_cores = 1, method = "randomlhs", fit_name = "")
+refitModel(mra_model, parameter_set = c(), vary_param = c(),
+  inits = 100, nb_cores = 1, method = "randomlhs", fit_name = "")
 
-fitFromModel(mra_model, parameters_model, vary_param = c(), inits = 100,
-  nb_cores = 1, method = "randomlhs", fit_name = "")
+fitFromModel(mra_model, parameters_model, vary_param = c(),
+  inits = 100, nb_cores = 1, method = "randomlhs", fit_name = "")
 }
 \arguments{
 \item{mra_model}{A MRAmodel object}
@@ -32,8 +32,6 @@ The refitted model as an MRAmodel object.
 }
 \description{
 Refit the model with a specified parameter set while keeping parameters constant
-
-Fit a model using the parameter set from another model
 }
 \seealso{
 printParametersNames
