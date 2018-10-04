@@ -421,8 +421,7 @@ importModel <- function(file_name=NULL,file=NULL) {
 #' @param fname Name of the MIDAS file
 #' @export
 readMIDAS <- function(fname) {
-    data_file = read.delim(fname, sep=",")
-    checkMIDAS(data_file)
+    data_file = extractMIDAS(fname)
 
     measures = data.matrix(data_file[grepl("^DV", colnames(data_file))])
     treatments = data.matrix(data_file[grepl("^TR", colnames(data_file))])
