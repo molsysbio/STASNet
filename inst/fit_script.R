@@ -69,7 +69,7 @@ for (argument in cargs) {
         message("    --values                     Print values in the -l accuracy heatmaps, only used if -l is specified")
         message("    -v                           Activate debug")
         message("    -D<float>                    Default coefficient of variation")
-        message("    -D<float>                    Minimum coefficient of variation")
+        message("    -M<float>                    Minimum coefficient of variation")
         message("    -u'<string1> <string2> ...'  List of perturbations to ignore")
         message("    -d'<string1> <string2> ...'  List of readouts to ignore")
         quit()

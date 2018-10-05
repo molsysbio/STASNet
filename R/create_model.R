@@ -11,8 +11,8 @@
 #' @useDynLib STASNet
 
 # Global variable to have more outputs
-verbose = 2
-debug = FALSE
+verbose = 3
+debug = TRUE
 
 get_running_time <- function(init_time, text="") {
   run_time = proc.time()["elapsed"]-init_time
@@ -143,7 +143,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
     plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
     lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
     if (length(order_resid) > 100) {
-        plot(1:100, order_resid[1:100], main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+        plot(1:100, residuals[order_resid[1:100]], main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
         lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
     }
   }
@@ -1224,9 +1224,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 
   #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(ee, na.rm=TRUE); return(ee) })
   error[error<0.001] = mean(error, na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
-  if (debug) {
+  if (verbose > 5) {
       message("Error =")
       apply(error, 1, function(ee) { message(paste0(ee, collapse=",")) })
+      message("CV =")
+      apply(cv_values, 1, function(ee) { message(paste0(ee, collapse=",")) })
   }
 
   # Extract experimental design
