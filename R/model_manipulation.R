@@ -88,7 +88,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
   if (any(grepl("acc", graphs)))
-      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values)
+      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE)
   if (any(grepl("diff", graphs)))
       plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values)
 # Log fold changes for the data and the stimulation with comparable color code

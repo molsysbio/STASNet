@@ -84,7 +84,7 @@ void generate_response( GiNaC::matrix &response,
                     if (r_idx[m][i_temp] > -1) { 
                         inhibited_links.push_back(std::make_pair( x[r_idx[m][i_temp]], x[r_idx[m][i_temp]] *
                         (exp(-pow(pow(x[inh_idx[l]],2),0.5))) )); // Force the inhibitor action to be between 0 and 1
-                        if (verbosity) {
+                        if (verbosity > 8) {
                             std::cerr << "Substitute " << x[r_idx[m][i_temp]] << " by " << x[r_idx[m][i_temp]] *
                             (exp(-pow(pow(x[inh_idx[l]],2),0.5))) << std::endl << std::endl;
                         }

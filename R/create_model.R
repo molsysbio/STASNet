@@ -142,8 +142,9 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   if (perform_plots) { # Best residuals to check the convergence of the fitting procedure
     plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
     lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
-    if (length(order_resid) > 100) {
-        plot(1:100, residuals[order_resid[1:100]], main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+    if (length(order_resid) >= 100) {
+        hundred_best = residuals[order_resid[1:100]]
+        plot(1:100, hundred_best, main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2, ylim=c(hundred_best[1], hundred_best[100]+1))
         lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
     }
   }
@@ -953,7 +954,7 @@ extractMIDAS <- function(to_detect) {
     checkMIDAS(to_detect)
     return(to_detect)
   }
-  stop("Format of the object not compatible with a MIDAS data")
+  stop("Format of the object not compatible with a MIDAS data (must be a filename, a matrix or a data.frame")
 }
 
 #' Plot a graph from an adjacency list
