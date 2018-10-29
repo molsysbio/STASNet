@@ -427,7 +427,7 @@ readMIDAS <- function(fname) {
     treatments = data.matrix(data_file[grepl("^TR", colnames(data_file))])
     rownames(measures) = sapply(1:nrow(measures), function(rr) { paste0(paste0("", colnames(treatments)[as.logical(treatments[rr,])]), collapse="+") })
     rownames(measures) = gsub("TR.", "", rownames(measures))
-    rownames(measures)[rownames(measures)==""] = as.character(data_file[,"ID.type"])[rownames(measures)==""]
+    rownames(measures)[rownames(measures)==""] = as.character(data_file[,"ID.type",drop=TRUE])[rownames(measures)==""]
     colnames(measures) = gsub("DV.", "", colnames(measures))
 
     return(measures[order(rownames(measures)),,drop=FALSE])
