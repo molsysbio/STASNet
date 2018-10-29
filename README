@@ -16,6 +16,7 @@ Requires the following C++ libraries to be installed (installation method depend
 
     ginac
     cln
+    pkg-config (at least Mac OS)
 
 And the following R packages: 
 
@@ -40,7 +41,7 @@ Unix (MacOS, BSD, GNU/Linux) installation guide:
     
     Note: for some newer OS versions you have to specify the c++ version:
     prior to installing the package execute:
-    export PKG_CXXFLAGS='`Rscript -e "Rcpp:::CxxFlags()"` -std=c++11’
+    export PKG_CXXFLAGS='`Rscript -e "Rcpp:::CxxFlags()"` -std=c++11'
 
 Have fun with it! 
 
