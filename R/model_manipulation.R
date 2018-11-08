@@ -376,7 +376,7 @@ suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c
   extension_mat=data.frame(extension_mat,"adj_pval"=p.adjust(as.numeric(as.matrix(extension_mat$pval)),method=padjust_method))
   
   message("Extension tests completed!")
-  sig_res = sum(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05)
+  sig_res = sum(as.numeric(as.matrix(extension_mat$adj_pval))<=0.05, na.rm=T)
   if (sig_res > 0){
     select=match(c("from","to","value","Res_delta","adj_pval"),colnames(extension_mat))
     message(paste0(sig_res ," significant link extension",ifelse(sig_res>1,"s",""),"found"))
