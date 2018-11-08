@@ -138,9 +138,10 @@ if (any(grepl("^-u", cargs))) {
     unused_perturbations = c( unused_perturbations, unlist(strsplit(argument, " |\t")) )
   }
 if (any(grepl("^-d", cargs))) {
-    argument = gsub("^-d", "", cargs[grepl("^-d", cargs)])
-    argument = gsub("\"", "", argument)
-    unused_readouts = c( unused_readouts, unlist(strsplit(argument, " |\t")) )
+  argument = gsub("^-d", "", cargs[grepl("^-d", cargs)]) # remove -d
+  argument = gsub("\"", "", argument) # remove quotation marks
+  unused_readouts = unlist(strsplit(argument, " |\t"))
+  print(paste0("ignoring the following parameters for variability analysis: ", paste0(unused_readouts, collapse=", ")))
 }
 
 #### LIBRARIES ####
@@ -203,7 +204,8 @@ modelset=addVariableParameters(original_modelset = modelset,
                               nb_cores = cores,
                               max_iterations=0,
                               nb_samples=var_samples,
-                              accuracy=0.95)
+                              accuracy=0.95,
+                              notVariable = unused_readouts)
   }
 if (extension){
   extensionMat=suggestExtension(original_model = modelset,
