@@ -276,7 +276,7 @@ importModel <- function(file_name=NULL,file=NULL) {
             }
         }
     }
-    structure = getModelStructure(links_list)
+    structure = STASNet:::getModelStructure(links_list)
 
     if (!grepl("^P", file[lnb])) {
         stop("This mra file is not valid, the parameters lines should start with a P")
@@ -318,7 +318,11 @@ importModel <- function(file_name=NULL,file=NULL) {
     ## List of inhibited nodes by C++ index
     if (grepl("^IN", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;"))
+        if (length(line)>1){
         inhib_nodes = line[2:length(line)]
+        }else{
+        inhib_nodes = integer(0)  
+        }
         lnb = lnb + 1
     } else {
         stop("This mra file is not valid, the experimental design lines should be Inhibited Nodes, Inhibition matrix, Stimulated nodes, Stimulation matrix, Measured nodes (with unstimulated value)")
@@ -326,26 +330,40 @@ importModel <- function(file_name=NULL,file=NULL) {
     ## Inhibitions for each measurement
     inhibitions = c()
     while (grepl("^I", file[lnb])) {
-        line = unlist(strsplit(file[lnb], " +|\t|;"))
+      line = unlist(strsplit(file[lnb], " +|\t|;"))
+      if (length(line)>1){
         line = as.numeric(line[2:length(line)])
-        lnb = lnb + 1
-
         inhibitions = rbind(inhibitions, line)
+      }else if (is.null(nrow(inhibitions))){  
+        inhibitions = matrix(as.numeric(NA),ncol=0,nrow=1) 
+      }else{
+        inhibitions = rbind(inhibitions, matrix(as.numeric(NA),ncol=0,nrow=1))  
+      }
+      lnb = lnb + 1
     }
     ## Index of the inhibited nodes
     if (grepl("^SN", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;"))
+        if (length(line)>1){
         stim_nodes = line[2:length(line)]
+        }else{
+        stim_nodes = integer(0)  
+        }
         lnb = lnb + 1
     }
     ## Stimuli for each measurement
     stimuli = c()
     while (grepl("^S", file[lnb])) {
-        line = unlist(strsplit(file[lnb], " +|\t|;"))
+      line = unlist(strsplit(file[lnb], " +|\t|;"))
+      if (length(line)>1){
         line = as.numeric(line[2:length(line)])
-        lnb = lnb + 1
-
         stimuli = rbind(stimuli, line)
+      }else if (is.null(nrow(stimuli))){  
+        stimuli = matrix(as.numeric(NA),ncol=0,nrow=1) 
+      }else{
+        stimuli = rbind(stimuli, matrix(as.numeric(NA),ncol=0,nrow=1))  
+      }
+      lnb = lnb + 1
     }
     ## Measured nodes with their unstimulated value
     unstim_data = c()
@@ -359,7 +377,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     }
 
     # Set up the experimental design and the model
-    design = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
+    design = STASNet:::getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
     model = new(STASNet:::Model)
     model$setModel( design, structure )
 
