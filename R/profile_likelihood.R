@@ -74,12 +74,14 @@ simplify_path_name <- function (path_name) {
     # Build the most simple sub path(s)
     final_paths=matrix("",ncol=length(selected),nrow=1)
     for (i in 1:length(selected)){	
+      back_at_start = T
       node = gsub("->", "", elements[selected[i], 2])
       simple_sub_path = paste0(elements[node, 1], elements[selected[i],2])
-      while (elements[node, 2] != "") {
+      while (elements[node, 2] != "" & back_at_start) {
         node = elements[node, 2]
         simple_sub_path = paste0(simple_sub_path, node)
         node = gsub("->", "", node)
+        back_at_start = unlist(strsplit(simple_sub_path,"->"))[1] != node
       }
       final_paths[i]=simple_sub_path
     }
