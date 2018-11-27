@@ -78,8 +78,12 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
 
 define_breaks <- function(m,lim = Inf,fixedRange = F) {
   if (!fixedRange) {
+    if (min(m,na.rm=T)==max(m,na.rm=T)){
+      return(seq(-1.1*ifelse(min(m,na.rm=T)==0,1,min(m,na.rm=T)),1.1*ifelse(max(m,na.rm=T)==0,1,max(m,na.rm=T)),length.out=22))  
+    }else{
       limit = min(lim,(max(abs(m),na.rm = T)))
       return(seq(-1.1*(limit)*ifelse(min(m,na.rm=T)<0,1,0),1.1*limit*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
+    }
   } else {
       if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
           stop("'lim' is invalid, cannot generate breaks within a fixed range")
