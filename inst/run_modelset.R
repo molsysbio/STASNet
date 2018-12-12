@@ -83,7 +83,7 @@ if (any(grepl(".var$", cargs))) {
   }
   var_files=var_files[order(var_files)]
 }
-    
+
 # options
 if (any(grepl("^-i", cargs))) {
   inits = as.numeric(gsub("-i", "", cargs[grepl("^-i", cargs)]))
@@ -123,20 +123,20 @@ if (any(grepl("^-s", cargs))) {
 } 
 
 if (any(cargs %in% "--noplots") || any(cargs %in% "--noplot"))
-    perf_plots = FALSE
+  perf_plots = FALSE
 if (any(grepl("^-v", cargs)))
-    STASNet:::setDebug(T)
+  STASNet:::setDebug(T)
 if (any(grepl("^--npc", cargs)))
-    precorrelate = FALSE
+  precorrelate = FALSE
 if (any(grepl("^-D", cargs)))
-    default_cv = as.numeric(gsub("^-D", "", cargs[grepl("^-D", cargs)]))
+  default_cv = as.numeric(gsub("^-D", "", cargs[grepl("^-D", cargs)]))
 if (any(grepl("^-M", cargs)))
-    min_cv = as.numeric(gsub("^-M", "", cargs[grepl("^-M", cargs)]))
+  min_cv = as.numeric(gsub("^-M", "", cargs[grepl("^-M", cargs)]))
 if (any(grepl("^-u", cargs))) {
-    argument = gsub("^-u", "", cargs[grepl("^-u", cargs)])
-    argument = gsub("\"", "", argument)
-    unused_perturbations = c( unused_perturbations, unlist(strsplit(argument, " |\t")) )
-  }
+  argument = gsub("^-u", "", cargs[grepl("^-u", cargs)])
+  argument = gsub("\"", "", argument)
+  unused_perturbations = c( unused_perturbations, unlist(strsplit(argument, " |\t")) )
+}
 if (any(grepl("^-d", cargs))) {
   argument = gsub("^-d", "", cargs[grepl("^-d", cargs)]) # remove -d
   argument = gsub("\"", "", argument) # remove quotation marks
@@ -200,20 +200,20 @@ writeLines(modelset$infos[2])
 
 #### 2 FIND VARIABLE PARAMETERS ####
 if (relax){
-modelset=addVariableParameters(original_modelset = modelset,
-                              nb_cores = cores,
-                              max_iterations=0,
-                              nb_samples=var_samples,
-                              accuracy=0.95,
-                              notVariable = unused_readouts)
-  }
+  modelset=addVariableParameters(original_modelset = modelset,
+                                 nb_cores = cores,
+                                 max_iterations=0,
+                                 nb_samples=var_samples,
+                                 accuracy=0.95,
+                                 notVariable = unused_readouts)
+}
 if (extension){
   extensionMat=suggestExtension(original_model = modelset,
                                 parallel = T,
                                 mc = cores,
                                 sample_range=c(10^(2:-1),0,-10^(-1:2)),
                                 print = F)
-write.table(extensionMat, file.path(folder, paste0("extension_", conditions, ".csv")), row.names=FALSE, quote=FALSE, sep="\t")
+  write.table(extensionMat, file.path(folder, paste0("extension_", conditions, ".csv")), row.names=FALSE, quote=FALSE, sep="\t")
 }
 
 if (reduction) {
@@ -247,9 +247,9 @@ if (relax){
 modelgroup=extractSubmodels(modelset)
 
 for ( ii in 1:length(modelgroup$names)){
-model=modelgroup$models[[ii]]
-# 3.1 plot graph
-pdf(file.path(folder,paste0("graph_",model$name,".pdf")))
+  model=modelgroup$models[[ii]]
+  # 3.1 plot graph
+  pdf(file.path(folder,paste0("graph_",model$name,".pdf")))
 plotModelGraph(model)
 dev.off()
 
