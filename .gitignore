@@ -6,9 +6,8 @@
 ..pdf
 */tags
 inst/doc
-vignettes
 tests/testthat/*.rds
 R/.nfs*
-tests/testthat/.Rhistory
+qtests/testthat/.Rhistory
 .Rhistory
 tests/testthat/model.mra

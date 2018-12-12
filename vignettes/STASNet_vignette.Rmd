@@ -25,69 +25,95 @@ vignette: >
 diagram="@startuml
     skinparam usecase {
         BackGroundColor<< S3 Class >> #eeeeee
-
+        BackgroundColor<< Visual >> #42b5db
         BackGroundColor<< Helper Functions >> #88ee88
     }
     (ModelSet) << S3 Class >>
     (MRAmodel) << S3 Class >>
     (profileLikelihoodResults) << List >>
     (getCombinationMatrix) << Helper Functions >>
+    (plotParameters) << Visual >>
+    (plotModelAccuracy) << Visual >>    
+    (plotModelPrediction) << Visual >>    
+    (plotModelScores)  << Visual >>
+    (plotModelParameters) << Visual >>
+    (compareParameters) << Visual >>
+    (plotResiduals) << Visual >>
+    (plotModelSimulation) << Visual >>
+    (niplotPL) << Visual >>
 
-    (importModel) --> MRAmodel
-    (rebuildModel) --> MRAmodel
+    (importModel) ----> MRAmodel
+    (rebuildModel) ----> MRAmodel
     (createModel)---->MRAmodel
-    (MRAmodel)-->(plotModelPrediction)
-    (MRAmodel)-->(plotModelAccuracy)
+    (MRAmodel)---->(plotModelPrediction)
+    (MRAmodel)---->(plotModelAccuracy)
     (MRAmodel)-->(simulateModel)
-    (MRAmodel)-->(plotModelScores)
+    (MRAmodel)---->(plotModelScores)
+    (MRAmodel)---->(plotModelParameters)
     (createModelSet) --> ModelSet
+    (rebuildModelSet) --> ModelSet
     (ModelSet)-->(extractSubmodels)
-    (ModelSet)-->(plotParameters)
-    (ModelSet)-->(plotResiduals)
-    (extractSubmodels) --> (MRAmodel)
+    (ModelSet)<-->(addVariableParameters)
+    (ModelSet)-->(compareParameters)
+    (addVariableParameters)--> (compareParameters)
+    (ModelSet)<-->(selectMinimalModel)
+    (ModelSet)-->(suggestExtension)
+    (ModelSet)---->(plotParameters)
+    (extractSubmodels)-->(plotResiduals)
+    (extractSubmodels)-->(MRAmodel)
     (simulateModel)-->(plotModelSimulation)
     (getCombinationMatrix)-->(simulateModel)
     (MRAmodel)-->(profileLikelihood)
     (profileLikelihood)-->(profileLikelihoodResults)
     (profileLikelihoodResults)-->(addPLinfos)
+    (profileLikelihoodResults)-->(niplotPL)
     (MRAmodel)-->(addPLinfos)
     (addPLinfos)-->(MRAmodel)
     (MRAmodel)-->(suggestExtension)
-    (MRAmodel)-->(selectMinimalModel)
+    (MRAmodel)<-->(selectMinimalModel)
     @enduml"
 write(diagram, "use_diagram.uml")
 system2("java", " -jar ~/bin/Java/plantuml.jar use_diagram.uml")
 ```
-![Use diagram](use_diagram.png)
+![](use_diagram.png)
 
-**NOTE** Various scripts are available in the inst/ folder of `STASNet` to run the fitting procedure from the command line
-
-Loading the library:
-```{r}
+__Loading the library:__
+```{r, message =F}
 library(STASNet)
 ```
 
-## Example dataset
+STASNet (STeady-STate Analysis of Signalling Networks) is a package that uses a modified version of Modular Response Analysis (as described in [Klinger at al. 2013](10.1038/msb.2013.29) and [Dorel et al.2018](10.1093/bioinformatics/bty473)) to quantify, locally adjust and analyse signalling networks from perturbation data. In here we will give an example for the kind of inputs required by the modelling pipeline along with a few further analysis examples. In general our methodology can be applied to two scenarios: (i) the basic MRAmodel approach to model single data sets (i.e. one cell line data) and (ii) using the Modelset extension to jointly model several data sets (e.g. a cell line panel). 
+
+**NOTE** Various scripts are available in the "inst/" folder of `STASNet` to run the fitting procedure from the command line (you may have to change the path to 'Rscript' in the first line)
+
+## MRAmodel
+
+### Example dataset
+
+As minimal input the model requires three inputs:  
+
+ -  network (a prior network as named adjacency matrix or a two column table FROM <TAB> TO)  
+ -  basal (a vector with names of nodes that are active in absence of external stimuli)  
+ -  midas_data (perturbation data in MIDAS format ([Saez-Rodriguez et al. 2008](https://doi.org/10.1093/bioinformatics/btn018)))  
+ (-  [midas_var] (optionally one can provide coefficient of variation data in same format and size as midas_data))  
+
 ```{r, eval=T}
-# Structure as adjacency list
-structure = rbind(c("N1", "N2"), c("N2", "N3"), c("N2", "N5"), c("N5", "N4"), c("N3", "N4"))
-basal = c("N1", "N2", "N3", "N4", "N5")
+network = rbind(c("N1", "N2"), c("N2", "N3"), c("N2", "N5"), c("N5", "N4"), c("N3", "N4")) # Two column table:  FROM -> TO 
+basal = c("N2", "N3", "N4", "N5") # Column vector of nodes active in ground state
 midas_data = as.data.frame(matrix(0, nrow=4, ncol=7,
     dimnames=list(NULL, c("ID:type", "TR:N1", "TR:N2i", "DA:ALL", "DV:N2", "DV:N3", "DV:N4"))))
 midas_data[,1] = c("c", "t", "t", "t") # Type of experiment
 midas_data[,c(2,3)] = cbind(c(0,1,1,0), c(0,0,1,1)) # Perturbations
-midas_data[,c(5:7)] = cbind(c(111, 250, 187, 98), c(100, 150, 147, 76), c(103, 600, 217, 54)) # Experimental values
+midas_data[,c(5:7)] = cbind(c(111, 263, 225, 97), c(103, 50, 128, 168), c(56, 618, 147, 20)) # Measurements
 print(midas_data)
 ```
 
-## Creation of the model
+### Modelling
 
-Create the model using the data and the network layout as prior knowledge.
-
-**NOTE** Depending on the number of initialisations ('inits') and the size of the network it is possible that the global optimum is not reached. Results can thus vary between runs of `createModel()` for big networks with an insufficient number of initialisations.
+By using the input files one can create the MRA-based model.
 
 ```{r}
-model = createModel(model_links = structure,
+model = createModel(model_links = network,
                     basal_file = basal,
                     data.stimulation = midas_data,
                     inits = 100,
@@ -97,27 +123,39 @@ model = createModel(model_links = structure,
 #setwd(system.file("extdata", package="STASNet"))
 #model = createModel("network.tab", "basal.dat", "HCT116_MIDAS.csv", inits=100, perform_plots=T,
 #                    method="randomlhs");
-#TODO: replace the HCT116 dataset with the trimed dataset used in the package
+#TODO: replace the HCT116 dataset with the trimmed dataset used in the package
 ```
 
-We can then visualise the resulting network. Be aware that the fitted values are paths and not directly link,
-thus the values displayed on a link should not be taken as is (use `printParameters()` to get the actual paths).
+**NOTE** Depending on the number of initialisations ('inits') and the size of the network it is possible that the global optimum is not reached (often visible by not obtaining the same best fit several times). Results can thus vary between runs of `createModel()` for big networks with an insufficient number of initialisations.
 
+We can then visualise the resulting network. 
 ```{r}
-printParameters(model)
 plotModelGraph(model)
 ```
 
-We can the evaluate how the simulation compares to the data.
+Be aware that the fitted values may represent paths,
+thus the values displayed on a link might stand for a combination of links (with the other dependent links given the strength 1). Use `printParameters()` to get the actual paths.
+```{r}
+printParameters(model)
+```
+Thus it can be noticed that the strength of N2->N5->N4 has in the above network been given to the link N2-> N5 with N5->N4 being set to 1. 
 
-```{r,fig.width=4}
+### Data vs Model
+
+We can evaluate how the simulation compares to the data using several ways. Using `plotModelAccuracy()` five heatmaps will be generated amongst which the experimental data and Simulated data being the Data and the fit, respectively. With `plotModelScores()` the individual goddness of fit for each analyte can be depicted as coefficient of Determination (R²). Using `plotModelSimulation()` analyte-wise bargraphs are plotted directly comparing data with simulation (not that by using `simulateModel()` one can also simulate novel not fitted perturbations or combinations therof).
+
+```{r,fig.width=4, message =F}
 plotModelAccuracy(model)
 plotModelScores(model)
 simulation = plotModelSimulation(model, with_data= TRUE,log_axis = T)
+```
+
+```{r}
 print(simulation)
 ```
 
-## Profile likelihood
+
+### Profile likelihood
 
 Profile likelihood aims at providing confidence intervals for the parameters. `niplotPL()` provides a convenient way to plot the likelihood and profiles of parameters.
 
@@ -126,49 +164,138 @@ profiles = profileLikelihood(model, nb_points = 1000, nb_cores = 8)
 model = addPLinfos(model, profiles)
 niplotPL(profiles, file_plots = FALSE)
 ```
+The two dashed lines denote family-wise and point-wise 95% confidence threshold, respectively.
 
 Note the correlation between N2->N3 and N2->N4->N5 which indicates a structural non identifiability, i.e. the experimental design does not allow to differentiate between them.
-Note also the symmetry around 0 for the inhibitor iN2 due to the fact that it is always considered negative for the fit.
+Note also the symmetry around 0 for the inhibitor iN2 due to the fact that the sign is ignored by the fitting routine and always assumed to be negative.
 
-The parameter confidence intervals can be visualised.
+The resulting parameter confidence intervals can be visualised in the following way with dots (or if outside the plotting regions numbers) pointing to the actual parameter values and green bars denoting the 95% point-wise confidence interval.
 
-```{r,fig.width=10,fig.height=6}
-
-plotModelParameters(model)
+```{r,fig.width=8,fig.height=4}
+plotModelParameters(model, lim = 4)
 ```
 
-We can then simulate with confidence intervals.
+We can now also redo the simulation plot and include the confidence interval information as error bars .
 
 ```{r,fig.width =4}
 simulation = plotModelSimulation(model, with_data= TRUE,log_axis = T)
 ```
 
-## Network structure alteration
-Next to the parameterisation also the structural sanity of the network can be assessed by searching for superfluous or missing connections.
+### Network alteration
+Next to the parameters (or more correctly identifiable combinations of response coefficients) also the structural sanity of the network can be assessed by searching for superfluous or missing connections.
 
 First we try to reduce the network in oder to test for links that do not significantly contribute to the overall fit
 ```{r}
 red_model = selectMinimalModel(model)
 ```
 
-In the model two links are found to be neglectable and the thusly reduced model is returned as output of `selectMinimalModel()`
+In the model the link from N3 to N4 has been found to be neglectable and the thusly reduced model is returned as output of `selectMinimalModel()`.
 
-After haveing reduce th model it is also of interest to search for missing links that would improve the overall fit.
-In contrast to the reduction this is done by returning a list which contains teh statistics of each link so that the extension can be then manually curated and compared to available biological insights from previous experiments or literature.
-```{r,eval =T}
-#TODO make ModelStructure to accept a list of all names to always preserve unconnected nodes in the network
+After having reduced the model it is also of interest to search for missing links that would improve the overall fit.
+In contrast to the reduction this is done by returning a list which provides the improvement and strength of each link so that the extension can then be manually conducted by a manually altering the network structure (at best guided by available biological insights from previous experiments or literature) and rerunning the `createModel()` routine.
+
+```{r,message =F}
 ext_mat = suggestExtension(red_model)
 ```
+```{r, echo=F, fig.width =10}
+trim_num <- function(x, non_zeros=2, behind_comma = 2){
+  if (non_zeros==0){
+    error("number should have a digits reconsider setting non_zeros larger 0!!")
+  }
+trim_it <- function(x, non_zeros, behind_comma){  
+  if (is.na(x)){ return(x) }
 
-## Creation of a Model set
+  if (!is.numeric(x)){ oldx =x; x = as.numeric(as.character(x)) } 
 
-A model set is a joint fitting of several dataset with the same model and some links varying independently between models.
+  if (is.na(x)){return(oldx)} # stop(paste("Number or NA expected '", oldx ,"' received as input!")) } 
+  
+  if (abs(x >= 1)){ 
+    newx = round(x*10^behind_comma)/10^behind_comma
+  } else{
+    newx =  signif(x,non_zeros)  
+  }
 
-```{r, eval=F}
-mset = createModelSet("network.tab", "basal.tab", c("Widr_"))
+  if (nchar(gsub("\\.|-","",as.character(newx))) > max(5,non_zeros+behind_comma)){
+    newx = format(newx, scientific = 0)  
+  }
+  return(newx)
+  }
+
+if (is.null(dim(x))){
+  return(as.data.frame(sapply(x,"trim_it",non_zeros,behind_comma)))
+}else{
+ newx=as.data.frame(sapply(1:ncol(x),function(y) sapply(x[,y],"trim_it",non_zeros,behind_comma)))
+ dimnames(newx) <- dimnames(x)
+ return(newx)
+}
+}
+
+# helper function to determine variable links
+not_duplicated <- function(x){
+  tmp = duplicated(x)
+  return(!all(tmp[-1]))
+}
+
+print(suppressWarnings(trim_num(ext_mat)))
+```
+In this toy example the data is already well represented with no significantly missing link (see multiple testing adjusted p-values column adj_pval).
+
+## Modelset
+
+A model set is the appropriate choice if several data sets are so similar that they can be jointly fitted  with the same model and only some links are of need to be fitted individually between data sets. 
+This would be the case for isogenic cell lines differing only by one mutation, or in different cell types of the same tissue (with identical genetic background).
+
+We add a second data set were the difference is that N2 is more reactive to the stimulus than in the first data set (which is also propagated to the downstream nodes).
+```{r}
+midas_data2 = midas_data
+midas_data2[,c(5:7)] = cbind(c(111, 507, 524, 97), c(103, 48, 241, 330), c(56, 1218, 290, 20)) # Measurements
+print(midas_data)
+print(midas_data2)
 ```
 
-
-```{r, eval=F}
-mset = addVariableParameters(mset)
+Now we can fit both data sets with one set of coefficients first using the `createModelSet()` function.
+```{r}
+mset = createModelSet(model_links = network, 
+                      basal_file = basal,
+                      csv_files = list(midas_data, midas_data2),
+                      model_name = c("example1","example2"),
+                      inits = 1000)
 ```
+
+In order to obtain the visualisation and extraction routines shwon for the MRAmodel section the single model objects have to be extracted whcih can be treated alike MRAmodels. The extraction is conducted as follows:
+```{r}
+modelgrp <- extractSubmodels(mset)
+modelgrp$names
+mramodel_ex1 = modelgrp$models[[1]]
+mramodel_ex2 = modelgrp$models[[2]]
+```
+
+The `Modelgroup` object resides between the Modelset and MRAModel structure and allows some basic visualisations such as the individual fitting scores.  
+```{r, fig.height = 4}
+plotResiduals(modelgrp)
+```
+
+### Variable Links
+
+So far we have only fitted on set of model coefficients that can on average explain best two different data sets.
+As we are interested in the link coefficients that have to be significantly different between those data sets (.i.e. instead of one coefficient here two data-set-specific coefficients have to be used) we apply a greedy-hill climbing likelihood ratio test-based routine in `addVariableParameter()`.
+The implementation iteratively makes those links variable that when allowed to vary between data sets most significantly improve the overall fit. In order to ensure robustness to this strategy the algorithm tests the variable links once more by the reverse operation (termed lumping).  
+```{r}
+msetVar = addVariableParameters(mset)
+```
+As expected the link from N1-> N2 was identified and is now fitted individually.
+
+We can visualize the variable coefficients using `compareParameters()`.
+```{r,fig.width=4.5}
+compareParameters(msetVar)
+```
+
+By this procedure we have found the best explaining set of coefficients which have also improved the overall fit.
+```{r, fig.height =4}
+modelgrpVar <- extractSubmodels(msetVar)
+plotResiduals(modelgrpVar)
+```
+
+### Network alteration
+
+The modelset object (including variable links) can now also be tested for network structure alterations by applying the very same functions used in the MRAmodel example above: `selectMinimalModel()` and `suggestExtension()`.
