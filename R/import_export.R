@@ -504,7 +504,7 @@ controlFC <- function(idata) {
 #' @export
 midasFromData <- function(data, fname) {
     treatments = unique(unlist(lapply( rownames(data), function(tt) { unlist(strsplit(tt, "\\+")) } )))
-    control_blank = which(grepl("control|^c$|blank", treatments))
+    control_blank = which(grepl( "control|cntrl|^c$|blank", tolower(treatments) ))
     if (length(control_blank) > 0) { treatments = treatments[-control_blank] }
     midas_data = matrix(nrow=0, ncol=2+length(treatments)+ncol(data))
 
@@ -512,7 +512,7 @@ midasFromData <- function(data, fname) {
     for (rr in 1:nrow(data)) {
         if (rownames(data)[rr] == "blank") {
             midas_data = rbind( midas_data, c("blank", rep(0,length(treatments)+1), data[rr,]) )
-        } else if (grepl("^c$|control", rownames(data)[rr])) {
+        } else if ( grepl("^c$|control|cntrl", tolower(rownames(data)[rr])) ) {
             midas_data = rbind( midas_data, c("control", rep(0,length(treatments)+1), data[rr,]) )
         } else {
             midas_data = rbind( midas_data, c("t", rep(0,length(treatments)+1), data[rr,]) )
