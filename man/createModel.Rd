@@ -2,13 +2,13 @@
 % Please edit documentation in R/create_model.R
 \name{createModel}
 \alias{createModel}
-\title{Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data}
+\title{Creates and fits a parameterised model from experimental data, network structure and basal activity information.}
 \usage{
-createModel(model_links, basal_file, data.stimulation, data.variation = "",
-  nb_cores = 1, inits = 1000, perform_plots = F, precorrelate = T,
-  method = "geneticlhs", unused_perturbations = c(),
-  unused_readouts = c(), MIN_CV = 0.1, DEFAULT_CV = 0.3,
-  model_name = "default", rearrange = "bystim")
+createModel(model_links, basal_file, data.stimulation,
+  data.variation = "", nb_cores = 1, inits = 1000,
+  perform_plots = F, precorrelate = T, method = "geneticlhs",
+  unused_perturbations = c(), unused_readouts = c(), MIN_CV = 0.1,
+  DEFAULT_CV = 0.3, model_name = "default", rearrange = "bystim")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
@@ -49,7 +49,7 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 An MRAmodel object describing the model and its best fit, containing the data
 }
 \description{
-Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
+Creates and fits a parameterised model from experimental data, network structure and basal activity information.
 }
 \examples{
 \dontrun{
@@ -67,3 +67,4 @@ Other Model initialisation: \code{\link{initModel}}
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
+\concept{Model initialisation}

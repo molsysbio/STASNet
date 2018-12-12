@@ -2,7 +2,7 @@
 ###################### profile_likelihood.R ###############################
 # Functions associated with the profile likelihood
 
-#' Computes the profile likelihood and the parameters relationships of each parameters in the model
+#' Computes the profile likelihood and the parameter relationships of each parameter in the model
 #' @param model_description An MRAmodel object
 #' @param nb_points Number of points to plot the profile
 #' @param nb_cores Maximum number of cores used for the calculation
@@ -125,9 +125,9 @@ print_error_intervals <- function(profiles) {
 }
 
 #' Add the information provided by the profile likelihood in the model_description object
-#' ie the limits of the confidence interval and the corresponding sets of parameters
+#' (i.e. the limits of the confidence interval and the corresponding sets of coefficients)
 #' @param model_description An MRAmodel object
-#' @param profiles A list of the likelihood profiles of the parameters of the model
+#' @param profiles A list of the likelihood profiles of the coefficients of the model
 #' @return An MRAmodel object with the profile likelihood information integrated to it
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
@@ -161,7 +161,7 @@ addPLinfos <- function(model_description, profiles) {
     return(model_description)
 }
 
-#' Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
+#' Plots the functional relations between each non-identifiable parameter and the profile likelihood of all parameters
 #' and redirect it in a pdf file.
 #' @param profiles A list of the likelihood profiles of the parameters of the model
 #' @param data_name Name for the output pdf file

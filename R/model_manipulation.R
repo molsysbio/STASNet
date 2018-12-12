@@ -136,7 +136,7 @@ reduceModel <- function(original_model, accuracy=0.95) {
     selectMinimalModel(original_model, accuracy)
 }
 
-#' Selection of a minimal model by the removal of non significant links with an Chi^2 test
+#' Selection of a minimal model by iteratively removing insignificant links using the likelihood ratio test.
 #' @param original_model An MRAmodel object, as the one produced by createModel or importModel
 #' @param accuracy Probability threshold, the type I error for each link will be 1-accuracy. Multiple testing is not taken into account.
 #' @return An MRAmodel object of the reduced model with the data
@@ -303,6 +303,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
 }
 
 #' Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
+#' 
 #' A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
 #' Note that values assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
 #' @param original_model MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data

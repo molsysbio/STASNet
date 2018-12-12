@@ -31,3 +31,4 @@ Simulate a model for a specified set of perturbation
 Other simulation: \code{\link{getCombinationMatrix}},
   \code{\link{plotSimulation}}
 }
+\concept{simulation}

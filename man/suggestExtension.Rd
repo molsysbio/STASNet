@@ -2,9 +2,7 @@
 % Please edit documentation in R/model_manipulation.R
 \name{suggestExtension}
 \alias{suggestExtension}
-\title{Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
-A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
-Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!}
+\title{Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model}
 \usage{
 suggestExtension(original_model, parallel = F, mc = 1,
   sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F,
@@ -24,9 +22,8 @@ suggestExtension(original_model, parallel = F, mc = 1,
 \item{padjust_method}{The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)}
 }
 \description{
-Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
 A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
-Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
+Note that values assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
 }
 \examples{
 \dontrun{

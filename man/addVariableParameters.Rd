@@ -2,16 +2,16 @@
 % Please edit documentation in R/create_model.R
 \name{addVariableParameters}
 \alias{addVariableParameters}
-\title{Extend a MRAmodelSet with relevant variable parameters}
+\title{Search for and relax fixed coefficients of an MRAmodelSet to fit individual data sets significantly better}
 \usage{
-addVariableParameters(original_modelset, nb_cores = 0, max_iterations = 0,
-  nb_samples = 100, accuracy = 0.95, method = "geneticlhs",
-  notVariable = c())
+addVariableParameters(original_modelset, nb_cores = 0,
+  max_iterations = 0, nb_samples = 100, accuracy = 0.95,
+  method = "geneticlhs", notVariable = c())
 }
 \arguments{
 \item{original_modelset}{An MRAmodelSet object}
 
-\item{nb_cores}{Number of cores to use for the refitting with the new variable parameters}
+\item{nb_cores}{Number of cores to use for the refitting with the new variable coefficients}
 
 \item{max_iterations}{Maximum number of variable parameters to add (if 0 takes as many as possible)}
 
@@ -21,13 +21,13 @@ addVariableParameters(original_modelset, nb_cores = 0, max_iterations = 0,
 
 \item{method}{Name of the LHS method to use}
 
-\item{notVariable}{Parameters that should not be varied, either a numeric or character vector identifying the parameters from 'modelset$model$getParametersNames()$names', defaults to 'c()'.}
+\item{notVariable}{Coefficients that should not be varied, either a numeric or character vector identifying the coefficients from 'modelset$model$getParametersNames()$names', defaults to 'c()'.}
 }
 \value{
-An updated MRAmodelSet with the new parameter sets
+An updated MRAmodelSet with the new set of coefficients
 }
 \description{
-See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
+See if an MRAmodelSet requires some coefficients to be variable among models to explain the variations
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

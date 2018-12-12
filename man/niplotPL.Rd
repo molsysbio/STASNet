@@ -2,7 +2,7 @@
 % Please edit documentation in R/profile_likelihood.R
 \name{niplotPL}
 \alias{niplotPL}
-\title{Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
+\title{Plots the functional relations between each non-identifiable parameter and the profile likelihood of all parameters
 and redirect it in a pdf file.}
 \usage{
 niplotPL(profiles, data_name = "default", folder = "./",
@@ -19,7 +19,7 @@ niplotPL(profiles, data_name = "default", folder = "./",
 Nothing
 }
 \description{
-Plots the functionnal relations between each non identifiable parameter and the profile likelihood of all parameters
+Plots the functional relations between each non-identifiable parameter and the profile likelihood of all parameters
 and redirect it in a pdf file.
 }
 \seealso{

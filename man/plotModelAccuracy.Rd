@@ -30,3 +30,4 @@ Other Model plots: \code{\link{plotModelGraph}},
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
+\concept{Model plots}

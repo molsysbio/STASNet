@@ -3,21 +3,21 @@
 \name{addPLinfos}
 \alias{addPLinfos}
 \title{Add the information provided by the profile likelihood in the model_description object
-ie the limits of the confidence interval and the corresponding sets of parameters}
+(i.e. the limits of the confidence interval and the corresponding sets of coefficients)}
 \usage{
 addPLinfos(model_description, profiles)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
 
-\item{profiles}{A list of the likelihood profiles of the parameters of the model}
+\item{profiles}{A list of the likelihood profiles of the coefficients of the model}
 }
 \value{
 An MRAmodel object with the profile likelihood information integrated to it
 }
 \description{
 Add the information provided by the profile likelihood in the model_description object
-ie the limits of the confidence interval and the corresponding sets of parameters
+(i.e. the limits of the confidence interval and the corresponding sets of coefficients)
 }
 \seealso{
 \code{\link{profileLikelihood}}

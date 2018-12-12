@@ -4,7 +4,7 @@
 \alias{plotResiduals}
 \title{Plot the residual of each model in the group}
 \usage{
-plotResiduals(model_group)
+plotResiduals(model_group, main = "Model residuals")
 }
 \arguments{
 \item{model_group}{Object of class modelGroup}
@@ -14,4 +14,7 @@ Invisibly, the residuals (chi-2)
 }
 \description{
 Display the residuals of the models as a barplot
+}
+\author{
+Bertram Klinger \email{bertram.klinger@charite.de}
 }

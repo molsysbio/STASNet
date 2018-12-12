@@ -1,6 +1,6 @@
 # Helper functions for the STASNet package, mostly patch stupid R behaviour
 
-#' Return a data.frame even if the output as on line or one column
+#' Return a data.frame even if the output is one-dimensional
 sub_data_frame <- function(input, rows=NULL, cols=NULL) {
   output = input
   if (!is.null(rows)) {

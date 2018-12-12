@@ -2,7 +2,7 @@
 % Please edit documentation in R/profile_likelihood.R
 \name{profileLikelihood}
 \alias{profileLikelihood}
-\title{Computes the profile likelihood and the parameters relationships of each parameters in the model}
+\title{Computes the profile likelihood and the parameter relationships of each parameter in the model}
 \usage{
 profileLikelihood(model_description, nb_points = 10000, nb_cores = 1)
 }
@@ -17,7 +17,7 @@ profileLikelihood(model_description, nb_points = 10000, nb_cores = 1)
 Returns a list of the profile for each parameters
 }
 \description{
-Computes the profile likelihood and the parameters relationships of each parameters in the model
+Computes the profile likelihood and the parameter relationships of each parameter in the model
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

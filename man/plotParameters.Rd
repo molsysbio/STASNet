@@ -2,14 +2,13 @@
 % Please edit documentation in R/compare_models.R, R/parameters_comparison.R
 \name{plotParameters}
 \alias{plotParameters}
-\alias{plotParameters}
 \title{Plot parameters}
 \usage{
-plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE,
-  vertical = TRUE)
+plotParameters(aggregated_paths, lim = 2, repar = TRUE,
+  resetpar = TRUE, vertical = TRUE)
 
-plotParameters(aggregated_paths, lim = 2, repar = TRUE, resetpar = TRUE,
-  vertical = TRUE)
+plotParameters(aggregated_paths, lim = 2, repar = TRUE,
+  resetpar = TRUE, vertical = TRUE)
 }
 \arguments{
 \item{aggregated_paths}{Aggregated direct paths as returned by aggregateDirectPaths}

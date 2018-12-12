@@ -33,3 +33,4 @@ Other toy data generation: \code{\link{addLayerLinks}},
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}
 }
+\concept{toy data generation}

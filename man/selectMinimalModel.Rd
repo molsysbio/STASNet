@@ -3,7 +3,7 @@
 \name{reduceModel}
 \alias{reduceModel}
 \alias{selectMinimalModel}
-\title{Selection of a minimal model by the removal of non significant links with an Chi^2 test}
+\title{Selection of a minimal model by iteratively removing insignificant links using the likelihood ratio test.}
 \usage{
 reduceModel(original_model, accuracy = 0.95)
 
@@ -18,7 +18,7 @@ selectMinimalModel(original_model, accuracy = 0.95, verbose = F)
 An MRAmodel object of the reduced model with the data
 }
 \description{
-Selection of a minimal model by the removal of non significant links with an Chi^2 test
+Selection of a minimal model by iteratively removing insignificant links using the likelihood ratio test.
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

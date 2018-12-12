@@ -23,6 +23,4 @@ Hidden. The direct paths
 }
 \description{
 Compute the direct paths for a model and their confidence intervals by combining the paths containing links with negative exponents with paths containing the same link with a positive exponent.
-
-Print the direct paths with confidence interval
 }

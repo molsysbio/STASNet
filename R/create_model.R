@@ -60,7 +60,7 @@ not_duplicated <- function(x){
   return(!all(tmp[-1]))
 }
 
-#' Creates a parameterised model from experiment files and the network structure, and fit the parameters to the data
+#' Creates and fits a parameterised model from experimental data, network structure and basal activity information.
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
 #' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
@@ -279,18 +279,18 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   return(self)
 }
 
-#' Extend a MRAmodelSet with relevant variable parameters
+#' Search for and relax fixed coefficients of an MRAmodelSet to fit individual data sets significantly better
 #'
-#' See if a MRAmodelSet requires some parameters to be variable among models to explain the variations
+#' See if an MRAmodelSet requires some coefficients to be variable among models to explain the variations
 #'
 #' @param original_modelset An MRAmodelSet object
-#' @param nb_cores Number of cores to use for the refitting with the new variable parameters
+#' @param nb_cores Number of cores to use for the refitting with the new variable coefficients
 #' @param max_iterations Maximum number of variable parameters to add (if 0 takes as many as possible)
 #' @param nb_samples Number of samples to generate to fit the new variable parameters
 #' @param accuracy Cutoff probability for the chi^2 test
 #' @param method Name of the LHS method to use
-#' @param notVariable Parameters that should not be varied, either a numeric or character vector identifying the parameters from 'modelset$model$getParametersNames()$names', defaults to 'c()'.
-#' @return An updated MRAmodelSet with the new parameter sets
+#' @param notVariable Coefficients that should not be varied, either a numeric or character vector identifying the coefficients from 'modelset$model$getParametersNames()$names', defaults to 'c()'.
+#' @return An updated MRAmodelSet with the new set of coefficients
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @author Bertram Klinger \email{bertram.klinger@charite.de}
