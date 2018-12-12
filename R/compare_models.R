@@ -56,10 +56,12 @@ modelGroup <- function(models=list()) {
 #' Display the residuals of the models as a barplot
 #' @param model_group Object of class modelGroup
 #' @return Invisibly, the residuals (chi-2)
+#' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 #' @export
-plotResiduals <- function(model_group) {
-    barplot(model_group$residuals, main="Models residuals")
-    invisible(model_group$residuals)
+plotResiduals <- function(model_group, main = "Model residuals") {
+  barx=barplot(model_group$residuals, ylab="likelihood", main=main, col="black")
+  text(barx, 1+0.1*min(model_group$residuals), labels = sapply(model_group$residuals, function(x) ifelse(x>100000, signif(x,1), round(x))), pos = 3, srt = 90, col = "grey80", offset = 1)
+  invisible(model_group$residuals)
 }
 
 #' Plot the fitting scores of the model
