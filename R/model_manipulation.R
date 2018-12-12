@@ -124,7 +124,7 @@ getModelError <- function(mra_model) {
 plotModelScores.MRAmodel <- function(mra_model, ...) {
     low_lim=ifelse(min(mra_model$Rscores,na.rm=T)<0,min(-1,0.1*min(mra_model$Rscores,na.rm=T)),0)
     
-    bb=barplot(mra_model$Rscores, xaxt="n", ylim=c(low_lim,1), las=1,ylab = "R²", ...)
+    bb=barplot(mra_model$Rscores, xaxt="n", ylim=c(low_lim,1), las=1,ylab = "R^2", ...)
     lablist = names(mra_model$Rscores)
     text(bb, par("usr")[3] - 0.05, labels=lablist, srt=45, pos=1, xpd=TRUE)
 
@@ -304,13 +304,14 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
 
 #' Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model
 #' A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.
-#' Note that valöues assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
+#' Note that values assigned to be exactly 1 inidicate almost always an non-identifiable link, whose combined value is assigned to another node in the combination!
 #' @param original_model MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data
 #' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
 #' @param mc Number of cores that should be used for the computation
 #' @param sample_range Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))
 #' @param print Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"
 #' @param padjust_method The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)
+#' @name suggestExtension
 #' @export
 #' @seealso selectMinimalModel, createModel
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
@@ -524,7 +525,7 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
 #' @param fit_name Name of the refit for the title of the plots
 #' @return The refitted model as an MRAmodel object.
 #' @seealso printParametersNames
-#' @name refit
+#' @name refitModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr} 
 refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, nb_cores=1, method="randomlhs", fit_name="") {

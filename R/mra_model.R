@@ -63,6 +63,8 @@ MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv
 #' @param mra_model The MRAmodel object for which the score should be computed
 #' @param refit_model Whether the model should be refitted before computing the scores (using the 'mra_model$parameters' as the initial value)
 #' @return A MRAmodel object with the scores in the fields 'Rscores' and 'bestfitscore'
+#' @name computeFitScore
+#' @export
 computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
     data = mra_model$data
 # The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason

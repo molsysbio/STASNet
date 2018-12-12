@@ -54,8 +54,8 @@ test_that("The computation is consistent", {
 context("Score computation functions")
 
 test_that("computeFitScore works as expected", {
-    computeFitScore(model)
-    computeFitScore(model, T)
+    expect_silent(computeFitScore(model))
+    expect_silent(computeFitScore(model, T))
 })
 
 context("Model import-export")
