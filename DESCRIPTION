@@ -1,8 +1,8 @@
 Package: STASNet
 Type: Package
 Title: Fit and Simulate Model from Perturbation Data
-Version: 0.9
-Date: 2016-08-01
+Version: 1.0.1
+Date: 2018-12-14
 Authors@R: c(person("Bertram", "Klinger", role=c("aut"),
     email="bertram.klinger@charite.de"), person("Mathurin", "Dorel",
     role=c("aut", "cre"), email="mathurin.dorel@charite.de"), person("Nils", "Bluethgen",
