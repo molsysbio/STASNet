@@ -483,7 +483,7 @@ double Model::score(const double *p, const Data *data) const {
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*data->stim_data.shape()[0]+j]=0;
             } else {
-                datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/data->error[j][i];
+                datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
             }
         }
     }

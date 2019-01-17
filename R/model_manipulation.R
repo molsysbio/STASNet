@@ -48,7 +48,7 @@ printParameters <- function(model_description, precision=2) {
 #' @param limit An integer to force the limit of the heatmaps
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
 #' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
-#' @return Nothing
+#' @return Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
@@ -204,14 +204,14 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
         # detect the parameter values that are fixed in the new network by having the exact same value in all following parameters
         leftVar = which( apply(matrix(paramstmp,ncol=model_description$nb_models,byrow=F), 1, not_duplicated) )
         model$setVariableParameters(leftVar) 
-        result = model$fitmodelset(data, paramstmp) 
+        result = model$fitmodelset(data, paramstmp, "levmar") 
         n_par=model$nr_of_parameters()/model_description$nb_models
         response.matrix = lapply(1:model_description$nb_models, function(x) model$getLocalResponseFromParameter( rep(result$parameter[(1+(x-1)*n_par):(x*n_par)], model_description$nb_models) ))
         params[[c]] = c(response.matrix)
         new_rank = model$modelRank()/model_description$nb_models + length(leftVar)*(model_description$nb_models-1)
       }else{
         paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
-        result = model$fitmodel(data, paramstmp)
+        result = model$fitmodel(data, paramstmp, "levmar")
         response.matrix = model$getLocalResponseFromParameter( result$parameter )
         params[[c]] = c(response.matrix)
         new_rank = model$modelRank()
@@ -440,11 +440,11 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
       initial_response[[ii]]$local_response[new_link]=jj
       paramstmp = c(paramstmp, model$getParameterFromLocalResponse(initial_response[[ii]]$local_response, initial_response[[ii]]$inhibitors)) 
       }
-      tmp_result = model$fitmodelset( data,paramstmp )  
+      tmp_result = model$fitmodelset( data, paramstmp, "levmar")  
     }else{
     initial_response$local_response[new_link]=jj
     paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
-    tmp_result = model$fitmodel( data,paramstmp )
+    tmp_result = model$fitmodel( data, paramstmp, "levmar" )
     }
     if ( verbose == T )
     message( paste0( "for ", jj ," : ",tmp_result$residuals ) )

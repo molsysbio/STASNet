@@ -26,7 +26,7 @@
 #include "fitmodel_in_CPP.hpp"
 #include <Rcpp.h>
 
-int verbosity=0;
+int verbosity=2;
 bool debug=false;
 
 //[[Rcpp::export]]
@@ -124,7 +124,7 @@ SEXP ModelWrapper::simulateWithOffset(Data *data, std::vector<double> parameters
   return ret;
 }
 
-SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant, std::string optimizer) {
 
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -132,7 +132,19 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        if (optimizer == "levmar") {
+            ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        } else if (optimizer == "siman") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant);
+        } else if (optimizer == "hybrid" || optimizer == "gradsim") {
+            ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+            ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant, 0.1); // Start cool annealing
+        } else if (optimizer == "hybrid" || optimizer == "simgrad") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant);
+            ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        } else {
+            throw std::invalid_argument("'optimizer' must be 'levmar', 'siman', 'simgrad', 'gradsim' or 'hybrid'");
+        }
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
@@ -145,15 +157,15 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     return ret;
 }
 
-SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters) {
-    return( fitmodel_wrapper(data, parameters, std::vector<size_t>()) );
+SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters, std::string optimizer) {
+    return( fitmodel_wrapper(data, parameters, std::vector<size_t>(), optimizer ));
 }
-SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant, std::string optimizer) {
     for (size_t ii=0; ii<keep_constant.size(); ii++) { keep_constant[ii]--; }
-    return( fitmodel_wrapper(data, parameters, keep_constant) );
+    return( fitmodel_wrapper(data, parameters, keep_constant, optimizer) );
 }
 
-SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth) {
+SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
 
     if (parameters.size() != model->nr_of_parameters()) {
         parameters.resize(model->nr_of_parameters());
@@ -161,12 +173,13 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
     
     // Find an approximation of the optimum with the simulated annealing
     double residual;
+    double_matrix predictions;
     //std::cerr << "Starting simulated annealing" << std::endl;
-    ::simulated_annealing(model, &data, parameters, residual, max_it, max_depth);
+    ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant);
     //std::cerr << "really in" << std::endl;
 
     // Ajust the gradient descent
-    double_matrix predictions;
+    /*
     try {
       ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {   
@@ -174,6 +187,7 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
     } catch(...) { 
     ::Rf_error("c++ exception (unknown reason)"); 
     }
+    */
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;

@@ -82,6 +82,7 @@ not_duplicated <- function(x){
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicated in the data.
 #' @param model_name The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.
 #' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
+#' @param optimizer One of c('levmar', 'siman', 'hybrid', 'gradsim', 'simgrad') to choose whether the optimizer should use the Levenberg-Marquardt algorithm, Simulated Annealing or an hybrid alternating between the two with gradiend first ('gradsim') or simulated annealing firest ('simgrad').
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -94,7 +95,7 @@ not_duplicated <- function(x){
 #' }
 #' @family Model initialisation
 # TODO completely remove examples or add datafile so they work (or use data matrices)
-createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim") {
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar") {
   # Creation of the model structure object
   model_structure = extractStructure(model_links)
   basal_activity = extractBasalActivity(basal_file)
@@ -108,7 +109,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   model$setModel(expdes, model_structure)
   
   # INITIAL FIT
-  results = initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots)
+  results = initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots, optimizer)
   
   # Choice of the best fit
   params = results$params
@@ -122,12 +123,23 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   for ( i in 1:length(order_id) ) {
     p_res = residuals[order_id[i]]
     if (!is.na(p_res) && !is.infinite(p_res)) {
+      convergence = 0
       repeat {
-        result = model$fitmodel(core$data, params[order_id[i],])
+        result = model$fitmodel(core$data, params[order_id[i],], optimizer)
         if (p_res == result$residuals) {
           break
+        } else if (result$residuals > p_res) {
+            message("Unstable algorithm, convergence iterations increased the residuals !!!")
+            break
+        }
+        if (verbose > 1) { message("Ensuring convergence") }
+        convergence = convergence + 1
+        if (convergence > 10) {
+            message("Convergence threshold reached")
+            break
         }
         p_res = result$residuals
+        params[order_id[i],] = result$parameter
       }
       params[order_id[i],] = result$parameter
       residuals[order_id[i]] = result$residuals
@@ -187,7 +199,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' @inheritParams createModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim") {
+createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar") {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -243,7 +255,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   model$setNbModels(nb_submodels)
   
   message("setting completed")
-  results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores)
+  results = initModel(model, list(design=core0$design, data=data_, structure=model_structure), inits, perform_plots=perform_plots, method=method, precorrelate=F, nb_cores=nb_cores, optimizer=optimizer)
   residuals = results$residuals
   params = results$params
   
@@ -255,7 +267,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
     p_res = residuals[order_id[i]]
     if (!is.na(p_res) && !is.infinite(p_res)) {
       repeat {
-        result = model$fitmodelset(data_, params[order_id[i],])
+        result = model$fitmodelset(data_, params[order_id[i],], optimizer)
         if (p_res == result$residuals) {
           break
         }
@@ -484,9 +496,11 @@ refitWithFixedParameter <- function(var_par, modelset, nb_sub_params, nb_cores=0
 #' @param method The LHS method to use to generate the random samples
 #' @param nb_cores Maximum number of cores to use for the initialisation
 #' @param perform_plots Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not
+#' @param optimizer One of c('levmar', 'siman') to choose whether the optimizer should use the Levenberg-Marquardt algorithm or Simulated Annealing.
 #' @return A list with the initialisation results
 #' @family Model initialisation
-initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb_cores=1, perform_plots=F) {
+initModel <- function(model, core, inits, precorrelate=TRUE, method="randomlhs", nb_cores=1, perform_plots=FALSE, optimizer="levmar") {
+  if (!optimizer %in% c("levmar", "siman", "simgrad", "gradsim", "hybrid")) { stop(paste("Invalid optimizer: ", optimizer, ", must be one of c('levmar', 'siman', 'hybrid', 'simgrad', 'gradsim')")) }
   if (inits <= 0) {
     stop("Number of initialisations must be a positive integer")
   }
@@ -518,7 +532,7 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
   if (verbose >= 1) { message("Sampling terminated.") }
   
   #  fit all samples to the model
-  results = parallel_initialisation(model, data, samples, nb_cores)
+  results = parallel_initialisation(model, data, samples, nb_cores, optimizer=optimizer)
   if (verbose >= 1) { message("Fitting completed.") }
   return(results)
 }
@@ -706,7 +720,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 
 # Parallel initialisation of the parameters
 # @family Model initialisation
-parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c()) {
+parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c(), optimizer="levmar") {
   if (verbose >= 1) {
       message("Setup parallel initialisation")
   }
@@ -718,12 +732,12 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
   parallel_sampling = lapply(1:nb_samples,function(x) samples[x,])
   # Parallel initialisations
   # The number of cores used depends on the ability of the detectCores function to detect them
-  fitmodel_wrapper <- function(params, data, model, keep_constant=c()) {
+  fitmodel_wrapper <- function(params, data, model, keep_constant=c(), optimizer) {
     init = proc.time()[3]
     if (length(keep_constant) > 0) {
-      result = model$fitmodelWithConstants(data, params, keep_constant)
+      result = model$fitmodelWithConstants(data, params, keep_constant, optimizer)
     } else {
-      result = model$fitmodel(data, params)
+      result = model$fitmodel(data, params, optimizer)
     }
     if (verbose > 10) {
       message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
@@ -731,22 +745,22 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     return(result)
   }
   
-  fitmodelset_wrapper <- function(params, data, model) {
+  fitmodelset_wrapper <- function(params, data, model, optimizer) {
     # TODO add keep_constant control
     if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a STASNet::DataSet object") }
     init = proc.time()[3]
-    result = model$fitmodelset(data, params)
+    result = model$fitmodelset(data, params, optimizer)
     if (verbose > 10) {
       message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
   }
   
-  get_parallel_results <- function(model, data, samplings, NB_CORES, keep_constant=c()) {
+  get_parallel_results <- function(model, data, samplings, NB_CORES, keep_constant=c(), optimizer) {
     if (class(model) == "Rcpp_ModelSet") {
-      parallel_results = mclapply(samplings, fitmodelset_wrapper, data, model, mc.cores=NB_CORES)
+      parallel_results = mclapply(samplings, fitmodelset_wrapper, data, model, optimizer, mc.cores=NB_CORES)
     } else {
-      parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, mc.cores=NB_CORES, keep_constant)
+      parallel_results = mclapply(samplings, fitmodel_wrapper, data, model, keep_constant, optimizer, mc.cores=NB_CORES)
     }
     
     # Reorder the results to get the same output as the non parallel function
@@ -778,7 +792,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     
     for (i in 1:nb_blocks) {
       seq = (block_size*(i-1)+1) : ifelse(block_size*(i+1) <= nb_samples, block_size*i, nb_samples)
-      results = get_parallel_results(model, data, parallel_sampling[seq], NB_CORES)
+      results = get_parallel_results(model, data, parallel_sampling[seq], NB_CORES, optimizer=optimizer)
       
       # Only keep the best fits
       best = order(results$residuals)[1:best_keep]
@@ -788,7 +802,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     }
     
   } else {
-    best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant)
+    best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant, optimizer)
     if (verbose >= 4) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
   }
   
@@ -800,7 +814,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
 classic_initialisation <- function(model, data, nb_samples) {
   residuals = c()
   for (i in 1:nb_samples) {
-    result = model$fitmodel( data, samples[i,] )
+    result = model$fitmodel( data, samples[i,], optimizer )
     residuals = c(residuals,result$residuals)
     params = cbind(params,result$parameter)
     if (i %% (nb_samples/20) == 0) {
@@ -1393,7 +1407,7 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
   
   model$model$setModel(core$design, core$structure)
-  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters)$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
+  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters, "levmar")$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
   
   return(model)
 }

@@ -28,6 +28,7 @@
 #include <vector>                       
 #include <fstream> 
 #include <exception>
+#include <boost/random.hpp> // for simulated annealing step
 #include <boost/numeric/ublas/io.hpp>   
 #include <boost/bind.hpp>   
 #include <boost/math/distributions/chi_squared.hpp>
@@ -274,25 +275,83 @@ void fitmodel( std::vector <double> &bestfit,
 }
 
 // Perform simulated annealing to find the global optimum for the model
-void simulated_annealing(const Model *model, const Data *data, std::vector<double> &bestfit, double &bestresid, int max_it, int max_depth) {
+void simulated_annealing(std::vector<double> &bestfit, double &bestresid, double_matrix &prediction, const Model *model, const Data *data, std::vector<size_t> keep_constant, const double starting_temperature) {
+    const int max_it = 3000*model->nr_of_parameters();
+    const int max_depth = model->nr_of_parameters(); // 30*model->nr_of_parameters() from matlab
+    const double cooling = 0.99;
+    double temperature = starting_temperature;
+    double step_size;
+    std::vector<double> step(bestfit.size());
+    double step_norm = 0;
      // Initialise the random generator, as there is no main function to do it, problem for parallelised version
     std::srand(std::time(NULL)*getpid()); // WARNING, getpid is only provided for Unix environments
+    boost::mt19937 rng;
 
-    // Parameters with a suspected value will be reseted to this value between each fit
-    std::vector<double> fixed_params;
-    std::vector<int> fixed_index, var_index;
-    if (bestfit.size() == model->nr_of_parameters()) {
-        for (size_t i=0 ; i < bestfit.size() ; i++) {
-            if (bestfit[i] != 0) {
-                fixed_index.push_back(i);
-                fixed_params.push_back(bestfit[i]);
-            } else {
-                var_index.push_back(i);
+    std::vector<double> lastfit = bestfit;
+    double evalfit[model->nr_of_parameters()];
+    bestresid = 100000000000.0;
+    double lastresid = model->score(&bestfit.front(), data); // Get the fitting value for the starting parameters
+    std::string starting_from = "Starting from " + boost::lexical_cast<std::string>(lastresid) + "\n";
+    double evalresid = lastresid;
+    std::string termination_why = "max_it reached";
+    double mean_delta = 0;
+    int eval_count = 0;
+    int stuck_it = 0;
+    
+    for (size_t ii=0; ii < max_it; ii++) {
+        // Choose the size of the step
+        boost::exponential_distribution<double> step_dist(1/temperature);
+        step_size = step_dist(rng) * model->nr_of_parameters();
+//        std::cerr << "Temperature==" << temperature << ", Average step size=" << step_size/model->nr_of_parameters() << std::endl;
+        if (step_size < 1e-10) {
+            termination_why = "small step size";
+            break;
+        }
+        // Generate a random step of length step_size, with potentially some parameters kept constant
+        boost::normal_distribution<double> rnorm(0.0, temperature);
+        step_norm = 0;
+        for (size_t st=0; st < step.size(); st++) {
+            step[st] = rnorm(rng);
+            step_norm += pow(step[st], 2);
+        }
+        for (size_t kk=0; kk < keep_constant.size(); kk++) {
+            step_norm -= pow(step[keep_constant[kk]], 2);
+            step[keep_constant[kk]] = 0;
+        }
+        step_norm = std::sqrt(step_norm);
+        // Execute the step and evaluate it
+        for (size_t st=0; st < step.size(); st++) {
+            evalfit[st] = lastfit[st] + (step[st] * step_size / step_norm); // Normalise step size
+        }
+        evalresid = model->score(evalfit, data);
+        eval_count ++;
+        // Choose whether to keep the step and update accordingly
+        if ( evalresid < lastresid | uniform_sampling() < std::exp(-(evalresid - lastresid) / temperature) ) {
+            std::copy(evalfit, evalfit+model->nr_of_parameters(), lastfit.begin());
+            mean_delta = (mean_delta + std::abs(evalresid-lastresid))/2;
+            lastresid = evalresid;
+            if (evalresid < bestresid) {
+                std::copy(evalfit, evalfit+model->nr_of_parameters(), bestfit.begin());
+                bestresid = evalresid;
+            }
+            //temperature *= cooling;
+            if (mean_delta < 1e-10) {
+                termination_why = "small residual variations: " + boost::lexical_cast<std::string>(mean_delta);
+                break;
+            }
+        } else { // Try a few more solutions without temperature change if there was no improvement
+            stuck_it += 1;
+            if (stuck_it > max_depth) {
+                stuck_it = 0;
+                temperature *= cooling;
             }
         }
-    } else {
-        bestfit.resize(model->nr_of_parameters());
     }
+    if (verbosity > 1) {
+        std::cerr << starting_from << "Simulated annealing terminated because '" << termination_why << "' after " << eval_count << " iterations with a residual of " << lastresid << std::endl;
+    }
+
+/*
     std::cerr << "Annealing setup..." << std::endl;
     if (max_it == 0) {
         max_it = pow(2, model->nr_of_parameters());
@@ -300,86 +359,11 @@ void simulated_annealing(const Model *model, const Data *data, std::vector<doubl
     if (max_depth == 0) {
         max_depth = model->nr_of_parameters();
     }
-
-    // Find the order of magnitude of the steps and calculate the parameters from it
-    size_t hypercube_samples = 100;
-    double exploration[hypercube_samples];
-    std::vector<size_t> index(hypercube_samples);
-    std::vector< std::vector<double> > parameters = normalLHS(hypercube_samples, model->nr_of_parameters(), 1);
-    double test_params[model->nr_of_parameters()];
-    std::cout << "Annealing init steps :" << std::endl;
-    for (size_t i=0 ; i < hypercube_samples ; i++) {
-        index.push_back(i);
-        std::copy(parameters[i].begin(), parameters[i].end(), test_params);
-        //exploration[i] = model->score(static_cast<double*>(parameters[i].begin()), data);
-        exploration[i] = model->score(test_params, data);
-        //std::cout << exploration[i] << std::endl;
-        //std::cout << test_params[0] << " ";
+    if (verbosity > 8) {
+        std::cout << "best = " << bestresid << " old = " << residual << " min_new = " << min_new << ", probablility = " << std::exp((bestresid - min_new)/temperature)  << std::endl;
+        std::cout << "Temperature " << temperature << ", Unity probability " << std::exp(-1/temperature) << std::endl;
     }
-    std::sort(index.begin(), index.end(), rev_index_cmp<double*>(exploration));
-    std::copy(parameters[index[0]].begin(), parameters[index[0]].end(), test_params);
-    std::copy(test_params, test_params + model->nr_of_parameters(), bestfit.begin());
-    double temperature = exploration[index[std::floor(hypercube_samples/2)]] - exploration[index[0]];
-    const double threshold = temperature/10;
-    double cooling = std::exp(std::log(threshold/temperature) / max_depth);
-
-    // Simulated annealing procedure
-    unsigned int no_change = 0;
-    double p[model->nr_of_parameters()];
-    double new_p[model->nr_of_parameters()];
-    double residual = exploration[index[0]], new_residual;
-    double min_new = 0; //debug
-    int depth = 0;
-    bestresid = residual;
-    while (temperature > threshold && no_change < max_it) {
-        depth ++;
-        std::vector< std::vector<double> > random_steps = normalLHS(max_it, var_index.size(), 1);
-        do {
-            // New step reset the fixed parameters and make a step on the other dimensions
-            // Try a different step from the current best
-            for (size_t i=0 ; i < fixed_index.size() ; i++) {
-                new_p[fixed_index[i]] = p[index[i]];
-            }
-            for (size_t i=0 ; i < var_index.size() ; i++) {
-                new_p[var_index[i]] = p[index[i]] + random_steps[no_change][i];
-            }
-            new_residual = model->score(new_p, data);
-            min_new = std::min(new_residual, min_new);
-            no_change++;
-        } while (no_change < max_it && uniform_sampling() > std::exp((bestresid - new_residual)/temperature));
-        if (verbosity > 8) {
-            std::cout << "best = " << bestresid << " old = " << residual << " min_new = " << min_new << ", probablility = " << std::exp((bestresid - min_new)/temperature)  << std::endl;
-            std::cout << "Temperature " << temperature << ", Unity probability " << std::exp(-1/temperature) << std::endl;
-        }
-        if (no_change < max_it) {
-            no_change = 0;
-            temperature *= cooling;
-            if (verbosity > 8) {
-                std::cout << "Jump to " << new_residual << std::endl;
-                std::cout << "Transition probability = " << std::exp((bestresid - new_residual)/temperature) << std::endl;
-            }
-        }
-        // Collect the new position and residual
-        residual = new_residual;
-        for (size_t i=0 ; i < var_index.size() ; i++) {
-            p[var_index[i]] = new_p[var_index[i]];
-        }
-        // Update the bestfit if a better solution is found
-        if (residual < bestresid) {
-            bestresid = residual;
-            std::copy(p, p+model->nr_of_parameters(), bestfit.begin());
-        }
-    }
-    for (size_t i=0 ; i < bestfit.size() ; i++) {
-        std::cerr << bestfit[i] << ", ";
-    }
-    std::cout << std::endl;
-    if (no_change >= max_it) {
-        printf("Simulated annealing terminated at depth %i because no new valid move has been found.\n", depth);
-    } else {
-        printf("Simulated annealing cooling completed.\n");
-        std::cout << "Best residual = " << bestresid << std::endl;
-    }
+    */
 }
 
 // Computes the profile likelihood and the variation of the other parameters depending on the variation of one parameter

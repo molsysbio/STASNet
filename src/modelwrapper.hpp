@@ -41,11 +41,11 @@ public:
   bool model_design_consistent(ExperimentalDesign &exp, ModelStructure &mod);
   virtual void setModel(ExperimentalDesign exp, ModelStructure mod);
 
-  SEXP fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant=std::vector<size_t>());
-  SEXP fitmodelWithConstants(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant);
-  virtual SEXP fitmodel(Data data, std::vector<double> parameters);
+  SEXP fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant=std::vector<size_t>(), std::string optimizer="levmar");
+  SEXP fitmodelWithConstants(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant, std::string optimizer);
+  virtual SEXP fitmodel(Data data, std::vector<double> parameters, std::string optimizer);
 
-  SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth);
+  SEXP annealingFit(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant);
 
   SEXP simulate(Data *data, std::vector<double> parameters);
   SEXP simulateWithOffset(Data *data, std::vector<double> parameters);
