@@ -48,12 +48,14 @@ printParameters <- function(model_description, precision=2) {
 #' @param limit An integer to force the limit of the heatmaps
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
 #' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
+#' @param selected_treatments A vector with the names of the subset of treatments that should be plotted
+#' @param selected_readouts A vector with the names of the subset of readouts that should be plotted
 #' @return Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction")) {
+plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c()) {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -85,6 +87,32 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
   message(paste(treatments, collapse=" "))
   colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = nodes[design$measured_nodes + 1]
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
+
+  # Subset the matrices to only have the select readouts and treatments
+  if (length(selected_readouts) > 0) {
+      valid_selection = c()
+      for (sr in selected_readouts) {
+          if (sr %in% colnames(stim_data)) {
+              valid_selection = c(valid_selection, sr)
+          }
+      }
+      mismatch = mismatch[,valid_selection]
+      stim_data = stim_data[,valid_selection]
+      simulation = simulation[,valid_selection]
+      prediction = prediction[,valid_selection]
+  }
+  if (length(selected_treatments) > 0) {
+      valid_selection = c()
+      for (st in selected_treatments) {
+          if (st %in% rownames(stim_data)) {
+              valid_selection = c(valid_selection, st)
+          }
+      }
+      mismatch = mismatch[valid_selection,]
+      stim_data = stim_data[valid_selection,]
+      simulation = simulation[valid_selection,]
+      prediction = prediction[valid_selection,]
+  }
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
   if (any(grepl("acc", graphs)))
