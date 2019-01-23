@@ -47,12 +47,13 @@ printParameters <- function(model_description, precision=2) {
 #' @param model_description An MRAmodel object
 #' @param limit An integer to force the limit of the heatmaps
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
+#' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
 #' @return Nothing
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
+plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction")) {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -63,7 +64,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
   
   simulation = model$simulateWithOffset(data, init_params)$prediction
   prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
-  mismatch = (stim_data - simulation) / error
+  mismatch = (stim_data - simulation) / (error*sqrt(2))
   simulation = log2(simulation / data$unstim_data)
   stim_data = log2(stim_data / data$unstim_data)
   
@@ -86,17 +87,22 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
-  plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values)
-  plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values)
+  if (any(grepl("acc", graphs)))
+      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE)
+  if (any(grepl("diff", graphs)))
+      plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values)
 # Log fold changes for the data and the stimulation with comparable color code
   lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
                        quantile(simulation,0.05, na.rm=TRUE),
                        quantile(stim_data,0.95, na.rm=TRUE),
                        quantile(simulation,0.95, na.rm=TRUE)) )))
   if (!is.infinite(limit)) { lim = limit }
-  plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values)
-  plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values)
-  plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values)
+  if (any(grepl("data", graphs)))
+      plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values)
+  if (any(grepl("sim", graphs)))
+      plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values)
+  if (any(grepl("pred", graphs)))
+      plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
@@ -107,7 +113,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
 #' @return A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
 getModelError <- function(mra_model) {
     simulation = simulateModel(mra_model)
-    mismatch = (mra_model$data$stim_data - simulation) / mra_model$data$error
+    mismatch = (mra_model$data$stim_data - simulation) / (mra_model$data$error*sqrt(2))
     residual = sum(mismatch^2, na.rm=T)
     return(list(simulation=simulation, mismatch=mismatch, residual=residual))
 }

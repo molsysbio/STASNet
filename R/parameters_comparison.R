@@ -316,12 +316,14 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
 }
 
 #' Plot the parameters for a model or a list of models
-#' @param aggregated_paths Aggregated direct paths as returned by aggregateDirectPaths
+#' @param aggregated_paths models A list of models where each entry must be named (i.e. 'names(models)' must return a vector)
+#' @param non_stop_nodes A list of nodes that should not begin or end a path, usefull to compare models with different basal activities. If the node is only present as a first or last node of a path, the corresponding paths will be deleted.
 #' @param lim The absolute limit of the plot y-axis, the parameters with value falling outside the range [-lim, lim] will have their value displayed at the edge of the plotting area.
 #' @param digits Number of digits to display for the confidence interval values
 #' @return Invisibly the aggregated direct paths
 #' @export
 #' @seealso \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code{\link{aggregateDirectPaths}}
+#' @examples \donotrun{ plotModelParameters }
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 plotModelParameters <- function(models, non_stop_nodes=c(), lim=2) {
     if ("MRAmodel" %in% class(models)) {
@@ -331,6 +333,7 @@ plotModelParameters <- function(models, non_stop_nodes=c(), lim=2) {
     }
     if (!is.list(models)) { stop("'models' must be a list") }
     if (is.null(names(models))) { stop("'names(models)' must be non NULL for the aggregation") }
+    null = lapply(models, function(single){ if(!"MRAmodel" %in% class(single)){ stop("All objects in the 'models' must be of class MRAmodel") } })
 
     dpaths = aggregateDirectPaths(lapply(models, getDirectPaths, non_stop_nodes))
     plotParameters(dpaths, lim)

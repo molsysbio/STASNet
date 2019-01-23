@@ -447,11 +447,11 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
             //    datax[i*rows+j] = 100000*penelty*data->stim_data[j][i]/data->error[j][i];
             //} else
             if (linear_approximation_) {
-                datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/data->error[j][i];
+                datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/(sqrt(2) * data->error[j][i]);
             } else {
-                datax[i*rows+j]= ( data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()))/data->error[j][i];
+                datax[i*rows+j]= ( data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()) )/ ( sqrt(2) * data->error[j][i] );
                 if (datax[i*rows+j] < data->scale[j][i]/data->error[j][i]) {
-                    datax[i*rows+j] = data->scale[j][i]/data->error[j][i];
+                    datax[i*rows+j] = data->scale[j][i]/ (sqrt(2) * data->error[j][i]);
                 }
             }
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
@@ -460,10 +460,10 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
                 if (verbosity > 6) {
                     std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << model_eqns_[i*rows+j][0]->eval() << std::endl;
                 }
-                datax[i*rows+j]=5*data->stim_data[j][i]/data->error[j][i];
+                datax[i*rows+j]=5*data->stim_data[j][i]/(sqrt(2)*data->error[j][i]);
             } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
                 // to exclude extreme values, where the algorithm can't find a way out somehow 
-                datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/data->error[j][i];
+                datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
             }
         }
     }

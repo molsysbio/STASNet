@@ -11,7 +11,7 @@
 #' @useDynLib STASNet
 
 # Global variable to have more outputs
-verbose = FALSE
+verbose = 3
 debug = TRUE
 
 get_running_time <- function(init_time, text="") {
@@ -133,15 +133,20 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
       residuals[order_id[i]] = result$residuals
     }
   }
-  if (debug) {
+  if (verbose >= 1) {
     # Print the 20 smallest residuals to check if the optimum has been found several times
     message("Best residuals :")
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
 
-  if (perform_plots) {
+  if (perform_plots) { # Best residuals to check the convergence of the fitting procedure
     plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
     lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+    if (length(order_resid) >= 100) {
+        hundred_best = residuals[order_resid[1:100]]
+        plot(1:100, hundred_best, main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2, ylim=c(hundred_best[1], hundred_best[100]+1))
+        lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+    }
   }
   
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
@@ -163,7 +168,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   best_id = order(residuals)[1]
   init_params = params[best_id,]
   init_residual = residuals[best_id]
-  if (verbose) {
+  if (verbose > 6) {
     message("Model simulation with optimal parameters :")
     message(model$simulateWithOffset(data, init_params)$prediction)
   }
@@ -260,7 +265,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
       residuals[order_id[i]] = result$residuals
     }
   }
-  if (debug) {
+  if (verbose >= 1) {
     # Print the 20 smallest residuals to check if the optimum has been found several times
     message("Best residuals :")
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
@@ -496,12 +501,13 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
     correlated = correlate_parameters(model, core, perform_plot=perform_plots)
     nr_known_par=length(correlated$list)
   }
+  if (verbose >= 1) { message("Generating initial samples") }
   samples = getSamples(model$nr_of_parameters()-nr_known_par, inits, method, nb_cores)
-  
   # assign sampled and precorrelated samples to the respective parameter positions
-  if(precorrelate){
+  if (precorrelate){
+    if (verbose >= 1) { message("Assigning precorrelated parameters") }
     for (ii in correlated$list){
-      inset=rep(correlated$values[correlated$list==ii], times=nrow(samples))
+      inset = as.matrix(rep(correlated$values[correlated$list==ii], times=nrow(samples)))
       if (ii==1){
         samples=cbind(inset,samples)
       } else {
@@ -509,11 +515,11 @@ initModel <- function(model, core, inits, precorrelate=T, method="randomlhs", nb
       }
     }
   }
-  message("Sampling terminated.")
+  if (verbose >= 1) { message("Sampling terminated.") }
   
   #  fit all samples to the model
   results = parallel_initialisation(model, data, samples, nb_cores)
-  message("Fitting completed")
+  if (verbose >= 1) { message("Fitting completed.") }
   return(results)
 }
 
@@ -555,7 +561,7 @@ getSamples <- function(sample_size, nb_samples, method="randomlhs", nb_cores=1) 
     stop(paste0("The selected initialisation method '", method, "' does not exist, valid methods are : ",paste(valid_methods$methods,collapse=", ")))
   }
   if (sample_stack_size*max_proc > nb_samples){
-    samples = samples[1:nb_samples,]  
+    samples = samples[1:nb_samples,,drop=FALSE]  
   }  
   return(samples) 
 }
@@ -600,7 +606,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
           senders = c(senders, sender)
         } else {
           valid = FALSE
-          if (verbose) { message(paste(model_structure$names[node], "excluded because", model_structure$names[sender], "is not measured")) }
+          if (verbose >= 6) { message(paste(model_structure$names[node], "excluded because", model_structure$names[sender], "is not measured")) }
           break
         }
       }
@@ -610,8 +616,8 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       valid_nodes = c(valid_nodes, node)
     }
   }
-  if (verbose){
-  message(paste0(length(valid_nodes), " target node",ifelse(length(valid_nodes)>1,"s","") ,"found correlatable with inputs")) 
+  if (verbose >= 6){
+  message(paste0(length(valid_nodes), " target node",ifelse(length(valid_nodes)>1,"s","") ," found correlatable with inputs")) 
   }
   # Collect the values and perform the correlation
   params_matrix = matrix(0, ncol=length(model_structure$names), nrow=length(model_structure$names)) # To store the values
@@ -673,9 +679,11 @@ correlate_parameters <- function(model, core, perform_plot=F) {
       }
     }
   }
-  if (verbose) {
-    message(model_structure$names)
-    message(params_matrix)
+  if (debug && verbose >= 8) {
+    message(paste0(model_structure$names, collapse=" "))
+    for (rr in 1:nrow(params_matrix)) {
+        message(paste0(signif(params_matrix[rr,], 3), collapse="\t"))
+    }
   }
   
   # Each link identified by correlation will correspond to one parameter
@@ -700,6 +708,9 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 # Parallel initialisation of the parameters
 # @family Model initialisation
 parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c()) {
+  if (verbose >= 1) {
+      message("Setup parallel initialisation")
+  }
   if (NB_CORES == 0) {
     NB_CORES = detectCores()-1
   }
@@ -715,7 +726,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     } else {
       result = model$fitmodel(data, params)
     }
-    if (verbose) {
+    if (verbose > 10) {
       message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
@@ -726,7 +737,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     if ( class(data) != "Rcpp_DataSet" ) { stop("MRAmodelSet require a STASNet::DataSet object") }
     init = proc.time()[3]
     result = model$fitmodelset(data, params)
-    if (verbose) {
+    if (verbose > 10) {
       message(paste(signif(proc.time()[3]-init, 3), "s for the descent, residual =", result$residuals))
     }
     return(result)
@@ -753,13 +764,18 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
   }
   # Since the aggregation in the end of the parallel calculations takes a lot of time for a big list, we calculate by block and take the best result of each block
   if (nb_samples > 10000) {
+    if (verbose >= 1) {
+        message("Define blocks for parallel initialization")
+    }
     
     # chop the data into optimal number of pieces
     nb_blocks = nb_samples %/% 10000 + 1
     block_size = NB_CORES * ((nb_samples %/% nb_blocks) %/% NB_CORES)
     best_keep = 10000 %/% nb_blocks
     best_results = list( residuals=c(), params=c() )
-    message(paste0("Parallel initialization using block sizes of ", block_size, " samples"))
+    if (verbose >= 1) {
+      message(paste0("Parallel initialization using block sizes of ", block_size, " samples"))
+    }
     
     for (i in 1:nb_blocks) {
       seq = (block_size*(i-1)+1) : ifelse(block_size*(i+1) <= nb_samples, block_size*i, nb_samples)
@@ -767,14 +783,14 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
       
       # Only keep the best fits
       best = order(results$residuals)[1:best_keep]
-      if (verbose) { message(paste(sum(is.na(results$residuals)), "NAs"), stderr()) }
+      if (verbose >= 4) { message(paste(sum(is.na(results$residuals)), "NAs"), stderr()) }
       best_results$residuals = c(best_results$residuals, results$residuals[best])
       best_results$params = rbind(best_results$params, results$params[best,])
     }
     
   } else {
     best_results = get_parallel_results(model, data, parallel_sampling, NB_CORES, keep_constant)
-    if (verbose) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
+    if (verbose >= 4) { message(paste(sum(is.na(best_results$residuals)), "NAs"), stderr()) }
   }
   
   return(best_results)
@@ -792,7 +808,7 @@ classic_initialisation <- function(model, data, nb_samples) {
       message(paste(i %/% (nb_samples/20), "/ 20 initialization done."))
     }
   }
-  if (debug) {
+  if (verbose > 2) {
     message(sort(residuals))
   }
   results = list()
@@ -939,7 +955,7 @@ extractMIDAS <- function(to_detect) {
     checkMIDAS(to_detect)
     return(to_detect)
   }
-  stop("Format of the object not compatible with a MIDAS data")
+  stop("Format of the object not compatible with a MIDAS data (must be a filename, a matrix or a data.frame")
 }
 
 #' Plot a graph from an adjacency list
@@ -1203,8 +1219,19 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
-  error = blank_values + cv_values * mean_values
-  error[error<1] = 1 # The error cannot be 0 as it is used for the fit. If we get 0 (which means blank=0 and stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt
+  error = cv_values * mean_values
+  # Normalise by the number of replicates for each measurement (standard error of the mean)
+  replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum)
+  error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
+
+  #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(ee, na.rm=TRUE); return(ee) })
+  error[error<0.001] = mean(error, na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
+  if (verbose > 5) {
+      message("Error =")
+      apply(error, 1, function(ee) { message(paste0(ee, collapse=",")) })
+      message("CV =")
+      apply(cv_values, 1, function(ee) { message(paste0(ee, collapse=",")) })
+  }
 
   # Extract experimental design
   perturbations = aggregate(perturbations, by=perturbations, max, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
@@ -1311,9 +1338,13 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   
   if (verbose > 3) {
     message("Stimulated nodes")
-    message(stim_sort)
+    for (rr in 1:nrow(stim_sort)) {
+        message(stim_sort[rr,])
+    }
     message("Inhibited nodes")
-    message(inh_sort)
+    for (rr in 1:nrow(inh_sort)) {
+        message(inh_sort[rr,])
+    }
   }
   
   expdes=getExperimentalDesign(model_structure, stim_nodes, inhib_nodes, measured_nodes, stim_sort, inh_sort, basal_activity)
