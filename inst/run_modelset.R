@@ -18,6 +18,7 @@ relax = TRUE
 extension = FALSE
 reduction = FALSE
 perform_pl = TRUE
+unused_readouts = ""
 # Autodetection of the cores
 cores = 0
 
