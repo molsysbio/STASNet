@@ -78,6 +78,7 @@ computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
         mra_model$parameters = refit$params[1,]
     } else {
         simulation = simulateModel(mra_model, with_offset=with_offset)
+        simulation$error[simulation$error == 0] = NA
         mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/(simulation$error*sqrt(2))^2, na.rm=T ) # Compute the residual ourselves
     }
     prediction = getSimulation(mra_model, with_offset=with_offset)
