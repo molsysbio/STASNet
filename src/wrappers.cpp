@@ -48,6 +48,7 @@ RCPP_MODULE(DataEx) {
     .field_readonly( "stim_data", &Data::stim_data, "Stimulated Data")
     .field_readonly( "error", &Data::error, "Measurement Error")
     .field_readonly( "scale", &Data::scale, "Scaling (typically = Unstim_Data)")
+    .method( "use_log", &Data::useLog, "Whether to log-transform the data")
     .method( "set_unstim_data", &Data::setUnstimData, "Unstimulated Data")
     .method( "set_stim_data", &Data::setStimData, "Stimulated Data")
     .method( "set_error", &Data::setError, "Measurement Error")

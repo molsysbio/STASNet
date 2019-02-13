@@ -24,7 +24,7 @@
 #' @return An MRAmodel object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c(), min_cv=0.1, default_cv=0.3) {
+MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name="", infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c(), min_cv=0.1, default_cv=0.3, use_log=TRUE) {
 
     if ( !(class(data) %in% c("Rcpp_Data","Rcpp_DataSet")) ) { stop("A Data object with unstimulated measurements is required") }
     mra_model = structure(
@@ -49,7 +49,8 @@ MRAmodel <- function(model, design, structure, basal=matrix(), data=matrix(), cv
                    unused_perturbations = unused_perturbations,
                    unused_readouts = unused_readouts,
                    min_cv = min_cv,
-                   default_cv = default_cv
+                   default_cv = default_cv,
+                   use_log = use_log
                    ),
               class="MRAmodel")
     mra_model = computeFitScore(mra_model)
@@ -76,18 +77,28 @@ computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
         refit = parallel_initialisation(mra_model$model, mra_model$data, matrix(mra_model$parameters, nrow=1), NB_CORES=1)
         mra_model$bestfit = refit$residual[1] # Get the residual from the C++ code
         mra_model$parameters = refit$params[1,]
-    } else {
+    } else { # Compute the residual ourselves
         simulation = simulateModel(mra_model, with_offset=with_offset)
         simulation$error[simulation$error == 0] = NA
-        mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/(simulation$error*sqrt(2))^2, na.rm=T ) # Compute the residual ourselves
+        if (mra_model$use_log) {
+            mra_model$bestfit = sum( log(simulation$bestfit / simulation$data)^2/( log(simulation$error)*sqrt(2) )^2, na.rm=T )
+        } else {
+            mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/(simulation$error*sqrt(2))^2, na.rm=T )
+        }
     }
     prediction = getSimulation(mra_model, with_offset=with_offset)
     Rscores = c()
     meanScores = c()
     for ( abc in 1:ncol(prediction) ) {
-        mdata = mean(data$stim_data[,abc], na.rm=T)
-        Sbase = sum((data$stim_data[,abc]-mdata)^2, na.rm=T)
-        Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2, na.rm=T)
+        if (mra_model$use_log) {
+            mdata = mean(log(data$stim_data[,abc]), na.rm=T)
+            Sbase = sum((log(data$stim_data[,abc])-mdata)^2, na.rm=T)
+            Sfit = sum(log(data$stim_data[,abc]/prediction[,abc])^2, na.rm=T)
+        } else {
+            mdata = mean(data$stim_data[,abc], na.rm=T)
+            Sbase = sum((data$stim_data[,abc]-mdata)^2, na.rm=T)
+            Sfit = sum((data$stim_data[,abc]-prediction[,abc])^2, na.rm=T)
+        }
         Rscores[colnames(prediction)[abc]] = 1 - Sfit/Sbase
     }
 

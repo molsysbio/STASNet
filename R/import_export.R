@@ -47,6 +47,7 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
     writeLines(paste0("BF ", model_description$bestfit), handle)
     writeLines(paste0("BFS ", model_description$bestfitscore), handle)
     writeLines(paste0("RS ", paste(model_description$Rscores, collapse=" ")), handle)
+    writeLines(paste0("LOG ", as.character(model_description$use_log)), handle)
     # Unused readouts and perturbations
     if (length(model_description$unused_perturbations) > 0) {
         writeLines(paste0("UP ", paste(model_description$unused_perturbations, collapse=" ")), handle)
@@ -203,6 +204,12 @@ importModel <- function(file_name=NULL,file=NULL) {
     if (grepl("^RS", file[lnb])) {
         Rscores = gsub("^RS( |\t)", "", file[lnb])
         Rscores = as.numeric( unlist(strsplit(Rscores, " ")) )
+        lnb = lnb + 1
+    }
+    use_log = FALSE
+    if (grepl("^LOG", file[lnb])) {
+        use_log = gsub("^LOG( |\t)", "", file[lnb])
+        use_log = as.logical( unlist(strsplit(Rscores, " ")) )
         lnb = lnb + 1
     }
     # Model fitting modification performed on the data matrix
@@ -407,7 +414,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     cv = cv_values
 # TODO import the data, and calculate the base fit
 
-    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv)
+    model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv, use_log)
     model_description$bestfitscore = bestfitscore
     meas_nodes = getMeasuredNodesNames(model_description)
     if ( length(Rscores) == length(meas_nodes) ) { names(Rscores) = meas_nodes }

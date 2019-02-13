@@ -34,7 +34,7 @@ void setDebug(bool debug_lvl) {
     debug = debug_lvl;
 }
 
-ModelWrapper::ModelWrapper() : linear_approximation(FALSE), model(NULL)  { }
+ModelWrapper::ModelWrapper() : linear_approximation(false), model(NULL)  { }
 
 ModelWrapper::~ModelWrapper() {
   if (model!=NULL) delete model;
@@ -75,7 +75,7 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
   return true;
 }
 
-void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
+void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data) {
   if (debug) { std::cerr << "Using original ModelWrapper setModel" << std::endl; }
   model_design_consistent(exp,mod);
 
@@ -89,7 +89,7 @@ void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
   if (model != NULL) delete model;
   model = new Model(response_full_model,  
             symbols_full_model,
-            exp, mod, linear_approximation);
+            exp, mod, linear_approximation, log_data);
 } 
 
 SEXP ModelWrapper::simulate(Data *data, std::vector<double> parameters) {
@@ -348,6 +348,10 @@ void ModelWrapper::printSymbols() {
     model->printSymbols();
 }
 
+void ModelWrapper::useLog() {
+    model->useLog();
+}
+
 
 ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 
@@ -438,6 +442,7 @@ RCPP_MODULE(ModelEx) {
     .method( "printEquation", &ModelWrapper::printEquation )
     .method( "printEquationMatrix", &ModelWrapper::printEquationMatrix )
     .method( "printSymbols", &ModelWrapper::printSymbols )
+    .method( "useLog", &ModelWrapper::useLog )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
     

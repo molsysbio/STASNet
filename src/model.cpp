@@ -35,8 +35,9 @@ Model::Model(const GiNaC::matrix &response,
              const std::vector<GiNaC::symbol> &symbols, 
              const ExperimentalDesign &expdesign,
              const ModelStructure &structure,
-             bool linear_approximation) : 
-    response_(response), structure_(structure), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation)
+             bool linear_approximation,
+             bool log_data) : 
+    response_(response), structure_(structure), exp_design_(expdesign), symbols_(symbols), rank_(0), linear_approximation_(linear_approximation), log_data_(log_data)
 {
     do_init();
 } 
@@ -64,6 +65,7 @@ void Model::copy_Model(const Model &model) {
     copy_matrix(model.parameter_dependency_matrix_unreduced_,parameter_dependency_matrix_unreduced_);
     rank_=model.rank_;
     linear_approximation_ = model.linear_approximation_;
+    log_data_ = model.log_data_;
 
     param_constraints_ = model.param_constraints_;
     constraints_ = model.constraints_;
@@ -400,7 +402,7 @@ void Model::getConstraints( parameterlist &params, std::vector<MathTree::math_it
     }
 }
 
-// Give the value of the model for each condition for the set of parameters p
+// Give the value of the model for each condition for the set of parameters p, always return the linear scale
 void Model::predict(const std::vector<double> &p, double_matrix &datax, const Data *data, const bool with_offset ) const {
     size_t rows=data->unstim_data.shape()[0], cols=data->unstim_data.shape()[1];
 
@@ -417,9 +419,16 @@ void Model::predict(const std::vector<double> &p, double_matrix &datax, const Da
             if (linear_approximation_) {
                 datax[j][i]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i]);
             } else {
-                datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
-                if (with_offset && datax[j][i] < data->scale[j][i]) {
-                    datax[j][i] = data->scale[j][i]; // Minimum value is blank
+                if (log_data_) {
+                    datax[j][i]= log(data->unstim_data[j][i]) + model_eqns_[i*rows+j][0]->eval();
+                    if (with_offset && datax[j][i] < data->scale[j][i]) {
+                        datax[j][i] = log(data->scale[j][i]); // Minimum value is blank
+                    }
+                } else {
+                    datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
+                    if (with_offset && datax[j][i] < data->scale[j][i]) {
+                        datax[j][i] = data->scale[j][i]; // Minimum value is blank
+                    }
                 }
             }
         }
@@ -448,19 +457,29 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
             //} else
             if (linear_approximation_) {
                 datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/(sqrt(2) * data->error[j][i]);
+            } else if (log_data_) {
+                    datax[i*rows+j]= ( log(data->unstim_data[j][i]) + model_eqns_[i*rows+j][0]->eval() ) / ( sqrt(2) * log(data->error[j][i]) );
+                if ( datax[i*rows+j] < log(data->scale[j][i]) / (sqrt(2)*log(data->error[j][i])) ) {
+                    datax[i*rows+j] = log(data->scale[j][i]) / (sqrt(2) * log(data->error[j][i]));
+                }
             } else {
-                datax[i*rows+j]= ( data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()) )/ ( sqrt(2) * data->error[j][i] );
-                if (datax[i*rows+j] < data->scale[j][i]/data->error[j][i]) {
-                    datax[i*rows+j] = data->scale[j][i]/ (sqrt(2) * data->error[j][i]);
+                    datax[i*rows+j]= ( data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()) ) / ( sqrt(2) * data->error[j][i] );
+                if ( datax[i*rows+j] < data->scale[j][i] / (sqrt(2)*data->error[j][i]) ) {
+                    datax[i*rows+j] = data->scale[j][i] / (sqrt(2) * data->error[j][i]);
                 }
             }
+
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*rows+j]=0;
             } else if ((std::isnan(datax[i*rows+j])) || (std::isinf(datax[i*rows+j])) ) {
                 if (verbosity > 6) {
                     std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << model_eqns_[i*rows+j][0]->eval() << std::endl;
                 }
-                datax[i*rows+j]=5*data->stim_data[j][i]/(sqrt(2)*data->error[j][i]);
+                if (log_data_) {
+                    datax[i*rows+j]=5*log(data->stim_data[j][i]) / (sqrt(2)*log(data->error[j][i]));
+                } else {
+                    datax[i*rows+j]=5*data->stim_data[j][i] / (sqrt(2)*data->error[j][i]);
+                }
             } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
                 // to exclude extreme values, where the algorithm can't find a way out somehow 
                 datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
@@ -483,7 +502,11 @@ double Model::score(const double *p, const Data *data) const {
             if (std::isnan(data->error[j][i]) || std::isnan(data->stim_data[j][i])) {
                 datax[i*data->stim_data.shape()[0]+j]=0;
             } else {
-                datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
+                if (log_data_) {
+                    datax[i*data->stim_data.shape()[0]+j]=log(data->stim_data[j][i]) / ( sqrt(2)*log(data->error[j][i]) );
+                } else {
+                    datax[i*data->stim_data.shape()[0]+j]=data->stim_data[j][i] / (sqrt(2)*data->error[j][i]);
+                }
             }
         }
     }

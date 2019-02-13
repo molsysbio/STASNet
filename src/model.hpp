@@ -43,7 +43,9 @@ public:
      const std::vector<GiNaC::symbol> &symbols, 
      const ExperimentalDesign &expdes,
      const ModelStructure &structure,
-     bool linear_approximation );
+     bool linear_approximation,
+     bool log_data_
+     );
              
   Model();
 
@@ -63,6 +65,7 @@ public:
   inline void eval(const double *p,double *datax,int m, int n, const Data *data) const {
     eval(p,datax,data);
   }
+  inline void useLog() { log_data_=true; }
 
   // returns the number of identifiable parameter combinations
   virtual size_t nr_of_parameters() const;
@@ -135,6 +138,7 @@ protected:
   int_matrix parameter_dependency_matrix_unreduced_;
   size_t rank_;
   bool linear_approximation_;
+  bool log_data_;
 
   void do_init();
   void simplify_independent_parameters_using_k(std::vector< std::pair<MathTree::math_item::Ptr, MathTree::math_item::Ptr> > &replace_vector);

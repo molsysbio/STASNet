@@ -83,6 +83,7 @@ not_duplicated <- function(x){
 #' @param model_name The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.
 #' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
 #' @param optimizer One of c('levmar', 'siman', 'hybrid', 'gradsim', 'simgrad') to choose whether the optimizer should use the Levenberg-Marquardt algorithm, Simulated Annealing or an hybrid alternating between the two with gradiend first ('gradsim') or simulated annealing firest ('simgrad').
+#' @param data_space One of "log" or "linear". Determines whether the data should be fitted in log space or linear space. The parameters will be in log space in both cases, but the log space data might be more adapted if the data are log-normal (as opposed to normal assumed by the linear option).
 #' @return An MRAmodel object describing the model and its best fit, containing the data
 #' @export
 #' @seealso importModel, exportModel, rebuildModel
@@ -95,18 +96,18 @@ not_duplicated <- function(x){
 #' }
 #' @family Model initialisation
 # TODO completely remove examples or add datafile so they work (or use data matrices)
-createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar") {
+createModel <- function(model_links, basal_file, data.stimulation, data.variation="", nb_cores=1, inits=1000, perform_plots=F, precorrelate=T, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar", data_space="linear") {
   # Creation of the model structure object
   model_structure = extractStructure(model_links)
   basal_activity = extractBasalActivity(basal_file)
   
-  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
+  core = extractModelCore(model_structure, basal_activity, data.stimulation, data.variation, unused_perturbations, unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange, data_space=data_space)
   expdes = core$design
   data = core$data
 
   # MODEL SETUP
   model = new(STASNet:::Model)
-  model$setModel(expdes, model_structure)
+  model$setModel(expdes, model_structure, ifelse(data_space=="log", TRUE, FALSE))
   
   # INITIAL FIT
   results = initModel(model, core, inits, precorrelate, method, nb_cores, perform_plots, optimizer)
@@ -187,7 +188,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   
   # Information required to run the model (including the model itself)
   infos = generate_infos(data.stimulation, inits, sort(residuals)[1:5], method, model_links, model_name, fit_info)
-  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=infos$name, infos=infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv = DEFAULT_CV)
+  model_description = MRAmodel(model, expdes, model_structure, basal_activity, data, core$cv, init_params, init_residual, name=infos$name, infos=infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv = DEFAULT_CV, use_log = ifelse(data_space=="log", TRUE, FALSE))
   message(paste("Residual score =", trim_num(model_description$bestfitscore,behind_comma = 4)))
   
   return(model_description)
@@ -212,7 +213,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   basal_activity = extractBasalActivity(basal_file)
   
   nb_submodels = length(csv_files)
-  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
+  core0 = extractModelCore(model_structure, basal_activity, csv_files[[1]], var_files[[1]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange, data_space=data_space)
   stim_data = core0$data$stim_data
   unstim_data = core0$data$unstim_data
   error = core0$data$error
@@ -228,7 +229,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   data_ = new(STASNet:::DataSet)
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
-    core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange)
+    core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange, data_space=data_space)
     if (!all( dim(core0$data$unstim_data)==dim(core$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(core0$data$error)==dim(core$data$error) )) {
@@ -1098,8 +1099,10 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
 #' @param MIN_CV Minimum coefficient of variation.
 #' @param DEFAULT_CV Default coefficient of variation to use when none is provided and there are no replicates in the data.
 #' @param rearrange Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.
+#' @param data_space One of "log" or "linear". Determines whether the data should be fitted in log space or linear space. The parameters will be in log space in both cases, but the log space data might be more adapted if the data are log-normal (as opposed to normal assumed by the linear option).
 #' @seealso \code{\link{extractMIDAS}}
-extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3, rearrange="no") {
+extractModelCore <- function(model_structure, basal_activity, data_filename, var_filename="", dont_perturb=c(), dont_read=c(), MIN_CV=0.1, DEFAULT_CV=0.3, rearrange="no", data_space="log") {
+  if (!data_space %in% c("log", "linear")) { stop(paste("Invalid 'data_space':", data_space, ", must be one of c('log', 'linear')")) }
 
   model_structure = extractStructure(model_structure)
   basal_activity = extractBasalActivity(basal_activity)
@@ -1169,20 +1172,16 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (any(is.nan(unstim_values)|is.na(unstim_values))) {
     stop("Unstimulated data are required to simulate the network")
   }
-  # Calculate statistics for variation data
-  if (length(c(rm_rows,blanks))>0){
-    mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], mean, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
-    sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=T)[,-(1:ncol(perturbations)),drop=FALSE]
-  } else {
-    mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-    sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-  }
   # Delete the perturbations that cannot be used, blank and controls from the dataset
   rm_rows = c(rm_rows, controls, blanks) 
   data_values = data_values[-rm_rows,,drop=F]
   perturbations = perturbations[-rm_rows,,drop=F]
   # Compute the mean and standard deviation of the data
-  mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
+  if (data_space == "log") {
+      mean_values = aggregate(data_values, by=perturbations, geom_mean)[,-(1:ncol(perturbations)),drop=F] # Use the geometric mean if we assume data are log-normal
+  } else {
+      mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
+  }
   blank_values = matrix( rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values), dimnames=list(NULL, colnames(data_values)) )
   unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
   colnames(unstim_values) <- colnames(mean_values)
@@ -1194,7 +1193,25 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     message(head(mean_values))
   }
 
-  # Error model
+  ## ERROR MODEL
+
+  # Calculate statistics for variation data
+  if (length(c(rm_rows,blanks))>0){
+    if (data_space == "log") {
+      mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], geom_mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+      sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    } else {
+      mean_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+      sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    }
+  } else {
+    mean_stat = mean_values
+    if (data_space == "log") {
+      sd_stat = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    } else {
+      sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    }
+  }
   if (any(var_filename != "")) {
     # We use the CV file if there is one
     # The format and the order of the conditions are assumed to be the same as the data file
@@ -1202,7 +1219,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     variation_file = extractMIDAS(var_filename)
     # Check that the number of samples is the same for the measurements and the variation and that the names in the measurements file and in the variation file match
     if (nrow(variation_file) != nrow(data_file)) {
-      stop("Different number of experiments for the variation and the measurement files") 
+      stop("Different number of experiments for the variation and the measurement files")
     }
     notInVar = setdiff(colnames(data_file),colnames(variation_file))
     if (length(notInVar)>0){
@@ -1225,7 +1242,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   } else {
     # remove measurements not different from blank
     mean_stat[mean_stat <= 2 * blank_values] = NA
-    median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
+    if (data_space == "log") {
+      median_cv = apply(exp(log(sd_stat) / log(mean_stat)), 2, median, na.rm=T)
+    } else {
+      median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
+    }
     cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
   
@@ -1235,7 +1256,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   error = cv_values * mean_values
   # Normalise by the number of replicates for each measurement (standard error of the mean)
   replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum)
-  error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
+  if (data_space == "log") {
+    error = exp( log(error) / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error))) )
+  } else {
+    error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
+  }
 
   #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(ee, na.rm=TRUE); return(ee) })
   error[error<0.001] = mean(error, na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
@@ -1364,10 +1389,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   
   # Create data object
   data=new(STASNet:::Data)
+  if (data_space == "log") { data$use_log() }
   data$set_unstim_data ( unstim_values[, measured_nodes, drop=FALSE] )
   data$set_scale( blank_values[, measured_nodes, drop=FALSE] )
-  data$set_stim_data( as.matrix(stim_data_sort[, measured_nodes, drop=FALSE]) )
-  data$set_error( as.matrix( error_sort[, measured_nodes, drop=FALSE] ))
+  data$set_stim_data( stim_data_sort[, measured_nodes, drop=FALSE] )
+  data$set_error( error_sort[, measured_nodes, drop=FALSE] )
   
   # Finalize object 
   core = list()
@@ -1394,7 +1420,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples \dontrun{
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
-rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
+rebuildModel <- function(model_file, data_file, var_file="", rearrange="no", data_space="linear") {
   if(length(model_file)>1){
     model = importModel(file=model_file) # import R object of an read in mra file 
   }else{
@@ -1404,10 +1430,10 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
     model = importModel(model_file)
   }
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange, data_space=data_space)
   
-  model$model$setModel(core$design, core$structure)
-  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters, "levmar")$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv)
+  model$model$setModel(core$design, core$structure, ifelse(data_space=="log", TRUE, FALSE))
+  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters, "levmar")$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, ifelse(data_space=="log", TRUE, FALSE))
   
   return(model)
 }
