@@ -222,7 +222,7 @@ createSimulation <- function(input_network, perturbations="", measured="", inhib
     data$set_unstim_data( matrix( rep(10, nrow(stimuli)*length(measured)), nrow=nrow(stimuli) ))
     data$set_scale(matrix( rep(0, nrow(stimuli)*length(measured)), nrow=nrow(stimuli) )) # no offeset assumed
     model = new(STASNet:::Model)
-    model$setModel(expdes, structure)
+    model$setModel(expdes, structure, FALSE)
     mra_model = MRAmodel(model, expdes, structure, basal=structure$names, parameters=model$getParameterFromLocalResponse(adm, inhibitions), data=data)
 
     simulated_data = simulateModel( mra_model, inhibition_effect=inhibitions )$bestfit

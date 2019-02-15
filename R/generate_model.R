@@ -87,7 +87,7 @@ cloneModel <- function(old_model){
                                            inhibitor = old_model$design$inhibitor,
                                            basal.activity = old_model$basal)
 
-    model$setModel(design = design, structure = structure)
+    model$setModel(design = design, structure = structure, old_model$use_log)
     
     data$set_unstim_data ( old_model$data$unstim_data )
     data$set_scale( old_model$data$scale )

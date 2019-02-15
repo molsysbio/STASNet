@@ -44,7 +44,7 @@ public:
      const ExperimentalDesign &expdes,
      const ModelStructure &structure,
      bool linear_approximation,
-     bool log_data_
+     bool log_data_=false
      );
              
   Model();

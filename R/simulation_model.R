@@ -161,7 +161,7 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   
   # Set up the model and the data for the simulation
   model = new(STASNet:::Model)
-  model$setModel( new_design, model_description$structure )
+  model$setModel( new_design, model_description$structure, model_description$use_log )
   new_data = new(STASNet:::Data)
   new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
   new_data$set_scale( matrix( rep(model_description$data$scale[1, simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ) )

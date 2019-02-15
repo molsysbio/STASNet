@@ -39,10 +39,12 @@ sub_data_frame <- function(input, rows=NULL, cols=NULL) {
 #' Compute geometric mean with na.rm == TRUE
 geom_mean <- function(xx, na.rm=TRUE) {
     xx=xx[xx>0]
-    if (length(xx)>0) {
+    if (all(is.na(xx))) {
+        return(NA)
+    } else if (length(xx)>0) {
         return( exp(sum(log(xx), na.rm=na.rm)/length(xx)) )
     } else {
-        warn("No or only negative values for geom_mean !")
+        warning("No or only negative values for geom_mean !")
         return(NA)
     }
 }
@@ -65,7 +67,9 @@ log_norm_sd <- function(xx, na.rm=TRUE) {
 #' Standard deviation of the log in linear space
 linear_sd_log <- function(xx, na.rm=TRUE) {
     xx = xx[xx>0]
-    if (length(xx) > 0) {
+    if (all(is.na(xx))) {
+        return(NA)
+    } else if (length(xx) > 0) {
         return( exp(sd(log(xx), na.rm=na.rm)) )
     } else {
         warn("Only negative values for linear_sd_log !")

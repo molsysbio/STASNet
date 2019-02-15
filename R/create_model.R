@@ -252,7 +252,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   data_$set_scale(offset)
   
   model = new(STASNet:::ModelSet)
-  model$setModel(core0$design, model_structure)
+  model$setModel(core0$design, model_structure, FALSE)#ifelse(data_space=="log", TRUE, FALSE))
   model$setNbModels(nb_submodels)
   
   message("setting completed")
@@ -1172,26 +1172,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (any(is.nan(unstim_values)|is.na(unstim_values))) {
     stop("Unstimulated data are required to simulate the network")
   }
-  # Delete the perturbations that cannot be used, blank and controls from the dataset
-  rm_rows = c(rm_rows, controls, blanks) 
-  data_values = data_values[-rm_rows,,drop=F]
-  perturbations = perturbations[-rm_rows,,drop=F]
-  # Compute the mean and standard deviation of the data
-  if (data_space == "log") {
-      mean_values = aggregate(data_values, by=perturbations, geom_mean)[,-(1:ncol(perturbations)),drop=F] # Use the geometric mean if we assume data are log-normal
-  } else {
-      mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
-  }
-  blank_values = matrix( rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values), dimnames=list(NULL, colnames(data_values)) )
-  unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
-  colnames(unstim_values) <- colnames(mean_values)
-  if (verbose > 7) {
-    message("Data used:")
-    message(mean_values)
-  } else if (verbose > 5) {
-    message("Data used:")
-    message(head(mean_values))
-  }
+
 
   ## ERROR MODEL
 
@@ -1205,13 +1186,37 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
       sd_stat = aggregate(data_values[-c(rm_rows,blanks),,drop=FALSE], by=perturbations[-c(rm_rows,blanks),,drop=FALSE], sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
     }
   } else {
-    mean_stat = mean_values
     if (data_space == "log") {
+      mean_stat = aggregate(data_values, by=perturbations, geom_mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
       sd_stat = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
     } else {
+      mean_stat = aggregate(data_values, by=perturbations, mean, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
       sd_stat = aggregate(data_values, by=perturbations, sd, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
     }
   }
+
+  # Delete the perturbations that cannot be used, blank and controls from the dataset
+  rm_rows = c(rm_rows, controls, blanks) 
+  data_values = data_values[-rm_rows,,drop=F]
+  perturbations = perturbations[-rm_rows,,drop=F]
+  # Compute the mean and standard deviation of the data
+  if (data_space == "log") {
+      mean_values = aggregate(data_values, by=perturbations, geom_mean)[,-(1:ncol(perturbations)),drop=F] # Use the geometric mean if we assume data are log-normal
+  } else {
+      mean_values = aggregate(data_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations)),drop=F]
+  }
+  # Put blank and unstimulated values in matrices of the right size
+  blank_values = matrix( rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values), dimnames=list(NULL, colnames(mean_values)) )
+  unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
+  colnames(unstim_values) <- colnames(mean_values)
+  if (verbose > 7) {
+    message("Data used:")
+    message(mean_values)
+  } else if (verbose > 5) {
+    message("Data used:")
+    message(head(mean_values))
+  }
+
   if (any(var_filename != "")) {
     # We use the CV file if there is one
     # The format and the order of the conditions are assumed to be the same as the data file
@@ -1243,22 +1248,24 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     # remove measurements not different from blank
     mean_stat[mean_stat <= 2 * blank_values] = NA
     if (data_space == "log") {
-      median_cv = apply(exp(log(sd_stat) / log(mean_stat)), 2, median, na.rm=T)
+      median_cv = apply(log(sd_stat) / mean_stat, 2, median, na.rm=T)
     } else {
       median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
     }
     cv_values = matrix(rep(median_cv,each=nrow(mean_values)),nrow=nrow(mean_values))
   }
-  
   colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
-  error = cv_values * mean_values
-  # Normalise by the number of replicates for each measurement (standard error of the mean)
-  replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum)
+  
+  # Derive the error either from the CV in linear space or the sd of the log in log space
   if (data_space == "log") {
-    error = exp( log(error) / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error))) )
+    error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    error[is.na(error)] = mean(error, na.rm=TRUE)
   } else {
+      error = cv_values * mean_values
+      # Normalise by the number of replicates for each measurement (standard error of the mean)
+      replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum)
     error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
   }
 
@@ -1267,8 +1274,6 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (verbose > 5) {
       message("Error =")
       apply(error, 1, function(ee) { message(paste0(ee, collapse=",")) })
-      message("CV =")
-      apply(cv_values, 1, function(ee) { message(paste0(ee, collapse=",")) })
   }
 
   # Extract experimental design
@@ -1346,7 +1351,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
           stim_sort = rbind(stim_sort, stimuli[stim_pos, ,drop=F])
         }
       }
-    }else{
+    } else {
       for (jj in 1:nrow(inh_motifs)){
         inh_pos = apply(inhibitor==matrix(rep(inh_motifs[jj,], each=nrow(inhibitor)), nrow=nrow(inhibitor)), 1, all)
         if (any(inh_pos)){
@@ -1392,8 +1397,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (data_space == "log") { data$use_log() }
   data$set_unstim_data ( unstim_values[, measured_nodes, drop=FALSE] )
   data$set_scale( blank_values[, measured_nodes, drop=FALSE] )
-  data$set_stim_data( stim_data_sort[, measured_nodes, drop=FALSE] )
-  data$set_error( error_sort[, measured_nodes, drop=FALSE] )
+  data$set_stim_data( matrix(as.numeric(as.matrix(stim_data_sort[, measured_nodes, drop=FALSE])), ncol=length(measured_nodes)) )
+  data$set_error( matrix(as.numeric(as.matrix(error_sort[, measured_nodes, drop=FALSE])), ncol=length(measured_nodes)) )
   
   # Finalize object 
   core = list()
@@ -1420,7 +1425,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples \dontrun{
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
-rebuildModel <- function(model_file, data_file, var_file="", rearrange="no", data_space="linear") {
+rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
   if(length(model_file)>1){
     model = importModel(file=model_file) # import R object of an read in mra file 
   }else{
@@ -1430,10 +1435,10 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no", dat
     model = importModel(model_file)
   }
   #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange, data_space=data_space)
+  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange, data_space=ifelse(model$use_log, "log", "linear"))
   
-  model$model$setModel(core$design, core$structure, ifelse(data_space=="log", TRUE, FALSE))
-  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters, "levmar")$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, ifelse(data_space=="log", TRUE, FALSE))
+  model$model$setModel(core$design, core$structure, model$use_log)
+  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$model$fitmodel(core$data, model$parameters, "levmar")$residuals, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, model$use_log)
   
   return(model)
 }
@@ -1537,7 +1542,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   
   # populate MRAmodelSet
   modelSet = new(STASNet:::ModelSet)
-  modelSet$setModel(design = model1$design, structure = model1$structure)
+  modelSet$setModel(design = model1$design, structure = model1$structure, FALSE) # ifelse(data_space=="log", TRUE, FALSE)
   modelSet$setNbModels(nb_models)
   
   bestfit = as.numeric(unlist(strsplit(model1$infos[3]," "))[4])

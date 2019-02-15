@@ -66,7 +66,11 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
   
   simulation = model$simulateWithOffset(data, init_params)$prediction
   prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
-  mismatch = (stim_data - simulation) / (error*sqrt(2))
+  if (model_description$use_log) {
+      mismatch = (log(stim_data) - log(simulation)) / (log(error)*sqrt(2))
+  } else {
+      mismatch = (stim_data - simulation) / (error*sqrt(2))
+  }
   simulation = log2(simulation / data$unstim_data)
   stim_data = log2(stim_data / data$unstim_data)
   
@@ -224,7 +228,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
       c=c+1
       newadj[ii]=0
       model_structure$setAdjacencyMatrix( newadj )
-      model$setModel ( expdes, model_structure )
+      model$setModel ( expdes, model_structure, model_description$use_log )
       
       if (class(model)== "Rcpp_ModelSet"){
         model$setNbModels(model_description$nb_models)
@@ -314,7 +318,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
   # We recover the final model
   ## Basal activity and data do not change
   model_description$structure$setAdjacencyMatrix(adj)
-  model_description$model$setModel(expdes, model_description$structure)
+  model_description$model$setModel(expdes, model_description$structure, original_model$use_log)
   if ("MRAmodelSet" %in% class(model_description)) {
     model_description$model$setNbModels(model_description$nb_models)
     model_description$parameters = unlist(lapply(1:length(models), function(x) model_description$model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
@@ -448,7 +452,7 @@ suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c
 addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,variable_links=c(),verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
-  model$setModel ( expdes, model_structure )
+  model$setModel ( expdes, model_structure, model$use_log )
   if (class(model) == "Rcpp_ModelSet"){
     model$setNbModels(length(initial_response))
     if (length(variable_links)>0) {  
@@ -501,7 +505,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
   adj[new_link] = 0
   model_structure$setAdjacencyMatrix( adj )
-  model$setModel ( expdes, model_structure )
+  model$setModel ( expdes, model_structure, model$use_log )
   if (class(model)== "Rcpp_ModelSet"){
     model$setNbModels(length(initial_response))
     if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersNames()$names))}

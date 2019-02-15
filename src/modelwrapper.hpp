@@ -54,6 +54,7 @@ public:
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 
+  bool use_log;
   bool linear_approximation;
   
   SEXP getParametersLinks();
@@ -67,6 +68,8 @@ public:
   void printEquation(const size_t r, const size_t c);
   void printEquationMatrix();
   void printSymbols();
+  
+  void useLog();
 
 protected:
   GiNaC::matrix response_full_model; 

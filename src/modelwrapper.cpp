@@ -34,7 +34,7 @@ void setDebug(bool debug_lvl) {
     debug = debug_lvl;
 }
 
-ModelWrapper::ModelWrapper() : linear_approximation(false), model(NULL)  { }
+ModelWrapper::ModelWrapper() : linear_approximation(false), use_log(false), model(NULL)  { }
 
 ModelWrapper::~ModelWrapper() {
   if (model!=NULL) delete model;
@@ -77,6 +77,7 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
 
 void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data) {
   if (debug) { std::cerr << "Using original ModelWrapper setModel" << std::endl; }
+  use_log = log_data;
   model_design_consistent(exp,mod);
 
   generate_response(response_full_model,  
@@ -349,6 +350,7 @@ void ModelWrapper::printSymbols() {
 }
 
 void ModelWrapper::useLog() {
+    use_log = true;
     model->useLog();
 }
 
@@ -443,6 +445,7 @@ RCPP_MODULE(ModelEx) {
     .method( "printEquationMatrix", &ModelWrapper::printEquationMatrix )
     .method( "printSymbols", &ModelWrapper::printSymbols )
     .method( "useLog", &ModelWrapper::useLog )
+    .field( "use_log", &ModelWrapper::use_log, "Fitting in log space" )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
     

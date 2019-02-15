@@ -209,7 +209,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     use_log = FALSE
     if (grepl("^LOG", file[lnb])) {
         use_log = gsub("^LOG( |\t)", "", file[lnb])
-        use_log = as.logical( unlist(strsplit(Rscores, " ")) )
+        use_log = as.logical( use_log )
         lnb = lnb + 1
     }
     # Model fitting modification performed on the data matrix
@@ -368,7 +368,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     # Set up the experimental design and the model
     design = getExperimentalDesign(structure, stim_nodes, inhib_nodes, measured_nodes, stimuli, inhibitions, basal_activity)
     model = new(STASNet:::Model)
-    model$setModel( design, structure )
+    model$setModel( design, structure, use_log )
 
     # Get the unstimulated data
     data = new(STASNet:::Data)

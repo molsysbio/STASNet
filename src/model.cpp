@@ -419,16 +419,10 @@ void Model::predict(const std::vector<double> &p, double_matrix &datax, const Da
             if (linear_approximation_) {
                 datax[j][i]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i]);
             } else {
-                if (log_data_) {
-                    datax[j][i]= log(data->unstim_data[j][i]) + model_eqns_[i*rows+j][0]->eval();
-                    if (with_offset && datax[j][i] < data->scale[j][i]) {
-                        datax[j][i] = log(data->scale[j][i]); // Minimum value is blank
-                    }
-                } else {
-                    datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
-                    if (with_offset && datax[j][i] < data->scale[j][i]) {
-                        datax[j][i] = data->scale[j][i]; // Minimum value is blank
-                    }
+                // Predict in linear space for both log and linear fitted data, for consistency 
+                datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
+                if (with_offset && datax[j][i] < data->scale[j][i]) {
+                    datax[j][i] = data->scale[j][i]; // Minimum value is blank
                 }
             }
         }
@@ -476,15 +470,19 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
                     std::cerr << datax[i*rows+j] << ", " << data->unstim_data[j][i] << ", " << data->error[j][i] << ", " << model_eqns_[i*rows+j][0]->eval() << std::endl;
                 }
                 if (log_data_) {
-                    datax[i*rows+j]=5*log(data->stim_data[j][i]) / (sqrt(2)*log(data->error[j][i]));
+                    datax[i*rows+j]=5*data->stim_data[j][i] / (sqrt(2)*log(data->error[j][i]));
                 } else {
                     datax[i*rows+j]=5*data->stim_data[j][i] / (sqrt(2)*data->error[j][i]);
                 }
-            } else if ((datax[i*rows+j]<0.00001) || (datax[i*rows+j]>100000)){
+            } else if ((datax[i*rows+j]<0.00001 || datax[i*rows+j]>100000) && !log_data_){
                 // to exclude extreme values, where the algorithm can't find a way out somehow 
                 datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
             }
         }
+//       std::cout<<"lin: "<< datax[i*rows] << ", " << data->stim_data[0][i] << ", " << data->unstim_data[0][i] << ", " << model_eqns_[i*rows][0]->eval() << ", " << data->error[0][i] << std::endl
+//       << "log: " << datax[i*rows] << ", " << log(data->stim_data[0][i]) << ", " << log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval() << ", " << log(data->error[0][i]) << std::endl
+//       << (log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval()) / (sqrt(2) * log(data->error[0][i])) << std::endl
+//       << log((log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval()) / (sqrt(2) * log(data->error[0][i]))) << " log(1) " << (log(1) + 0)/0.1 << std::endl << std::endl;
     }
 
 }
