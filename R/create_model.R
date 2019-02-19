@@ -1263,9 +1263,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
   } else {
-      error = cv_values * mean_values
-      # Normalise by the number of replicates for each measurement (standard error of the mean)
-      replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum, na.rm=TRUE)
+    error = cv_values * mean_values
+    # Normalise by the number of replicates for each measurement (standard error of the mean)
+    replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum, na.rm=TRUE)
     error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
   }
 
