@@ -40,7 +40,7 @@ sub_data_frame <- function(input, rows=NULL, cols=NULL) {
 geom_mean <- function(xx, na.rm=TRUE) {
     xx=xx[xx>0]
     if (all(is.na(xx))) {
-        return(NA)
+        return(NaN) # Return NaN for consistency with mean
     } else if (length(xx)>0) {
         return( exp(sum(log(xx), na.rm=na.rm)/length(xx)) )
     } else {

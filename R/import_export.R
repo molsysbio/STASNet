@@ -379,7 +379,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     while(grepl("^SD ", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;|,"))
         lnb = lnb + 1
-        stim_data = rbind( stim_data, suppressWarnings(as.numeric(line[2:length(line)])) )
+        stim_data = rbind( stim_data, as.numeric(line[2:length(line)]) )
     }
     if (!is.null(stim_data)) {
         data$set_stim_data(stim_data)
@@ -388,7 +388,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     while(grepl("^ER ", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;|,"))
         lnb = lnb + 1
-        error = rbind( error, suppressWarnings(as.numeric(line[2:length(line)])) )
+        error = rbind( error, as.numeric(line[2:length(line)]) )
     }
     if (!is.null(error)) {
         data$set_error(error)
@@ -397,7 +397,7 @@ importModel <- function(file_name=NULL,file=NULL) {
     while(grepl("^SC ", file[lnb])) {
         line = unlist(strsplit(file[lnb], " +|\t|;|,"))
         lnb = lnb + 1
-        scale = rbind( scale, suppressWarnings(as.numeric(line[2:length(line)])) )
+        scale = rbind( scale, as.numeric(line[2:length(line)]) )
     }
     if (!is.null(scale)) {
         data$set_scale(scale)
@@ -408,7 +408,7 @@ importModel <- function(file_name=NULL,file=NULL) {
         line = unlist(strsplit(file[lnb], " +|\t|;"))
         lnb = lnb + 1
 
-        cv_values = rbind( cv_values, suppressWarnings(as.numeric(line[2:length(line)])) )
+        cv_values = rbind( cv_values, as.numeric(line[2:length(line)]) )
         colnames(cv_values) = structure$names[design$measured_nodes+1]
     }
     cv = cv_values
