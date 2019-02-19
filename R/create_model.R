@@ -1219,13 +1219,14 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   colnames(cv_values)=colnames(mean_values)
   cv_values[is.nan(as.matrix(cv_values)) | is.na(cv_values)] = DEFAULT_CV
   cv_values[cv_values < MIN_CV] = MIN_CV
+  
   error = cv_values * mean_values
   # Normalise by the number of replicates for each measurement (standard error of the mean)
-  replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum)
+  replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum, na.rm=TRUE)
   error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
 
-  #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(ee, na.rm=TRUE); return(ee) })
-  error[error<0.001] = mean(error, na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
+  #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(as.matrix(ee), na.rm=TRUE); return(ee) })
+  error[error<0.001] = mean(as.matrix(error), na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
   if (verbose > 5) {
       message("Error =")
       apply(error, 1, function(ee) { message(paste0(ee, collapse=",")) })
