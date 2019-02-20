@@ -337,6 +337,9 @@ DataSet::~DataSet() {
 
 void DataSet::addData(Data &data, bool doDataVectorComputation) {
     datas_.push_back(data);
+    if (use_log) {
+        datas_.back().useLog();
+    }
 
     // rbind_matrix generates an 'memory corruption' on the second call, could not figure out why
     // As a consequence, the rbind matrix must be provided in R (or an override of computeDataVector is necessary)
