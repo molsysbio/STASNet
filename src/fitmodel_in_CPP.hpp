@@ -35,7 +35,7 @@ void fitmodel( std::vector<double> &bestfit,
            const Data * data,
            std::vector<size_t> keep_constant = std::vector<size_t>());
 
-void simulated_annealing(std::vector<double> &bestfit, double &bestresid, double_matrix &prediction, const Model *model, const Data *data, std::vector<size_t> keep_constant, const double starting_temperature=1.);
+void simulated_annealing(std::vector<double> &bestfit, double &bestresid, double_matrix &prediction, const Model *model, const Data *data, std::vector<size_t> keep_constant=std::vector<size_t>(), const double starting_temperature=1.);
 
 // Structure for the profile likelihood
 struct pl_analysis {

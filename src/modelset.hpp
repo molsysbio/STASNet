@@ -27,7 +27,7 @@
 
 class ModelSet: public Model {
 public:
-    ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbol> &symbols, const ExperimentalDesign &expdes, const ModelStructure &structure, const int nb_submodels, const std::vector<size_t> inter_variable_parameters=std::vector<size_t>(), bool linear_approximation=false );
+    ModelSet(const GiNaC::matrix &response, const std::vector<GiNaC::symbol> &symbols, const ExperimentalDesign &expdes, const ModelStructure &structure, const int nb_submodels, bool linear_approximation=false, bool log_data=false, const std::vector<size_t> inter_variable_parameters=std::vector<size_t>() );
     ModelSet();
 
     void predict(const std::vector<double> &p, double_matrix &datax, const Data *data, const bool with_offset=true ) const;

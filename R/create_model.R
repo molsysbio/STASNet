@@ -200,7 +200,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' @inheritParams createModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar") {
+createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar", data_space="log") {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -227,6 +227,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   }
   # Build an extended dataset that contains the data of each model
   data_ = new(STASNet:::DataSet)
+  if (data_space == "log") { data_$use_log() }
   data_$addData(core0$data, FALSE)
   for (ii in 2:nb_submodels) {
     core = extractModelCore(model_structure, basal_activity, csv_files[[ii]], var_files[[ii]], unused_perturbations, dont_read=unused_readouts, MIN_CV, DEFAULT_CV, rearrange=rearrange, data_space=data_space)
@@ -239,6 +240,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
     } else if (!all( dim(core0$cv)==dim(core$cv) )) {
       stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
     }
+
     unstim_data = rbind(unstim_data, core$data$unstim_data)
     stim_data = rbind(stim_data, core$data$stim_data)
     error = rbind(error, core$data$error)
@@ -252,7 +254,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   data_$set_scale(offset)
   
   model = new(STASNet:::ModelSet)
-  model$setModel(core0$design, model_structure, FALSE)#ifelse(data_space=="log", TRUE, FALSE))
+  model$setModel(core0$design, model_structure, ifelse(data_space=="log", TRUE, FALSE))
   model$setNbModels(nb_submodels)
   
   message("setting completed")
@@ -292,7 +294,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
   parameters = params[bestid,]
   bestfit = residuals[bestid]
   infos = generate_infos(csv_files, inits, sort(results$residuals)[1:5], method, model_links, model_name)
-  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV)
+  self = MRAmodelSet(nb_submodels, model, core0$design, model_structure, basal_activity, data_, cv, parameters, bestfit, infos$name, infos$infos, unused_perturbations=unused_perturbations, unused_readouts=unused_readouts, min_cv=MIN_CV, default_cv=DEFAULT_CV, use_log=ifelse(data_space=="log", TRUE, FALSE))
   # param_range, lower_values, upper_values defined using profile likelihood
   return(self)
 }
@@ -1497,12 +1499,13 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   
   # rebuild single models
   nb_models = length(model_files)
-  data_ = new(STASNet:::DataSet)
   if (length(var_files)>0){
     model1 = rebuildModel(model_files[[1]], data_files[[1]], var_files[[1]], rearrange)  
   }else{
     model1 = rebuildModel(model_files[[1]], data_files[[1]], "", rearrange)
   }
+  data_ = new(STASNet:::DataSet)
+  if (model1$use_log) { data_$use_log() }
   data_$addData(model1$data, FALSE)
   params = model1$parameters
   stim_data = model1$data$stim_data
@@ -1513,7 +1516,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   
   for (ii in 2:nb_models){
     if(length(var_files)>0){
-    model=rebuildModel(model_files[[ii]], data_files[[ii]], var_files[[ii]], rearrange)
+      model=rebuildModel(model_files[[ii]], data_files[[ii]], var_files[[ii]], rearrange)
     }else{
       model=rebuildModel(model_files[[ii]], data_files[[ii]], "", rearrange)  
     }
@@ -1526,6 +1529,8 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
       stop(paste0("dimension of 'stim_data' from model ", ii, " do not match those of model 1"))
     } else if (!all( dim(model1$cv) == dim(model$cv) )) {
       stop(paste0("dimension of 'cv' from model ", ii, " do not match those of model 1"))
+    } else if (model$use_log != model1$use_log) {
+      stop(paste0("Incoherent fitting space (log vs linear) between model ", ii, " and model 1"))
     }
     params = cbind(params, model$parameters)
     stim_data = rbind(stim_data, model$data$stim_data)
@@ -1542,7 +1547,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   
   # populate MRAmodelSet
   modelSet = new(STASNet:::ModelSet)
-  modelSet$setModel(design = model1$design, structure = model1$structure, FALSE) # ifelse(data_space=="log", TRUE, FALSE)
+  modelSet$setModel(design = model1$design, structure = model1$structure, model1$use_log)
   modelSet$setNbModels(nb_models)
   
   bestfit = as.numeric(unlist(strsplit(model1$infos[3]," "))[4])
@@ -1560,7 +1565,8 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
                                unused_perturbations = model1$unused_perturbations,
                                unused_readouts = model1$unused_readouts,
                                min_cv = model1$min_cv, 
-                               default_cv = model1$default_cv)
+                               default_cv = model1$default_cv,
+                               use_log = model1$use_log)
   
   variaPar = rowSums(abs(sweep(params,1,params[,1],"-"))) > 0   
   if ( any(variaPar) ){ 

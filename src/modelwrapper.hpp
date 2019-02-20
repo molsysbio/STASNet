@@ -83,9 +83,9 @@ class ModelSetWrapper: public ModelWrapper {
 public:
     ModelSetWrapper();
     ~ModelSetWrapper();
-    SEXP fitmodelset(DataSet data, std::vector<double> parameters);
+    SEXP fitmodelset(DataSet data, std::vector<double> parameters, std::string optimizer="levmar");
     void setVariableParameters(std::vector<size_t> variable_parameters);
-    void setModel(ExperimentalDesign exp, ModelStructure mod);
+    void setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data=false);
     void setNbModels(size_t nb_submodels);
     SEXP getSubParameterIDs();
 };

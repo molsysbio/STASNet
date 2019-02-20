@@ -337,7 +337,7 @@ DataSet::~DataSet() {
 
 void DataSet::addData(Data &data, bool doDataVectorComputation) {
     datas_.push_back(data);
-    if (use_log) {
+    if (use_log_) {
         datas_.back().useLog();
     }
 

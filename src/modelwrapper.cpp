@@ -360,7 +360,7 @@ ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 ModelSetWrapper::~ModelSetWrapper() {
 }
 
-SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
+SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters, std::string optimizer) {
     model->setNbModels(data.datas_.size());
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -368,7 +368,19 @@ SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) 
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data);
+        if (optimizer == "levmar") {
+            ::fitmodel(parameters, &residual, predictions, model, &data);
+        } else if (optimizer == "siman") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data);
+        } else if (optimizer == "hybrid" || optimizer == "gradsim") {
+            ::fitmodel(parameters, &residual, predictions, model, &data);
+            ::simulated_annealing(parameters, residual, predictions, model, &data); // Not cooled annealing (last parameter but keep_constant not provided
+        } else if (optimizer == "hybrid" || optimizer == "simgrad") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data);
+            ::fitmodel(parameters, &residual, predictions, model, &data);
+        } else {
+            throw std::invalid_argument("'optimizer' must be 'levmar', 'siman', 'simgrad', 'gradsim' or 'hybrid'");
+        }
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) { 
@@ -390,8 +402,9 @@ void ModelSetWrapper::setVariableParameters(std::vector<size_t> variable_paramet
     model->setVariableParameters(variable_parameters);
 }
 
-void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
+void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data) {
     if (debug) { std::cerr << "Using ModelSetWrapper setModel" << std::endl; }
+    use_log = log_data;
     model_design_consistent(exp,mod);
 
     if(verbosity > 8) {std::cout << mod;} // DEBUGGING  
@@ -407,7 +420,7 @@ void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
     if (model != NULL) delete model;
     model = new ModelSet(response_full_model, 
               symbols_full_model,
-              exp, mod, 1); // 1 model by default, value changed by ModelSetWrapper::fitmodel
+              exp, mod, 1, linear_approximation, log_data); // 1 model by default, value changed by ModelSetWrapper::fitmodel
 }
 
 void ModelSetWrapper::setNbModels(size_t nb_submodels) {
