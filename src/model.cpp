@@ -421,7 +421,7 @@ void Model::predict(const std::vector<double> &p, double_matrix &datax, const Da
             } else {
                 // Predict in linear space for both log and linear fitted data, for consistency 
                 datax[j][i]= data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval());
-                if (with_offset && datax[j][i] < data->scale[j][i]) {
+                if (with_offset && !isnan(data->scale[j][i]) && datax[j][i] < data->scale[j][i]) {
                     datax[j][i] = data->scale[j][i]; // Minimum value is blank
                 }
             }
@@ -453,12 +453,12 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
                 datax[i*rows+j]=( data->unstim_data[j][i] + model_eqns_[i*rows+j][0]->eval()*data->scale[j][i])/(sqrt(2) * data->error[j][i]);
             } else if (log_data_) {
                     datax[i*rows+j]= ( log(data->unstim_data[j][i]) + model_eqns_[i*rows+j][0]->eval() ) / ( sqrt(2) * log(data->error[j][i]) );
-                if ( datax[i*rows+j] < log(data->scale[j][i]) / (sqrt(2)*log(data->error[j][i])) ) {
+                if ( !isnan(data->scale[j][i]) && datax[i*rows+j] < log(data->scale[j][i]) / (sqrt(2)*log(data->error[j][i])) ) {
                     datax[i*rows+j] = log(data->scale[j][i]) / (sqrt(2) * log(data->error[j][i]));
                 }
             } else {
                     datax[i*rows+j]= ( data->unstim_data[j][i] * exp( model_eqns_[i*rows+j][0]->eval()) ) / ( sqrt(2) * data->error[j][i] );
-                if ( datax[i*rows+j] < data->scale[j][i] / (sqrt(2)*data->error[j][i]) ) {
+                if ( !isnan(data->scale[j][i]) && datax[i*rows+j] < data->scale[j][i] / (sqrt(2)*data->error[j][i]) ) {
                     datax[i*rows+j] = data->scale[j][i] / (sqrt(2) * data->error[j][i]);
                 }
             }
@@ -479,9 +479,10 @@ void Model::eval(const double *p,double *datax, const Data *data ) const {
                 datax[i*rows+j]=log(datax[i*rows+j])*data->stim_data[j][i]/ (sqrt(2) * data->error[j][i]);
             }
         }
-//       std::cout<<"lin: "<< datax[i*rows] << ", " << data->stim_data[0][i] << ", " << data->unstim_data[0][i] << ", " << model_eqns_[i*rows][0]->eval() << ", " << data->error[0][i] << std::endl
+//       std::cout << "scale: " << data->scale[0][i] << ", " << isnan(data->scale[0][i]) << std::endl
+//       << "lin: "<< datax[i*rows] << ", " << data->stim_data[0][i] << ", " << data->unstim_data[0][i] << ", " << model_eqns_[i*rows][0]->eval() << ", " << data->error[0][i] << std::endl
 //       << "log: " << datax[i*rows] << ", " << log(data->stim_data[0][i]) << ", " << log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval() << ", " << log(data->error[0][i]) << std::endl
-//       << (log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval()) / (sqrt(2) * log(data->error[0][i])) << std::endl
+//       << (log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval()) / (sqrt(2) * log(data->error[0][i])) << std::endl;
 //       << log((log(data->unstim_data[0][i]) + model_eqns_[i*rows][0]->eval()) / (sqrt(2) * log(data->error[0][i]))) << " log(1) " << (log(1) + 0)/0.1 << std::endl << std::endl;
     }
 

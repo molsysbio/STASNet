@@ -113,7 +113,7 @@ extractSubmodels <- function(modelset) {
         cv = modelset$cv[row_selection,]
         data = modelset$data$datas_list[[ii]]
         fit_value = sum( (( model$simulate( data, parameters )$prediction - data$stim_data) / data$error)^2, na.rm=T)
-        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, fit_value, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, model$use_log)
+        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, fit_value, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values, modelset$unused_perturbations, modelset$unused_readouts, modelset$min_cv, modelset$default_cv, modelset$use_log)
     }
     return(modelGroup(model_list))
 }

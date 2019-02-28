@@ -200,7 +200,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
 #' @inheritParams createModel
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar", data_space="log") {
+createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb_cores=1, inits=1000, perform_plots=F, method="geneticlhs", unused_perturbations=c(), unused_readouts=c(), MIN_CV=0.1, DEFAULT_CV=0.3, model_name="default", rearrange="bystim", optimizer="levmar", data_space="linear") {
   if (length(csv_files) != length(var_files)) {
     if (length(var_files) == 0) {
       var_files = rep("", length(csv_files))
@@ -1209,6 +1209,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
   # Put blank and unstimulated values in matrices of the right size
   blank_values = matrix( rep(blank_values, each=nrow(mean_values)), nrow=nrow(mean_values), dimnames=list(NULL, colnames(mean_values)) )
+  if (data_space == "log") {
+      blank_values[blank_values==0] = NA
+  }
   unstim_values = matrix(rep(unstim_values, each=nrow(mean_values)), nrow=nrow(mean_values))
   colnames(unstim_values) <- colnames(mean_values)
   if (verbose > 7) {
@@ -1250,7 +1253,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     # remove measurements not different from blank
     mean_stat[mean_stat <= 2 * blank_values] = NA
     if (data_space == "log") {
-      median_cv = apply(log(sd_stat) / mean_stat, 2, median, na.rm=T)
+      median_cv = apply(log(sd_stat) / log(mean_stat), 2, median, na.rm=T)
     } else {
       median_cv = apply(sd_stat / mean_stat, 2, median, na.rm=T)
     }
@@ -1264,6 +1267,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (data_space == "log") {
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
+    if ( all(is.na(error)) ) {
+      error[is.na(error)] = exp(DEFAULT_CV) # If no replicates are present, set the error to the DEFAULT_CV (in log)
+    }
   } else {
     error = cv_values * mean_values
     # Normalise by the number of replicates for each measurement (standard error of the mean)

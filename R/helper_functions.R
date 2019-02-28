@@ -42,6 +42,7 @@ geom_mean <- function(xx, na.rm=TRUE) {
     if (all(is.na(xx))) {
         return(NaN) # Return NaN for consistency with mean
     } else if (length(xx)>0) {
+        xx = xx[!is.na(xx)]
         return( exp(sum(log(xx), na.rm=na.rm)/length(xx)) )
     } else {
         warning("No or only negative values for geom_mean !")
@@ -68,7 +69,7 @@ log_norm_sd <- function(xx, na.rm=TRUE) {
 linear_sd_log <- function(xx, na.rm=TRUE) {
     xx = xx[xx>0]
     if (all(is.na(xx))) {
-        return(NA)
+        return(NaN)
     } else if (length(xx) > 0) {
         return( exp(sd(log(xx), na.rm=na.rm)) )
     } else {

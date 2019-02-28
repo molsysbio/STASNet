@@ -16,6 +16,14 @@ test_that("createModel works with unused readouts and perturbations", {
      expect_output( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", unused_readout=c("node2"), unused_perturbation=c("node2i")), NA )
 })
 sub_model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", unused_readout=c("node2"), unused_perturbation=c("node2i")) )
+test_that("createModel works with log-space fitting", {
+    expect_output( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", data_space="log"), NA)
+})
+log_model = suppressMessages( createModel("network.tab", "basal.dat", DATA_FILE, VAR_FILE, inits=1000, nb_cores=2, perform_plots=F, method="geneticlhs",rearrange = "bystim", data_space="log") )
+test_that("log-space models are fitted correctly (basal activity==0 and no replicates to compute the error)", {
+    expect_equal(log_model$use_log, TRUE)
+    expect_equal(is.na(log_model$bestfit), FALSE)
+})
 
 test_that("All expected fields are present" ,{
     expect_equal(exists("min_cv", model), TRUE)
@@ -47,15 +55,14 @@ test_that("The data are loaded correctly", {
     expect_equal_to_reference(model$data$error, "data_error.rds")
 })
 
-test_that("The computation is consistent", {
-    expect_equal( sum( ((model$model$simulate(model$data, model$parameters)$prediction - model$data$stim_data) / model$data$error)^2, na.rm=T ), model$bestfit )
-})
-
 context("Score computation functions")
 
 test_that("computeFitScore works as expected", {
     computeFitScore(model)
     computeFitScore(model, T)
+})
+test_that("The fit score computation for MRAmodel is consistent", {
+    expect_equal( computeFitScore(model)$bestfit, model$bestfit )
 })
 
 context("Model import-export")
@@ -177,7 +184,7 @@ test_that("Cloned model is independent", {
   tmp_adj = alt_model$structure$adjacencyMatrix
   tmp_adj[4,3] = 0
   alt_model$structure$setAdjacencyMatrix(tmp_adj)
-  alt_model$model$setModel(alt_model$design, alt_model$structure)
+  alt_model$model$setModel(alt_model$design, alt_model$structure, FALSE)
   expect_gt(model$model$modelRank(), alt_model$model$modelRank())
 })
 
@@ -284,7 +291,7 @@ context("ModelSet")
 DATA_FILES = c("test_model_no_error_midas.csv","test_model_no_error_midas_2.csv")#,"test_model_no_error_midas_3.csv")
 VAR_FILES = c()
 
-modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F))
+modelset = suppressMessages(createModelSet("network.tab", "basal.dat", DATA_FILES, VAR_FILES,1,100,F, DEFAULT_CV=0.2))
 
 
 context("Cloning modelset")
@@ -305,7 +312,7 @@ test_that("Cloned modelset is independent", {
   tmp_adj = alt_modelset$structure$adjacencyMatrix
   tmp_adj[4,3] = 0
   alt_modelset$structure$setAdjacencyMatrix(tmp_adj)
-  alt_modelset$model$setModel(alt_modelset$design, alt_modelset$structure)
+  alt_modelset$model$setModel(alt_modelset$design, alt_modelset$structure, FALSE)
   alt_modelset$model$setNbModels(alt_modelset$nb_models)
   expect_gt(modelset$model$modelRank(), alt_modelset$model$modelRank())
 })
@@ -336,8 +343,8 @@ test_that("The data are loaded correctly", {
   expect_equal_to_reference(modelset$data$error, "ms_data_error.rds")
 })
 
-test_that("The computation is consistent", {
-  expect_equal( sum( ((modelset$model$simulate(modelset$data, modelset$parameters)$prediction - modelset$data$stim_data) / modelset$data$error)^2, na.rm=T ), modelset$bestfit )
+test_that("The fit score computation for ModelSet is consistent", {
+  expect_equal( computeFitScore(modelset)$bestfit, modelset$bestfit )
 })
 
 test_that("ModelSet breakup works", {
@@ -348,8 +355,8 @@ context("ModelSet relaxation")
 test_that("parameters can be relaxed",{
         expect_message(addVariableParameters(modelset, 1, 0, 10))
         relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
-        expect_equal(relax_modelset$variable_parameters, 5)
-        expect_equal(sum( ((relax_modelset$model$simulate(relax_modelset$data, relax_modelset$parameters)$prediction - relax_modelset$data$stim_data) / relax_modelset$data$error)^2, na.rm=T ), relax_modelset$bestfit)
+        expect_equal(relax_modelset$variable_parameters, 5) # The sqrt(2) factor is enough to make this variable link not detectable (p=0.72)
+        expect_equal(computeFitScore(relax_modelset)$bestfit, relax_modelset$bestfit)
 })
 
 relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
