@@ -26,7 +26,7 @@
 #include "fitmodel_in_CPP.hpp"
 #include <Rcpp.h>
 
-int verbosity=0;
+int verbosity=2;
 bool debug=false;
 
 //[[Rcpp::export]]

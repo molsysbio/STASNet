@@ -153,12 +153,16 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   }
 
   if (perform_plots) { # Best residuals to check the convergence of the fitting procedure
-    plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
-    lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
-    if (length(order_resid) >= 100) {
-        hundred_best = residuals[order_resid[1:100]]
-        plot(1:100, hundred_best, main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2, ylim=c(hundred_best[1], hundred_best[100]+1))
+    if ( all(is.na(residuals)) ) {
+        warning("All residuals are NAs! (no residual plot possible)")
+    } else {
+        plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
         lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+        if (length(order_resid) >= 100) {
+            hundred_best = residuals[order_resid[1:100]]
+            plot(1:100, hundred_best, main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2, ylim=c(hundred_best[1], hundred_best[100]+1))
+            lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+        }
     }
   }
   
@@ -286,8 +290,12 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
   if (perform_plots) {
-    plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
-    lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+    if ( all(is.na(residuals)) ) {
+        warning("All residuals are NAs! (no residual plot possible)")
+    } else {
+      plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+      lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+    }
   }
   
   bestid = order(residuals)[1]
@@ -1267,18 +1275,19 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   if (data_space == "log") {
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
-    if ( all(is.na(error)) ) {
+    if ( all(is.na(error))) {
       error[is.na(error)] = exp(DEFAULT_CV) # If no replicates are present, set the error to the DEFAULT_CV (in log)
     }
+    error[error <= 1] = exp(0.3)
   } else {
     error = cv_values * mean_values
     # Normalise by the number of replicates for each measurement (standard error of the mean)
     replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum, na.rm=TRUE)
     error = error / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error)))
+    #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(as.matrix(ee), na.rm=TRUE); return(ee) })
+    error[error<0.001] = mean(as.matrix(error), na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
   }
 
-  #error = apply(error, 2, function(ee){ ee[ee<1e-5]=mean(as.matrix(ee), na.rm=TRUE); return(ee) })
-  error[error<0.001] = mean(as.matrix(error), na.rm=TRUE) # The error cannot be 0 as it is used for the fit. If we get 0 (which means stim_data=0), we set it to 1 (which mean the score will simply be (fit-data)^2 for those measurements). We also ensure that is is not too small (which would lead to a disproportionate fit attempt)
   if (verbose > 5) {
       message("Error =")
       apply(error, 1, function(ee) { message(paste0(ee, collapse=",")) })
