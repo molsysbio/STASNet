@@ -1127,9 +1127,9 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
   colnames(perturbations) = gsub("^[A-Z]{2}.", "", colnames(perturbations))
   not_perturbable = setdiff(colnames(perturbations), vpert)
-  id_colums = grepl("^ID.type", colnames(data_file))
-  blanks = which(tolower(data_file[,id_colums]) %in% c("b","blank"))
-  controls = which(tolower(data_file[,id_colums]) %in% c("c","ctl","ctrl","control"))
+  id_columns = grepl( "^id.type", tolower(colnames(data_file)) )
+  blanks = which(tolower(data_file[,id_columns]) %in% c("b","blank"))
+  controls = which(tolower(data_file[,id_columns]) %in% c("c","ctl","ctrl","control"))
   if (length(controls) == 0) { 
     stop("Control experiments are required (indicated as 'control' in the column 'ID:type', see extractMIDAS)")
     }
