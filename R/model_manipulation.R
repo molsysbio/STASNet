@@ -63,7 +63,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
   
   simulation = model$simulateWithOffset(data, init_params)$prediction
   prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
-  mismatch = (stim_data - simulation) / error
+  mismatch = (stim_data - simulation) / (error*sqrt(2))
   simulation = log2(simulation / data$unstim_data)
   stim_data = log2(stim_data / data$unstim_data)
   
@@ -107,7 +107,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE) {
 #' @return A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
 getModelError <- function(mra_model) {
     simulation = simulateModel(mra_model)
-    mismatch = (mra_model$data$stim_data - simulation) / mra_model$data$error
+    mismatch = (mra_model$data$stim_data - simulation) / (mra_model$data$error*sqrt(2))
     residual = sum(mismatch^2, na.rm=T)
     return(list(simulation=simulation, mismatch=mismatch, residual=residual))
 }
