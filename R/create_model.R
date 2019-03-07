@@ -1127,7 +1127,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   }
   colnames(perturbations) = gsub("^[A-Z]{2}.", "", colnames(perturbations))
   not_perturbable = setdiff(colnames(perturbations), vpert)
-  id_columns = grepl( "^id.type", tolower(colnames(data_file)) )
+  id_columns = grepl( "^ID.type", colnames(data_file) )
   blanks = which(tolower(data_file[,id_columns]) %in% c("b","blank"))
   controls = which(tolower(data_file[,id_columns]) %in% c("c","ctl","ctrl","control"))
   if (length(controls) == 0) { 
@@ -1300,6 +1300,11 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   stim_nodes = as.character( stim_names[match(model_structure$names, stim_names, nomatch = 0)] )
   names = gsub("i$", "", names[grepl("i$", names)])
   inhib_nodes = as.character( names[match(model_structure$names, names, nomatch = 0 )] )
+  for (nn in inhib_nodes) {
+      if (!nn %in% basal_activity) {
+          message(paste("Check consistency: ", nn, " is inhibited but does not have a basal activity."))
+      }
+  }
   
   no_stim=F
   no_inh=F
