@@ -647,61 +647,63 @@ correlate_parameters <- function(model, core, perform_plot=F) {
   # Collect the values and perform the correlation
   params_matrix = matrix(0, ncol=length(model_structure$names), nrow=length(model_structure$names)) # To store the values
   for (node in valid_nodes) {
-    use = rep(TRUE, times=nrow(expdes$inhibitor))
-    # We do not use the conditions where one of the sender nodes is inhibited (since it decorelates the measurements)
-    for ( sender in which((expdes$inhib_nodes+1) %in% upstreams[[node]]) ) {
-      for ( i in 1:nrow(expdes$inhibitor) ) {
-        if (expdes$inhibitor[i, sender] == 1) {
-          use[i] = FALSE
-        }
-      }
-    }
-    
-    # Collect the measured data for the regression
-    node_mes = which( measured_nodes == node)
-    measurements = log(data$stim_data[use, node_mes,drop=F] / mean(data$unstim_data[1, node_mes],na.rm=T) )
-    regression = paste0('lm(measurements[,1] ~ ')
-    first = TRUE
-    node_name = model_structure$names[node]
-    condition = paste(node_name, "and")
-    for (sender in upstreams[[node]] ) {
-      mes_index = which(measured_nodes==sender)
-      measurements = cbind(measurements, log(data$stim_data[use, mes_index,drop=F] / mean(data$unstim_data[1,mes_index],na.rm=T)))
-      if (first) {
-        first = FALSE
-      } else {
-        regression = paste0(regression, "+")
-        condition = paste(condition, "+")
-      }
-      regression = paste0(regression, "measurements[,", 1+which(upstreams[[node]] == sender), "]")
-      sender_name = model_structure$names[sender]
-      condition = paste(condition, sender_name)
-    }
-    # Perform the regression and put the values in the adjacency matrix
-    regression = paste0(regression, ")")
-    result = eval(parse(text=regression))
-    condition = paste(condition, ".\n R^2 =", signif(summary(result)$r.squared, 2) )
-    for (sender in 1:length(upstreams[[node]])) {
-      params_matrix[ node, upstreams[[node]][sender] ] = result$coefficients[sender+1]
-      # TODO add the information on the quality of the fit
-    }
-    if (perform_plot) {
-      # Plot the data and the fit, directly plot the correlation curve if there is only one upstream node, or plot the distance between each measurements and the hyperplane
-      if (length(upstreams[[node]]) == 1) {
-        plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name)
-        lines(measurements[,2], result$coefficients[1] + result$coefficients[2] * measurements[,2])
-      } else {
-        plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name, xlab="Conditions")
-        for (measure in 1:nrow(measurements)) {
-          fitted = result$coefficients[1]
-          for (sender in 2:ncol(measurements)) {
-            fitted = fitted + result$coefficients[sender] * measurements[measure, sender]
+      use = rep(TRUE, times=nrow(expdes$inhibitor))
+      # We do not use the conditions where one of the sender nodes is inhibited (since it decorelates the measurements)
+      for ( sender in which((expdes$inhib_nodes+1) %in% upstreams[[node]]) ) {
+        for ( i in 1:nrow(expdes$inhibitor) ) {
+          if (expdes$inhibitor[i, sender] == 1) {
+            use[i] = FALSE
           }
-          points(measure, fitted, col="blue", pch=20)
-          lines(rep(measure, 2), c(fitted, measurements[measure,1]), col="red")
         }
       }
-    }
+      
+      # Collect the measured data for the regression
+      node_mes = which( measured_nodes == node)
+      measurements = log(data$stim_data[use, node_mes,drop=F] / mean(data$unstim_data[1, node_mes],na.rm=T) )
+      if (nrow(measurements) > 1) { # Can't correlate with only one data point
+          regression = paste0('lm(measurements[,1] ~ ')
+          first = TRUE
+          node_name = model_structure$names[node]
+          condition = paste(node_name, "and")
+          for (sender in upstreams[[node]] ) {
+            mes_index = which(measured_nodes==sender)
+            measurements = cbind(measurements, log(data$stim_data[use, mes_index,drop=F] / mean(data$unstim_data[1,mes_index],na.rm=T)))
+            if (first) {
+              first = FALSE
+            } else {
+              regression = paste0(regression, "+")
+              condition = paste(condition, "+")
+            }
+            regression = paste0(regression, "measurements[,", 1+which(upstreams[[node]] == sender), "]")
+            sender_name = model_structure$names[sender]
+            condition = paste(condition, sender_name)
+          }
+          # Perform the regression and put the values in the adjacency matrix
+          regression = paste0(regression, ")")
+          result = eval(parse(text=regression))
+          condition = paste(condition, ".\n R^2 =", signif(summary(result)$r.squared, 2) )
+          for (sender in 1:length(upstreams[[node]])) {
+            params_matrix[ node, upstreams[[node]][sender] ] = result$coefficients[sender+1]
+            # TODO add the information on the quality of the fit
+          }
+          if (perform_plot) {
+            # Plot the data and the fit, directly plot the correlation curve if there is only one upstream node, or plot the distance between each measurements and the hyperplane
+            if (length(upstreams[[node]]) == 1) {
+              plot(measurements[,2], measurements[,1], main=condition, xlab=sender_name, ylab=node_name)
+              lines(measurements[,2], result$coefficients[1] + result$coefficients[2] * measurements[,2])
+            } else {
+              plot(1:nrow(measurements), measurements[,1], pch=4, main=condition, ylab=node_name, xlab="Conditions")
+              for (measure in 1:nrow(measurements)) {
+                fitted = result$coefficients[1]
+                for (sender in 2:ncol(measurements)) {
+                  fitted = fitted + result$coefficients[sender] * measurements[measure, sender]
+                }
+                points(measure, fitted, col="blue", pch=20)
+                lines(rep(measure, 2), c(fitted, measurements[measure,1]), col="red")
+              }
+            }
+          }
+      }
   }
   if (debug && verbose >= 8) {
     message(paste0(model_structure$names, collapse=" "))
