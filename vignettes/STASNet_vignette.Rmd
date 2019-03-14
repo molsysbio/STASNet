@@ -50,6 +50,7 @@ diagram="@startuml
     (MRAmodel)-->(simulateModel)
     (MRAmodel)---->(plotModelScores)
     (MRAmodel)---->(plotModelParameters)
+    (MRAmodel)---->(exportModel)
     (createModelSet) --> ModelSet
     (rebuildModelSet) --> ModelSet
     (ModelSet)-->(extractSubmodels)
@@ -142,7 +143,7 @@ Thus it can be noticed that the strength of N2->N5->N4 has in the above network 
 
 ### Data vs Model
 
-We can evaluate how the simulation compares to the data using several ways. Using `plotModelAccuracy()` five heatmaps will be generated amongst which the experimental data and Simulated data being the Data and the fit, respectively. With `plotModelScores()` the individual goddness of fit for each analyte can be depicted as coefficient of Determination (R²). Using `plotModelSimulation()` analyte-wise bargraphs are plotted directly comparing data with simulation (not that by using `simulateModel()` one can also simulate novel not fitted perturbations or combinations therof).
+We can evaluate how the simulation compares to the data using several ways. Using `plotModelAccuracy()` five heatmaps will be generated among which the experimental data and Simulated data being the Data and the fit, respectively. With `plotModelScores()` the individual goodness of fit for each analyte can be depicted as coefficient of Determination (R²). Using `plotModelSimulation()` analyte-wise bargraphs are plotted directly comparing data with simulation (not that by using `simulateModel()` one can also simulate novel not fitted perturbations or combinations thereof).
 
 ```{r,fig.width=4, message =F}
 plotModelAccuracy(model)
@@ -166,7 +167,7 @@ niplotPL(profiles, file_plots = FALSE)
 ```
 The two dashed lines denote family-wise and point-wise 95% confidence threshold, respectively.
 
-Note the correlation between N2->N3 and N2->N4->N5 which indicates a structural non identifiability, i.e. the experimental design does not allow to differentiate between them.
+Note the correlation between N3->N4 and N2->N4->N5 which indicates a structural non identifiability, i.e. the experimental design does not allow to differentiate between them.
 Note also the symmetry around 0 for the inhibitor iN2 due to the fact that the sign is ignored by the fitting routine and always assumed to be negative.
 
 The resulting parameter confidence intervals can be visualised in the following way with dots (or if outside the plotting regions numbers) pointing to the actual parameter values and green bars denoting the 95% point-wise confidence interval.
@@ -184,12 +185,12 @@ simulation = plotModelSimulation(model, with_data= TRUE,log_axis = T)
 ### Network alteration
 Next to the parameters (or more correctly identifiable combinations of response coefficients) also the structural sanity of the network can be assessed by searching for superfluous or missing connections.
 
-First we try to reduce the network in oder to test for links that do not significantly contribute to the overall fit
+First we try to reduce the network in order to test for links that do not significantly contribute to the overall fit
 ```{r}
 red_model = selectMinimalModel(model)
 ```
 
-In the model the link from N3 to N4 has been found to be neglectable and the thusly reduced model is returned as output of `selectMinimalModel()`.
+In the model the links from N2 to N5 and N5 to N4 have been found to be neglectable and the thusly reduced model is returned as output of `selectMinimalModel()`.
 
 After having reduced the model it is also of interest to search for missing links that would improve the overall fit.
 In contrast to the reduction this is done by returning a list which provides the improvement and strength of each link so that the extension can then be manually conducted by a manually altering the network structure (at best guided by available biological insights from previous experiments or literature) and rerunning the `createModel()` routine.
@@ -248,7 +249,7 @@ This would be the case for isogenic cell lines differing only by one mutation, o
 We add a second data set were the difference is that N2 is more reactive to the stimulus than in the first data set (which is also propagated to the downstream nodes).
 ```{r}
 midas_data2 = midas_data
-midas_data2[,c(5:7)] = cbind(c(111, 507, 524, 97), c(103, 48, 241, 330), c(56, 1218, 290, 20)) # Measurements
+midas_data2[,c(5:7)] = cbind(c(111, 803, 824, 97), c(103, 20, 341, 430), c(56, 1618, 190, 20)) # Measurements
 print(midas_data)
 print(midas_data2)
 ```
@@ -262,7 +263,7 @@ mset = createModelSet(model_links = network,
                       inits = 1000)
 ```
 
-In order to obtain the visualisation and extraction routines shwon for the MRAmodel section the single model objects have to be extracted whcih can be treated alike MRAmodels. The extraction is conducted as follows:
+In order to obtain the visualisation and extraction routines shown for the MRAmodel section the single model objects have to be extracted which can be treated like MRAmodels. The extraction is conducted as follows:
 ```{r}
 modelgrp <- extractSubmodels(mset)
 modelgrp$names
@@ -277,7 +278,7 @@ plotResiduals(modelgrp)
 
 ### Variable Links
 
-So far we have only fitted on set of model coefficients that can on average explain best two different data sets.
+So far we have only fitted one set of model coefficients that can on average explain two different data sets best.
 As we are interested in the link coefficients that have to be significantly different between those data sets (.i.e. instead of one coefficient here two data-set-specific coefficients have to be used) we apply a greedy-hill climbing likelihood ratio test-based routine in `addVariableParameter()`.
 The implementation iteratively makes those links variable that when allowed to vary between data sets most significantly improve the overall fit. In order to ensure robustness to this strategy the algorithm tests the variable links once more by the reverse operation (termed lumping).  
 ```{r}
