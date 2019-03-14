@@ -7,9 +7,11 @@
 plotModelParameters(models, non_stop_nodes = c(), lim = 2)
 }
 \arguments{
+\item{non_stop_nodes}{A list of nodes that should not begin or end a path, usefull to compare models with different basal activities. If the node is only present as a first or last node of a path, the corresponding paths will be deleted.}
+
 \item{lim}{The absolute limit of the plot y-axis, the parameters with value falling outside the range [-lim, lim] will have their value displayed at the edge of the plotting area.}
 
-\item{aggregated_paths}{Aggregated direct paths as returned by aggregateDirectPaths}
+\item{aggregated_paths}{models A list of models where each entry must be named (i.e. 'names(models)' must return a vector)}
 
 \item{digits}{Number of digits to display for the confidence interval values}
 }
@@ -18,6 +20,9 @@ Invisibly the aggregated direct paths
 }
 \description{
 Plot the parameters for a model or a list of models
+}
+\examples{
+\\donotrun{ plotModelParameters }
 }
 \seealso{
 \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code{\link{aggregateDirectPaths}}

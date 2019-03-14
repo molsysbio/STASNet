@@ -87,7 +87,14 @@ for (argument in cargs) {
     } else if (grepl(".var$", argument)) {
         variation = paste0(getwd(), "/", argument)
     } else if (grepl("^-i", argument)) {
-        inits = as.numeric(gsub("-i", "", argument))
+        power = c("k", "M", "G", "T", "P", "Y");
+        inits = gsub("-i", "", argument)
+        last_char = substr(inits, nchar(inits), nchar(inits))
+        if (last_char %in% power) {
+            inits = as.numeric(substr(inits, 1, nchar(inits)-1)) * 10^(3*which(power==last_char))
+        } else {
+            inits = as.numeric(gsub("-i", "", argument))
+        }
         if (is.na(inits)) { # If error
             inits = 1000
             print("Incorrect number of initialisation, using 1000 instead")

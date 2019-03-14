@@ -17,10 +17,12 @@ cbbPalette <- c("#009E73", "#e79f00", "#9ad0f3", "#0072B2", "#D55E00", "#CC79A7"
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
 #' @param scale_rows Transforms color code to show differences between columns by formula: x-rowmean/abs(rowmean)
 #' @return Nothing
+#' @export
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.05,col = colorRampPalette(c("deepskyblue","white","red1")),textCol = "gray10", sig_numbers=2, show_values=TRUE,scale_rows=FALSE){
   # helper functions to generate the breaks. When data contain only one sign: 0...+-limit, otherwise -limit...+limit 
   
+  lim = abs(lim) # Must be positive
   mat[is.infinite(as.matrix(mat))] = NA
   # cutoff and transformation of colour
   if (scale_rows){
@@ -71,7 +73,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
                 xlab = "",
                 ylab = "",
                 main = main,
-                scales = list(alternating = 2,tck = c(0,1),x = list(rot = 90)),
+                scales = list(alternating = 2,tck = c(0,1),x = list(rot = 90, cex=2), y=list(cex=1.1)),
                 panel=panel_function)
   print(p) # Plot the heatmap
 }
