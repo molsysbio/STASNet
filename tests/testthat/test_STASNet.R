@@ -48,7 +48,7 @@ test_that("The data are loaded correctly", {
 })
 
 test_that("The computation is consistent", {
-    expect_equal( sum( ((model$model$simulate(model$data, model$parameters)$prediction - model$data$stim_data) / model$data$error)^2, na.rm=T ), model$bestfit )
+    expect_equal( sum( ((model$model$simulate(model$data, model$parameters)$prediction - model$data$stim_data) / (sqrt(2)*model$data$error))^2, na.rm=T ), model$bestfit )
 })
 
 context("Score computation functions")
@@ -337,7 +337,7 @@ test_that("The data are loaded correctly", {
 })
 
 test_that("The computation is consistent", {
-  expect_equal( sum( ((modelset$model$simulate(modelset$data, modelset$parameters)$prediction - modelset$data$stim_data) / modelset$data$error)^2, na.rm=T ), modelset$bestfit )
+  expect_equal( sum( ((modelset$model$simulate(modelset$data, modelset$parameters)$prediction - modelset$data$stim_data) / (sqrt(2)*modelset$data$error))^2, na.rm=T ), modelset$bestfit )
 })
 
 test_that("ModelSet breakup works", {
@@ -349,7 +349,7 @@ test_that("parameters can be relaxed",{
         expect_message(addVariableParameters(modelset, 1, 0, 10))
         relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
         expect_equal(relax_modelset$variable_parameters, 5)
-        expect_equal(sum( ((relax_modelset$model$simulate(relax_modelset$data, relax_modelset$parameters)$prediction - relax_modelset$data$stim_data) / relax_modelset$data$error)^2, na.rm=T ), relax_modelset$bestfit)
+        expect_equal(sum( ((relax_modelset$model$simulate(relax_modelset$data, relax_modelset$parameters)$prediction - relax_modelset$data$stim_data) / (sqrt(2)*relax_modelset$data$error))^2, na.rm=T ), relax_modelset$bestfit)
 })
 
 relax_modelset = suppressMessages(addVariableParameters(modelset, 1, 0, 10))
