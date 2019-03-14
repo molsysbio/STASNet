@@ -55,7 +55,7 @@ context("Score computation functions")
 
 test_that("computeFitScore works as expected", {
     expect_silent(computeFitScore(model))
-    expect_silent(computeFitScore(model, T))
+    expect_message(computeFitScore(model, T))
 })
 
 context("Model import-export")
