@@ -50,12 +50,13 @@ printParameters <- function(model_description, precision=2) {
 #' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
 #' @param selected_treatments A vector with the names of the subset of treatments that should be plotted
 #' @param selected_readouts A vector with the names of the subset of readouts that should be plotted
+#' @param name The name of the model, used as subtitle in the plot
 #' @return Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c()) {
+plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c(), name="") {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -63,6 +64,7 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
   cv = model_description$cv
   stim_data = data$stim_data
   init_params = model_description$parameter
+  if (name == "") { name = model_description$name }
   
   simulation = model$simulateWithOffset(data, init_params)$prediction
   prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
@@ -87,8 +89,10 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
     treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
   }
 
-  message("Treatments : ")
-  message(paste(treatments, collapse=" "))
+  if (verbose > 3) {
+      message("Treatments : ")
+      message(paste(treatments, collapse=" "))
+  }
   colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = nodes[design$measured_nodes + 1]
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
@@ -120,9 +124,9 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
   if (any(grepl("acc", graphs)))
-      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE)
+      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE, sub=name)
   if (any(grepl("diff", graphs)))
-      plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values)
+      plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values, sub=name)
 # Log fold changes for the data and the stimulation with comparable color code
   lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
                        quantile(simulation,0.05, na.rm=TRUE),
@@ -130,11 +134,11 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
                        quantile(simulation,0.95, na.rm=TRUE)) )))
   if (!is.infinite(limit)) { lim = limit }
   if (any(grepl("data", graphs)))
-      plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values)
+      plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values, sub=name)
   if (any(grepl("sim", graphs)))
-      plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values)
+      plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values, sub=name)
   if (any(grepl("pred", graphs)))
-      plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values)
+      plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values, sub=name)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
@@ -501,7 +505,7 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                            new_rank,
                            deltares,
                            dr,
-                           1-pchisq(deltares, df=dr)),nrow=1)   
+                           ifelse(dr > 0, 1-pchisq(deltares, df=dr), 1) ),nrow=1 )
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
   adj[new_link] = 0
   model_structure$setAdjacencyMatrix( adj )
