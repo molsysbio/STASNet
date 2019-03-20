@@ -1159,10 +1159,18 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     if (length(not_perturbable) > 0) {
       message(paste(not_perturbable , "perturbation not compatible with the network structure, it will not be used\n" ))
     }
+    remove_perturb = c()
     if (length(dont_perturb) > 0) {
-      message(paste(dont_perturb, "perturbation will not be used for the fit\n"))
+        for (pp in dont_perturb) {
+            if (pp %in% colnames(perturbations)) {
+                remove_perturb = c(remove_perturb, pp)
+                message(paste(pp, "perturbation will not be used for the fit\n"))
+            } else {
+                message(paste(pp, "perturbation is not present in the data\n"))
+            }
+        }
     }
-    not_perturbable = c(not_perturbable, dont_perturb)
+    not_perturbable = c(not_perturbable, remove_perturb)
     rm_rows = unique(unlist(lapply(not_perturbable, function(pp) { which(perturbations[,pp]==1) })))
     perturbations = perturbations[,-which(colnames(perturbations) %in% not_perturbable), drop=F]
     if (length(perturbations)==0){
@@ -1276,6 +1284,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Derive the error either from the CV in linear space or the sd of the log in log space
   if (data_space == "log") {
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
+    error[error < MIN_CV] = MIN_CV
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
     if ( all(is.na(error))) {
       error[is.na(error)] = exp(DEFAULT_CV) # If no replicates are present, set the error to the DEFAULT_CV (in log)
