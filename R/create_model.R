@@ -989,10 +989,15 @@ extractMIDAS <- function(to_detect) {
 #' @param structure A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.
 #' @param expdes An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.
 #' @param local_values A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input
+#' @param print_values If local_values has values, whether those values should be printed on top of the arrows in the graph.
+#' @param scaling Maximum parameter value
+#' @param max_width Maximum line width to use.
+#' @param min_width Minimum line width to use.
+#' @details The width of the lines is set in ['min_width','max_width'] according to the 'scaling' parameter, with 0 corresponding to 'min_width' and >='scaling' to 'max_width'.
 #' @export
 #' @family Network graph
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-plotNetworkGraph <- function(structure, expdes="", local_values="") {
+plotNetworkGraph <- function(structure, expdes="", local_values="", print_values=TRUE, scaling=5, max_width=3, min_width=1) {
     if (class(structure) == "matrix") {
       ss = extractStructure(structure)
       adm = ss$adjacencyMatrix
@@ -1055,14 +1060,18 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
       ato = rownames(adm)[ifelse(idx %% len==0,len,idx %% len)]
       cc = which(afrom==efrom & ato==eto)
       cc = ifelse(length(cc)!=0, cc, which(afrom==eto & ato==efrom)) # Link in both directions
-      graph::edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=5,2,3))
-      graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
-      
-      coordMat=Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
-      graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(graph::edgeRenderInfo(g1)$label[cc])*10/2)
-      graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
+#      graph::edgeRenderInfo(g1)$lwd[cc] = ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=scaling,2,max_width))
+      graph::edgeRenderInfo(g1)$lwd[cc] = ifelse( abs(vv)>scaling, max_width, min_width + (max_width-min_width) * (abs(vv)/scaling) )
+      ifelse(abs(vv)<=1,1,ifelse(abs(vv)<=scaling,2,max_width))
       if (!is.na(vv)){
-      if (vv < 0) { graph::edgeRenderInfo(g1)$col[cc] = "orange" }
+          if (vv < 0) { graph::edgeRenderInfo(g1)$col[cc] = "orange" }
+      }
+      if (print_values) {
+          graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
+          
+          coordMat=Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates
+          graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[5,"x"]-ceiling(nchar(graph::edgeRenderInfo(g1)$label[cc])*10/2)
+          graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[5,"y"]
       }
     }
     
@@ -1074,12 +1083,15 @@ plotNetworkGraph <- function(structure, expdes="", local_values="") {
         nname = colnames(adm)[expdes$inhib_nodes[idx]+1]
         cc = which(nname==efrom & iname==eto)
         graph::edgeRenderInfo(g1)$col[cc]="white" # mask inhibitor pseudo edges
-        graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
-        graph::edgeRenderInfo(g1)$textCol[cc]="red"
+        if (print_values) {
+            graph::edgeRenderInfo(g1)$label[cc] = trim_num(vv)
+            graph::edgeRenderInfo(g1)$textCol[cc]="red"
+
+            coordMat = Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
+            graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
+            graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
+        }
         
-        coordMat = Rgraphviz::bezierPoints(edge_spline[[cc]][[1]]) # 11 x 2 matrix with x and y coordinates 
-        graph::edgeRenderInfo(g1)$labelX[cc] = coordMat[2,"x"]
-        graph::edgeRenderInfo(g1)$labelY[cc] = coordMat[2,"y"]
       }
     }
   }

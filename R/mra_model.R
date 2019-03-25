@@ -126,12 +126,13 @@ getMeasuredNodesNames <- function(mra_model) {
 #'
 #' Plot the network used in the model with the experimental design on top of it
 #' @param mra_model A MRAmodel object.
+#' @param print_values Whether the parameter values should be printed on top of the arrows in the graph.
 #' @export
 #' @family Model plots
 #' @family Network graph
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelGraph <- function(mra_model) {
-    plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters))
+plotModelGraph <- function(mra_model, print_values=TRUE, scaling=5, max_width=3, min_width=1) {
+    plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters), print_values, scaling=5, max_width=3, min_width=1)
 }
 
 #' Return the paths corresponding to each parameter
