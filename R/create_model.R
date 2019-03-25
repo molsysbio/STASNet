@@ -734,7 +734,7 @@ correlate_parameters <- function(model, core, perform_plot=F) {
 # Parallel initialisation of the parameters
 # @family Model initialisation
 parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constant=c(), optimizer="levmar") {
-  if (verbose >= 1) {
+  if (verbose >= 9) {
       message("Setup parallel initialisation")
   }
   if (NB_CORES == 0) {
@@ -1284,12 +1284,12 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Derive the error either from the CV in linear space or the sd of the log in log space
   if (data_space == "log") {
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-    error[error < MIN_CV] = MIN_CV
+    error = matrix(exp(colMeans(log(error))), nrow=nrow(error), ncol=ncol(error), byrow=TRUE, dimnames=list(rownames(error), colnames(error)))
+    error[error < exp(MIN_CV)] = exp(MIN_CV)
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
     if ( all(is.na(error))) {
       error[is.na(error)] = exp(DEFAULT_CV) # If no replicates are present, set the error to the DEFAULT_CV (in log)
     }
-    error[error <= 1] = exp(0.3)
   } else {
     error = cv_values * mean_values
     # Normalise by the number of replicates for each measurement (standard error of the mean)
@@ -1479,7 +1479,7 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
 #' Import a saved set of models with data files to construct a modelSet object
 #'
 #' Build a fitted modelSet object from the individual .mra files, and import data for this modelSet
-#' Does NOT perform any initialisation
+#' Does NOT perform any initialisation but identifies the variable parameters.
 #' @param model_files A list of .mra files containing the information on the models, or a named list of read in mra Files with readLines
 #' @param data_files A list of .csv files with the data for the models or a named list of read in data files with extractMIDAS
 #' @param var_files A list of .var files with the variation of the data or a named list of read in var files with extractMIDAS
