@@ -4,8 +4,9 @@
 \alias{initModel}
 \title{Perform an initialisation of the model}
 \usage{
-initModel(model, core, inits, precorrelate = T, method = "randomlhs",
-  nb_cores = 1, perform_plots = F)
+initModel(model, core, inits, precorrelate = TRUE,
+  method = "randomlhs", nb_cores = 1, perform_plots = FALSE,
+  optimizer = "levmar")
 }
 \arguments{
 \item{model}{A MRAmodel object to initialise}
@@ -21,6 +22,8 @@ initModel(model, core, inits, precorrelate = T, method = "randomlhs",
 \item{nb_cores}{Maximum number of cores to use for the initialisation}
 
 \item{perform_plots}{Whether the distribution of the residuals and the correlation plots for the parameters deduced by correlation should be plotted or not}
+
+\item{optimizer}{One of c('levmar', 'siman') to choose whether the optimizer should use the Levenberg-Marquardt algorithm or Simulated Annealing.}
 }
 \value{
 A list with the initialisation results

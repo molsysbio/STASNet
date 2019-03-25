@@ -21,7 +21,7 @@ Depends:
     RhpcBLASctl
 LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1
 Suggests:
     knitr,
     testthat

@@ -8,7 +8,8 @@ createModelSet(model_links, basal_file, csv_files, var_files = c(),
   nb_cores = 1, inits = 1000, perform_plots = F,
   method = "geneticlhs", unused_perturbations = c(),
   unused_readouts = c(), MIN_CV = 0.1, DEFAULT_CV = 0.3,
-  model_name = "default", rearrange = "bystim")
+  model_name = "default", rearrange = "bystim", optimizer = "levmar",
+  data_space = "linear")
 }
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
@@ -38,6 +39,10 @@ annealing : Simulated annealing and gradient descent on the best result. \emph{i
 \item{model_name}{The name of the model is derived from the name of the data.stimulation file name. If data.stimulation is a matrix or a data.frame, 'model_name' will be used to name the model.}
 
 \item{rearrange}{Whether the rows should be rearranged. "no" to keep the order of the perturbations from the data file, "bystim" to group by stimulations, "byinhib" to group by inhibitions.}
+
+\item{optimizer}{One of c('levmar', 'siman', 'hybrid', 'gradsim', 'simgrad') to choose whether the optimizer should use the Levenberg-Marquardt algorithm, Simulated Annealing or an hybrid alternating between the two with gradiend first ('gradsim') or simulated annealing firest ('simgrad').}
+
+\item{data_space}{One of "log" or "linear". Determines whether the data should be fitted in log space or linear space. The parameters will be in log space in both cases, but the log space data might be more adapted if the data are log-normal (as opposed to normal assumed by the linear option).}
 }
 \description{
 Build and fit an MRAmodelSet, which consists of the simultaneous fitting of several MRA models
