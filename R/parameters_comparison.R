@@ -110,7 +110,11 @@ getDirectPaths <- function(mra_model, non_stop_nodes=c()) {
         for (pid in 1:length(paths)) {
             path = paths[[pid]]
             if (all(rev$path %in% path$links)) {
-                cip = pl_ci_product(mra_model, rev$pid, pid)
+                if (length(mra_model$upper_values)==0 || length(mra_model$lower_values)==0) {
+                    cip = product_ci(path, paths[[rev$pid]])
+                } else {
+                    cip = pl_ci_product(mra_model, rev$pid, pid)
+                }
                 pmul = mul_path(main_path$links, path$links)
                 final_paths[[length(final_paths)+1]] = list( path=paste0(pmul, collapse="*"), value=cip[1], lv=cip[2], hv=cip[3] )
             }
@@ -268,7 +272,7 @@ plotParameters <- function(aggregated_paths, lim=2, repar=TRUE, resetpar=TRUE, v
         xmin = ymin
         xmax = ymax
         # Plot the parameters with error bars
-        plot(aggregated_paths[,"value"], 1:nrow(aggregated_paths), yaxt="n", ylab="", pch=20, xlim=c(xmin, xmax), xlab="Path value", lwd=4, ylim=c(-1, nrow(aggregated_paths)))
+        plot(aggregated_paths[,"value"], 1:nrow(aggregated_paths), yaxt="n", ylab="", pch=20, xlim=c(xmin, xmax), xlab="Path value", lwd=4, ylim=c(-1, nrow(aggregated_paths)), col=colors)
         lines(rep(0, nrow(aggregated_paths)), 1:nrow(aggregated_paths), col="grey", lty=2)
         segments(aggregated_paths[,"lv"], 1:nrow(aggregated_paths), aggregated_paths[,"hv"], 1:nrow(aggregated_paths), xlab="", lwd=4, col=colors)
         #text(par("usr")[4] - (xmax-xmin)/10, 1:nrow(aggregated_paths), adj = 1, labels = rownames(aggregated_paths), xpd = TRUE, cex=0.7)
