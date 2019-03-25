@@ -154,6 +154,8 @@ generate_infos <- function(input_file, inits, best_resid, method, model_links, n
     infos$infos = c(paste0(inits, " samplings"), paste0( "Best residuals : ", paste0(best_resid, collapse=" ") ), paste0("Method : ", method), paste0("Network : ", model_links), fit_info)
     if ( !is.matrix(input_file) && all(sapply(input_file, is.string)) ) {
       infos$name = gsub("\\.csv", "", gsub("_MIDAS", "", basename(input_file)))
+    } else if (is.list(input_file)) {
+      infos$name = names(input_file)
     } else {
       infos$name = name
     }
