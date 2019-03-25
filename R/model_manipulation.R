@@ -55,8 +55,13 @@ printParameters <- function(model_description, precision=2) {
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
+#' @rdname accuracy_plot
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c(), name="") {
+plotModelAccuracy <- function(x, ...) { UseMethod("plotModelAccuracy", x) }
+#' Plot model accuracy for MRAmodel
+#' @export
+#' @rdname accuracy_plot
+plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c(), name="") {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -141,6 +146,24 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
       plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values, sub=name)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
+}
+#' Plot accuracy of all submodels of a modelset
+#' @export
+#' @rdname accuracy_plot
+plotModelAccuracy.MRAmodelSet <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "data", "simulation"), selected_treatments = c(), selected_readouts = c(), name="") {
+    submodels = extractSubmodels(model_description)
+    if (any(grepl("acc", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="accuracy") }
+    }
+    if (any(grepl("diff", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="diff") }
+    }
+    if (any(grepl("data", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="data") }
+    }
+    if (any(grepl("sim", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="simulation") }
+    }
 }
 
 #' Compute the error of the model
