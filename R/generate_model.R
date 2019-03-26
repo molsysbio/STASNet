@@ -63,12 +63,18 @@ cloneModel <- function(old_model){
   if ("MRAmodelSet" %in% type ){
     model = new(STASNet:::ModelSet)
     data = new(STASNet:::DataSet)
+    if (old_model$use_log) {
+      data$use_log()
+    }
     for (ii in 1:old_model$nb_models){
       data$addData(old_model$data$datas_list[[ii]], FALSE)
     }
   }else if ("MRAmodel" %in% type ){
     model = new(STASNet:::Model)
     data=new(STASNet:::Data)
+    if (old_model$use_log) {
+        data$use_log()
+    }
   }else{
     stop(paste0("Wrong input class '",type,",' must be of class 'MRAmodel' or 'MRAmodelSet'!")) 
   }
@@ -87,7 +93,7 @@ cloneModel <- function(old_model){
                                            inhibitor = old_model$design$inhibitor,
                                            basal.activity = old_model$basal)
 
-    model$setModel(design = design, structure = structure)
+    model$setModel(design = design, structure = structure, old_model$use_log)
     
     data$set_unstim_data ( old_model$data$unstim_data )
     data$set_scale( old_model$data$scale )

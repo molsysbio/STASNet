@@ -34,7 +34,7 @@ void setDebug(bool debug_lvl) {
     debug = debug_lvl;
 }
 
-ModelWrapper::ModelWrapper() : linear_approximation(FALSE), model(NULL)  { }
+ModelWrapper::ModelWrapper() : linear_approximation(false), use_log(false), model(NULL)  { }
 
 ModelWrapper::~ModelWrapper() {
   if (model!=NULL) delete model;
@@ -75,8 +75,9 @@ bool ModelWrapper::model_design_consistent(ExperimentalDesign &exp, ModelStructu
   return true;
 }
 
-void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
+void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data) {
   if (debug) { std::cerr << "Using original ModelWrapper setModel" << std::endl; }
+  use_log = log_data;
   model_design_consistent(exp,mod);
 
   generate_response(response_full_model,  
@@ -89,7 +90,7 @@ void ModelWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
   if (model != NULL) delete model;
   model = new Model(response_full_model,  
             symbols_full_model,
-            exp, mod, linear_approximation);
+            exp, mod, linear_approximation, log_data);
 } 
 
 SEXP ModelWrapper::simulate(Data *data, std::vector<double> parameters) {
@@ -124,7 +125,7 @@ SEXP ModelWrapper::simulateWithOffset(Data *data, std::vector<double> parameters
   return ret;
 }
 
-SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant, std::string optimizer) {
 
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -132,7 +133,19 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        if (optimizer == "levmar") {
+            ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        } else if (optimizer == "siman") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant);
+        } else if (optimizer == "hybrid" || optimizer == "gradsim") {
+            ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+            ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant, 0.1); // Start cool annealing
+        } else if (optimizer == "hybrid" || optimizer == "simgrad") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant);
+            ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);
+        } else {
+            throw std::invalid_argument("'optimizer' must be 'levmar', 'siman', 'simgrad', 'gradsim' or 'hybrid'");
+        }
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) {
@@ -145,15 +158,15 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
     return ret;
 }
 
-SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters) {
-    return( fitmodel_wrapper(data, parameters, std::vector<size_t>()) );
+SEXP ModelWrapper::fitmodel(Data data, std::vector<double> parameters, std::string optimizer) {
+    return( fitmodel_wrapper(data, parameters, std::vector<size_t>(), optimizer ));
 }
-SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
+SEXP ModelWrapper::fitmodelWithConstants (Data data, std::vector<double> parameters, std::vector<size_t> keep_constant, std::string optimizer) {
     for (size_t ii=0; ii<keep_constant.size(); ii++) { keep_constant[ii]--; }
-    return( fitmodel_wrapper(data, parameters, keep_constant) );
+    return( fitmodel_wrapper(data, parameters, keep_constant, optimizer) );
 }
 
-SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth) {
+SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant) {
 
     if (parameters.size() != model->nr_of_parameters()) {
         parameters.resize(model->nr_of_parameters());
@@ -161,12 +174,13 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
     
     // Find an approximation of the optimum with the simulated annealing
     double residual;
+    double_matrix predictions;
     //std::cerr << "Starting simulated annealing" << std::endl;
-    ::simulated_annealing(model, &data, parameters, residual, max_it, max_depth);
+    ::simulated_annealing(parameters, residual, predictions, model, &data, keep_constant);
     //std::cerr << "really in" << std::endl;
 
     // Ajust the gradient descent
-    double_matrix predictions;
+    /*
     try {
       ::fitmodel(parameters, &residual, predictions, model, &data);
     } catch(std::exception &ex) {   
@@ -174,6 +188,7 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, int m
     } catch(...) { 
     ::Rf_error("c++ exception (unknown reason)"); 
     }
+    */
     Rcpp::List ret;
     Rcpp::NumericVector pars( parameters.begin(), parameters.end() );
     ret["parameter"]=pars;
@@ -334,13 +349,18 @@ void ModelWrapper::printSymbols() {
     model->printSymbols();
 }
 
+void ModelWrapper::useLog() {
+    use_log = true;
+    model->useLog();
+}
+
 
 ModelSetWrapper::ModelSetWrapper() : ModelWrapper() { }
 
 ModelSetWrapper::~ModelSetWrapper() {
 }
 
-SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) {
+SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters, std::string optimizer) {
     model->setNbModels(data.datas_.size());
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
@@ -348,7 +368,19 @@ SEXP ModelSetWrapper::fitmodelset(DataSet data, std::vector<double> parameters) 
     double residual;
     double_matrix predictions;
     try {
-        ::fitmodel(parameters, &residual, predictions, model, &data);
+        if (optimizer == "levmar") {
+            ::fitmodel(parameters, &residual, predictions, model, &data);
+        } else if (optimizer == "siman") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data);
+        } else if (optimizer == "hybrid" || optimizer == "gradsim") {
+            ::fitmodel(parameters, &residual, predictions, model, &data);
+            ::simulated_annealing(parameters, residual, predictions, model, &data); // Not cooled annealing (last parameter but keep_constant not provided
+        } else if (optimizer == "hybrid" || optimizer == "simgrad") {
+            ::simulated_annealing(parameters, residual, predictions, model, &data);
+            ::fitmodel(parameters, &residual, predictions, model, &data);
+        } else {
+            throw std::invalid_argument("'optimizer' must be 'levmar', 'siman', 'simgrad', 'gradsim' or 'hybrid'");
+        }
     } catch(std::exception &ex) {
         forward_exception_to_r(ex);
     } catch(...) { 
@@ -370,8 +402,9 @@ void ModelSetWrapper::setVariableParameters(std::vector<size_t> variable_paramet
     model->setVariableParameters(variable_parameters);
 }
 
-void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
+void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data) {
     if (debug) { std::cerr << "Using ModelSetWrapper setModel" << std::endl; }
+    use_log = log_data;
     model_design_consistent(exp,mod);
 
     if(verbosity > 8) {std::cout << mod;} // DEBUGGING  
@@ -387,7 +420,7 @@ void ModelSetWrapper::setModel(ExperimentalDesign exp, ModelStructure mod) {
     if (model != NULL) delete model;
     model = new ModelSet(response_full_model, 
               symbols_full_model,
-              exp, mod, 1); // 1 model by default, value changed by ModelSetWrapper::fitmodel
+              exp, mod, 1, linear_approximation, log_data); // 1 model by default, value changed by ModelSetWrapper::fitmodel
 }
 
 void ModelSetWrapper::setNbModels(size_t nb_submodels) {
@@ -424,6 +457,8 @@ RCPP_MODULE(ModelEx) {
     .method( "printEquation", &ModelWrapper::printEquation )
     .method( "printEquationMatrix", &ModelWrapper::printEquationMatrix )
     .method( "printSymbols", &ModelWrapper::printSymbols )
+    .method( "useLog", &ModelWrapper::useLog )
+    .field( "use_log", &ModelWrapper::use_log, "Fitting in log space" )
     .field("linear_approximation", &ModelWrapper::linear_approximation, "Linear Approximation" )
     ;
     

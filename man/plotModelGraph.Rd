@@ -4,10 +4,13 @@
 \alias{plotModelGraph}
 \title{Plot the network used in the model}
 \usage{
-plotModelGraph(mra_model)
+plotModelGraph(mra_model, print_values = TRUE, scaling = 5,
+  max_width = 3, min_width = 1)
 }
 \arguments{
 \item{mra_model}{A MRAmodel object.}
+
+\item{print_values}{Whether the parameter values should be printed on top of the arrows in the graph.}
 }
 \description{
 Plot the network used in the model with the experimental design on top of it

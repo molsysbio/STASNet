@@ -59,13 +59,13 @@ compareParameters <- function(modelset) {
 #' @return An MRAmodelSet object
 #' @seealso \code{\link{createModel}}
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c(), min_cv=0.1, default_cv=0.3) {
+MRAmodelSet <- function(nb_models=1, model=NULL, design=NULL, structure=NULL, basal=matrix(), data=matrix(), cv=matrix(), parameters=vector(), bestfit=NA, name=c(), infos=c(), param_range=list(), lower_values=c(), upper_values=c(), unused_perturbations=c(), unused_readouts=c(), min_cv=0.1, default_cv=0.3, use_log=FALSE) {
     if (length(name) != nb_models) {
         name = rep(name[1], nb_models)
     }
 
     # An MRAmodelSet is an MRAmodel
-    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv)
+    self = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, paste0("Model set using: ", paste0(name, collapse=" ")),  infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv, use_log)
     # With some extra attributes
     class(self) = c("MRAmodelSet", class(self))
     self$nb_models = nb_models
@@ -104,7 +104,7 @@ setVariableParameters <- function(modelset, parameters_ids) {
 extractSubmodels <- function(modelset) {
     model_list = vector('list',modelset$nb_models)
     model = new(STASNet:::Model)
-    model$setModel(modelset$design, modelset$structure)
+    model$setModel(modelset$design, modelset$structure, modelset$use_log)
     nb_parameters = length(modelset$parameters)/modelset$nb_models # All submodels have the same number of parameters
     data_size = nrow(modelset$data$unstim_data)/modelset$nb_models # The data matrix dimensions are the same for all models
     for (ii in 1:modelset$nb_models) {
@@ -113,7 +113,7 @@ extractSubmodels <- function(modelset) {
         cv = modelset$cv[row_selection,]
         data = modelset$data$datas_list[[ii]]
         fit_value = sum( (( model$simulate( data, parameters )$prediction - data$stim_data) / data$error)^2, na.rm=T)
-        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, fit_value, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values)
+        model_list[[ii]] = MRAmodel(model, modelset$design, modelset$structure, modelset$basal, data, cv, parameters, fit_value, modelset$names[ii], modelset$infos, modelset$param_range, modelset$lower_values, modelset$upper_values, modelset$unused_perturbations, modelset$unused_readouts, modelset$min_cv, modelset$default_cv, modelset$use_log)
     }
     return(modelGroup(model_list))
 }

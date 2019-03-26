@@ -39,13 +39,13 @@ public:
   size_t nr_of_parameters() ;
   
   bool model_design_consistent(ExperimentalDesign &exp, ModelStructure &mod);
-  virtual void setModel(ExperimentalDesign exp, ModelStructure mod);
+  virtual void setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data=false);
 
-  SEXP fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant=std::vector<size_t>());
-  SEXP fitmodelWithConstants(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant);
-  virtual SEXP fitmodel(Data data, std::vector<double> parameters);
+  SEXP fitmodel_wrapper(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant=std::vector<size_t>(), std::string optimizer="levmar");
+  SEXP fitmodelWithConstants(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant, std::string optimizer);
+  virtual SEXP fitmodel(Data data, std::vector<double> parameters, std::string optimizer);
 
-  SEXP annealingFit(Data data, std::vector<double> parameters, int max_it, int max_depth);
+  SEXP annealingFit(Data data, std::vector<double> parameters, std::vector<size_t> keep_constant);
 
   SEXP simulate(Data *data, std::vector<double> parameters);
   SEXP simulateWithOffset(Data *data, std::vector<double> parameters);
@@ -54,6 +54,7 @@ public:
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 
+  bool use_log;
   bool linear_approximation;
   
   SEXP getParametersLinks();
@@ -67,6 +68,8 @@ public:
   void printEquation(const size_t r, const size_t c);
   void printEquationMatrix();
   void printSymbols();
+  
+  void useLog();
 
 protected:
   GiNaC::matrix response_full_model; 
@@ -80,9 +83,9 @@ class ModelSetWrapper: public ModelWrapper {
 public:
     ModelSetWrapper();
     ~ModelSetWrapper();
-    SEXP fitmodelset(DataSet data, std::vector<double> parameters);
+    SEXP fitmodelset(DataSet data, std::vector<double> parameters, std::string optimizer="levmar");
     void setVariableParameters(std::vector<size_t> variable_parameters);
-    void setModel(ExperimentalDesign exp, ModelStructure mod);
+    void setModel(ExperimentalDesign exp, ModelStructure mod, bool log_data=false);
     void setNbModels(size_t nb_submodels);
     SEXP getSubParameterIDs();
 };

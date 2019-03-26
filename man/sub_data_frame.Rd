@@ -2,10 +2,10 @@
 % Please edit documentation in R/helper_functions.R
 \name{sub_data_frame}
 \alias{sub_data_frame}
-\title{Return a data.frame even if the output as on line or one column}
+\title{Return a data.frame even if the output is one-dimensional}
 \usage{
 sub_data_frame(input, rows = NULL, cols = NULL)
 }
 \description{
-Return a data.frame even if the output as on line or one column
+Return a data.frame even if the output is one-dimensional
 }

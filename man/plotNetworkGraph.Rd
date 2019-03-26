@@ -4,7 +4,8 @@
 \alias{plotNetworkGraph}
 \title{Plot a graph from an adjacency list}
 \usage{
-plotNetworkGraph(structure, expdes = "", local_values = "")
+plotNetworkGraph(structure, expdes = "", local_values = "",
+  print_values = TRUE, scaling = 5, max_width = 3, min_width = 1)
 }
 \arguments{
 \item{structure}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.}
@@ -12,9 +13,20 @@ plotNetworkGraph(structure, expdes = "", local_values = "")
 \item{expdes}{An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.}
 
 \item{local_values}{A list with entries 'local_response' (A weighted adjacency matrix representing the values of the links) and 'inhibitors' (A list of inhibition values) both compatible with the 'structure' input}
+
+\item{print_values}{If local_values has values, whether those values should be printed on top of the arrows in the graph.}
+
+\item{scaling}{Maximum parameter value}
+
+\item{max_width}{Maximum line width to use.}
+
+\item{min_width}{Minimum line width to use.}
 }
 \description{
 Plot a graph from an adjacency list
+}
+\details{
+The width of the lines is set in ['min_width','max_width'] according to the 'scaling' parameter, with 0 corresponding to 'min_width' and >='scaling' to 'max_width'.
 }
 \seealso{
 Other Network graph: \code{\link{plotModelGraph}}

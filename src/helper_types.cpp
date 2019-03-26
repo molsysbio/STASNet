@@ -226,6 +226,7 @@ bool ExperimentalDesign::read_from_stream(std::istream &is) {
 Data::Data() {
     dataVector = new double[1];
     dataVectorComputed = false;
+    use_log_ = false;
 }
 
 bool Data::read_from_stream(std::istream &is) {
@@ -317,6 +318,8 @@ void Data::computeDataVector() {
             for (unsigned int j=0; j<rows;j++) {
                 if (std::isnan(error[j][i]) || std::isnan(stim_data[j][i])) {
                     dataVector[i*stim_data.shape()[0]+j]=0;
+                } else if (use_log_) {
+                    dataVector[i*stim_data.shape()[0]+j]=log(stim_data[j][i])/(sqrt(2)*log(error[j][i]) );
                 } else {
                     dataVector[i*stim_data.shape()[0]+j]=stim_data[j][i]/(sqrt(2)*error[j][i]);
                 }
@@ -334,6 +337,9 @@ DataSet::~DataSet() {
 
 void DataSet::addData(Data &data, bool doDataVectorComputation) {
     datas_.push_back(data);
+    if (use_log_) {
+        datas_.back().useLog();
+    }
 
     // rbind_matrix generates an 'memory corruption' on the second call, could not figure out why
     // As a consequence, the rbind matrix must be provided in R (or an override of computeDataVector is necessary)

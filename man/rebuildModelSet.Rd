@@ -19,7 +19,7 @@ An MRAmodelSet object describing the modelSet and its best fit, containing the d
 }
 \description{
 Build a fitted modelSet object from the individual .mra files, and import data for this modelSet
-Does NOT perform any initialisation
+Does NOT perform any initialisation but identifies the variable parameters.
 }
 \examples{
 \dontrun{

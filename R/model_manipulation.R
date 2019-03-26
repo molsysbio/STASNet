@@ -48,12 +48,20 @@ printParameters <- function(model_description, precision=2) {
 #' @param limit An integer to force the limit of the heatmaps
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
 #' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
-#' @return Nothing
+#' @param selected_treatments A vector with the names of the subset of treatments that should be plotted
+#' @param selected_readouts A vector with the names of the subset of readouts that should be plotted
+#' @param name The name of the model, used as subtitle in the plot
+#' @return Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
 #' @export
 #' @seealso createModel, importModel
 #' @family Model plots
+#' @rdname accuracy_plot
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction")) {
+plotModelAccuracy <- function(x, ...) { UseMethod("plotModelAccuracy", x) }
+#' Plot model accuracy for MRAmodel
+#' @export
+#' @rdname accuracy_plot
+plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c(), name="") {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -61,10 +69,15 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
   cv = model_description$cv
   stim_data = data$stim_data
   init_params = model_description$parameter
+  if (name == "") { name = model_description$name }
   
   simulation = model$simulateWithOffset(data, init_params)$prediction
   prediction = log2(model$simulate(data, init_params)$prediction / data$unstim_data)
-  mismatch = (stim_data - simulation) / (error*sqrt(2))
+  if (model_description$use_log) {
+      mismatch = (log(stim_data) - log(simulation)) / (log(error)*sqrt(2))
+  } else {
+      mismatch = (stim_data - simulation) / (error*sqrt(2))
+  }
   simulation = log2(simulation / data$unstim_data)
   stim_data = log2(stim_data / data$unstim_data)
   
@@ -81,16 +94,44 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
     treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
   }
 
-  message("Treatments : ")
-  message(paste(treatments, collapse=" "))
+  if (verbose > 3) {
+      message("Treatments : ")
+      message(paste(treatments, collapse=" "))
+  }
   colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = nodes[design$measured_nodes + 1]
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
+  # Subset the matrices to only have the select readouts and treatments
+  if (length(selected_readouts) > 0) {
+      valid_selection = c()
+      for (sr in selected_readouts) {
+          if (sr %in% colnames(stim_data)) {
+              valid_selection = c(valid_selection, sr)
+          }
+      }
+      mismatch = mismatch[,valid_selection]
+      stim_data = stim_data[,valid_selection]
+      simulation = simulation[,valid_selection]
+      prediction = prediction[,valid_selection]
+  }
+  if (length(selected_treatments) > 0) {
+      valid_selection = c()
+      for (st in selected_treatments) {
+          if (st %in% rownames(stim_data)) {
+              valid_selection = c(valid_selection, st)
+          }
+      }
+      mismatch = mismatch[valid_selection,]
+      stim_data = stim_data[valid_selection,]
+      simulation = simulation[valid_selection,]
+      prediction = prediction[valid_selection,]
+  }
+
 # Comparison of the data and the stimulation in term of error fold change and log fold change
   if (any(grepl("acc", graphs)))
-      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE)
+      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE, sub=name)
   if (any(grepl("diff", graphs)))
-      plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values)
+      plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values, sub=name)
 # Log fold changes for the data and the stimulation with comparable color code
   lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
                        quantile(simulation,0.05, na.rm=TRUE),
@@ -98,13 +139,31 @@ plotModelAccuracy <- function(model_description, limit=Inf, show_values=TRUE, gr
                        quantile(simulation,0.95, na.rm=TRUE)) )))
   if (!is.infinite(limit)) { lim = limit }
   if (any(grepl("data", graphs)))
-      plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values)
+      plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values, sub=name)
   if (any(grepl("sim", graphs)))
-      plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values)
+      plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values, sub=name)
   if (any(grepl("pred", graphs)))
-      plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values)
+      plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values, sub=name)
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
+}
+#' Plot accuracy of all submodels of a modelset
+#' @export
+#' @rdname accuracy_plot
+plotModelAccuracy.MRAmodelSet <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "data", "simulation"), selected_treatments = c(), selected_readouts = c(), name="") {
+    submodels = extractSubmodels(model_description)
+    if (any(grepl("acc", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="accuracy") }
+    }
+    if (any(grepl("diff", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="diff") }
+    }
+    if (any(grepl("data", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="data") }
+    }
+    if (any(grepl("sim", graphs))) {
+        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="simulation") }
+    }
 }
 
 #' Compute the error of the model
@@ -196,7 +255,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
       c=c+1
       newadj[ii]=0
       model_structure$setAdjacencyMatrix( newadj )
-      model$setModel ( expdes, model_structure )
+      model$setModel ( expdes, model_structure, model_description$use_log )
       
       if (class(model)== "Rcpp_ModelSet"){
         model$setNbModels(model_description$nb_models)
@@ -204,14 +263,14 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
         # detect the parameter values that are fixed in the new network by having the exact same value in all following parameters
         leftVar = which( apply(matrix(paramstmp,ncol=model_description$nb_models,byrow=F), 1, not_duplicated) )
         model$setVariableParameters(leftVar) 
-        result = model$fitmodelset(data, paramstmp) 
+        result = model$fitmodelset(data, paramstmp, "levmar") 
         n_par=model$nr_of_parameters()/model_description$nb_models
         response.matrix = lapply(1:model_description$nb_models, function(x) model$getLocalResponseFromParameter( rep(result$parameter[(1+(x-1)*n_par):(x*n_par)], model_description$nb_models) ))
         params[[c]] = c(response.matrix)
         new_rank = model$modelRank()/model_description$nb_models + length(leftVar)*(model_description$nb_models-1)
       }else{
         paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
-        result = model$fitmodel(data, paramstmp)
+        result = model$fitmodel(data, paramstmp, "levmar")
         response.matrix = model$getLocalResponseFromParameter( result$parameter )
         params[[c]] = c(response.matrix)
         new_rank = model$modelRank()
@@ -286,7 +345,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
   # We recover the final model
   ## Basal activity and data do not change
   model_description$structure$setAdjacencyMatrix(adj)
-  model_description$model$setModel(expdes, model_description$structure)
+  model_description$model$setModel(expdes, model_description$structure, original_model$use_log)
   if ("MRAmodelSet" %in% class(model_description)) {
     model_description$model$setNbModels(model_description$nb_models)
     model_description$parameters = unlist(lapply(1:length(models), function(x) model_description$model$getParameterFromLocalResponse(initial_response[[x]]$local_response, initial_response[[x]]$inhibitors)))
@@ -422,7 +481,7 @@ suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c
 addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expdes,data,model_structure,sample_range,variable_links=c(),verbose=F){
   adj[new_link] = 1
   model_structure$setAdjacencyMatrix( adj )
-  model$setModel ( expdes, model_structure )
+  model$setModel ( expdes, model_structure, model$use_log )
   if (class(model) == "Rcpp_ModelSet"){
     model$setNbModels(length(initial_response))
     if (length(variable_links)>0) {  
@@ -442,11 +501,11 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
       initial_response[[ii]]$local_response[new_link]=jj
       paramstmp = c(paramstmp, model$getParameterFromLocalResponse(initial_response[[ii]]$local_response, initial_response[[ii]]$inhibitors)) 
       }
-      tmp_result = model$fitmodelset( data,paramstmp )  
+      tmp_result = model$fitmodelset( data, paramstmp, "levmar")  
     }else{
     initial_response$local_response[new_link]=jj
     paramstmp = model$getParameterFromLocalResponse(initial_response$local_response, initial_response$inhibitors)  
-    tmp_result = model$fitmodel( data,paramstmp )
+    tmp_result = model$fitmodel( data, paramstmp, "levmar" )
     }
     if ( verbose == T )
     message( paste0( "for ", jj ," : ",tmp_result$residuals ) )
@@ -471,11 +530,11 @@ addLink <-  function(new_link,adj,rank,init_residual,model,initial_response,expd
                            new_rank,
                            deltares,
                            dr,
-                           1-pchisq(deltares, df=dr)),nrow=1)   
+                           ifelse(dr > 0, 1-pchisq(deltares, df=dr), 1) ),nrow=1 )
   colnames(extension_mat) <- c("adj_idx","from","to","value","residual","df","Res_delta","df_delta","pval")
   adj[new_link] = 0
   model_structure$setAdjacencyMatrix( adj )
-  model$setModel ( expdes, model_structure )
+  model$setModel ( expdes, model_structure, model$use_log )
   if (class(model)== "Rcpp_ModelSet"){
     model$setNbModels(length(initial_response))
     if (length(variable_links)>0) { model$setVariableParameters(match(variable_links,model$getParametersNames()$names))}

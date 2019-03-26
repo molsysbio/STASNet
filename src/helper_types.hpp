@@ -162,6 +162,7 @@ class Data {
 public:
   Data &operator=(const Data &data);
   Data();
+  void useLog() { use_log_=true; }
 public:
   double_matrix unstim_data;
   double_matrix stim_data;
@@ -171,6 +172,7 @@ public:
   size_t nb_measurements;
   double *dataVector;
   bool dataVectorComputed;
+  bool use_log_;
 
   void setUnstimData(double_matrix new_unstim) { copy_matrix(new_unstim,unstim_data); }
   void setStimData(double_matrix new_stim) { copy_matrix(new_stim,stim_data); computeDataVector(); }
