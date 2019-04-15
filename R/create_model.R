@@ -1542,11 +1542,13 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   
   # rebuild single models
   nb_models = length(model_files)
+  alt_names = c()
   if (length(var_files)>0){
     model1 = rebuildModel(model_files[[1]], data_files[[1]], var_files[[1]], rearrange)  
   }else{
     model1 = rebuildModel(model_files[[1]], data_files[[1]], "", rearrange)
   }
+  alt_names = c(alt_names, model1$name)
   data_ = new(STASNet:::DataSet)
   if (model1$use_log) { data_$use_log() }
   data_$addData(model1$data, FALSE)
@@ -1563,6 +1565,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
     }else{
       model=rebuildModel(model_files[[ii]], data_files[[ii]], "", rearrange)  
     }
+    alt_names = c(alt_names, model$name)
     data_$addData(model$data, FALSE)
     if (!all( dim(model1$data$unstim_data) == dim(model$data$unstim_data) )) {
       stop(paste0("dimension of 'unstim_data' from model ", ii, " do not match those of model 1"))
@@ -1593,6 +1596,8 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   modelSet$setModel(design = model1$design, structure = model1$structure, model1$use_log)
   modelSet$setNbModels(nb_models)
   
+  subnames = unname(mod)
+  if (all(!alt_names %in% c("", "default"))) { subnames = alt_names }
   bestfit = as.numeric(unlist(strsplit(model1$infos[3]," "))[4])
   self = STASNet:::MRAmodelSet(nb_models = nb_models,
                                model = modelSet, 
@@ -1603,7 +1608,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
                                cv = cv,
                                parameters = c(params),
                                bestfit = bestfit,
-                               name = unname(mod),
+                               name = subnames,
                                infos = model1$infos[2:5],
                                unused_perturbations = model1$unused_perturbations,
                                unused_readouts = model1$unused_readouts,
@@ -1614,6 +1619,7 @@ rebuildModelSet <- function(model_files, data_files, var_files=c(), rearrange="n
   variaPar = rowSums(abs(sweep(params,1,params[,1],"-"))) > 0   
   if ( any(variaPar) ){ 
     self = setVariableParameters(self, which(variaPar))
+    self = computeFitScore(self)
   }
   return(self)
 }
