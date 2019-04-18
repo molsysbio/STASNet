@@ -176,6 +176,7 @@ test_that("Model is cloned correctly", {
   expect_false(capture.output(alt_model$structure$.pointer) == capture.output(model$structure$.pointer))
   expect_false(capture.output(alt_model$data$.pointer) == capture.output(model$data$.pointer))
   expect_equal(alt_model$model$modelRank(),model$model$modelRank())
+  expect_equal(alt_model$use_log,model$use_log)
 })
 
 alt_model = STASNet:::cloneModel(model)

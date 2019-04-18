@@ -70,7 +70,7 @@ computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
     data = mra_model$data
 # The code for ModelSet::predict in C++ generates a segfault on datax return to R for an unknown reason
 # Couldn't find the bug so we do not compute the score for the MRAmodelSet objects
-    if (class(data) != "Rcpp_Data" || any(dim(data$stim_data)==0)) {# && class(data) != "Rcpp_DataSet") {
+    if (class(data) != "Rcpp_Data" && class(data) != "Rcpp_DataSet" || any(dim(data$stim_data)==0)) {
         mra_model$Rscores = NA
         mra_model$bestfitscore = NA
         return(computeReducedChiScore(mra_model))
@@ -80,12 +80,11 @@ computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
         mra_model$bestfit = refit$residual[1] # Get the residual from the C++ code
         mra_model$parameters = refit$params[1,]
     } else { # Compute the residual ourselves
-        simulation = simulateModel(mra_model, with_offset=with_offset)
-        simulation$error[simulation$error == 0] = NA
+        prediction = getSimulation(mra_model, with_offset=with_offset)
         if (mra_model$use_log) {
-            mra_model$bestfit = sum( log(simulation$bestfit / simulation$data)^2/( log(simulation$error)*sqrt(2) )^2, na.rm=T )
+            mra_model$bestfit = sum( log(prediction / mra_model$data$stim_data)^2/( log(mra_model$data$error)*sqrt(2) )^2, na.rm=T )
         } else {
-            mra_model$bestfit = sum( (simulation$bestfit - simulation$data)^2/(simulation$error*sqrt(2))^2, na.rm=T )
+            mra_model$bestfit = sum( (prediction - mra_model$data$stim_data)^2/(mra_model$data$error*sqrt(2))^2, na.rm=T )
         }
     }
     prediction = getSimulation(mra_model, with_offset=with_offset)
@@ -114,7 +113,12 @@ computeFitScore <- function(mra_model, refit_model=FALSE, with_offset=TRUE) {
 computeReducedChiScore <- function(mra_model) {
     real_data = mra_model$data$stim_data
     data_count = sum(!is.na(real_data) & !is.nan(real_data))
-    redChi = mra_model$bestfit / (data_count - length(mra_model$parameters))
+    if ("MRAmodelSet" %in% class(mra_model)) {
+        fitted_parameters = length(mra_model$parameters)/mra_model$nb_models + mra_model$variable_parameters * (mra_model$nb_models - 1)
+    } else {
+        fitted_parameters = length(mra_model$parameters)
+    }
+    redChi = mra_model$bestfit / (data_count - fitted_parameters)
 
     mra_model$reducedChi = redChi
     return(mra_model)

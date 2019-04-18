@@ -119,7 +119,8 @@ cloneModel <- function(old_model){
                                       unused_perturbations = old_model$unused_perturbations,
                                       unused_readouts = old_model$unused_readouts,
                                       min_cv = old_model$min_cv,
-                                      default_cv = old_model$default_cv)
+                                      default_cv = old_model$default_cv,
+                                      use_log = old_model$use_log)
       
     if ( length(old_model$variable_parameters) > 0 ){ 
       new_model = setVariableParameters(new_model, old_model$variable_parameters) 
@@ -144,7 +145,8 @@ cloneModel <- function(old_model){
                                    unused_perturbations = old_model$unused_perturbations,
                                    unused_readouts = old_model$unused_readouts,
                                    min_cv = old_model$min_cv,
-                                   default_cv = old_model$default_cv)
+                                   default_cv = old_model$default_cv,
+                                   use_log = old_model$use_log)
   }
   return(new_model)
 }

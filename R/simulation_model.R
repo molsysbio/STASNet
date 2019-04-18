@@ -160,9 +160,14 @@ simulateModel <- function(model_description, targets="all", readouts = "all", in
   new_design = getExperimentalDesign(model_description$structure, stim_nodes, inhib_nodes, simulated_nodes, stimulations, inhibitions, model_description$basal)
   
   # Set up the model and the data for the simulation
-  model = new(STASNet:::Model)
+  if (class(model_description) == "Rcpp_ModelSet") {
+      model = new(STASNet:::ModelSet)
+      new_data = new(STASNet:::DataSet)
+  } else {
+      model = new(STASNet:::Model)
+      new_data = new(STASNet:::Data)
+  }
   model$setModel( new_design, model_description$structure, model_description$use_log )
-  new_data = new(STASNet:::Data)
   new_data$set_unstim_data(matrix( rep(model_description$data$unstim_data[1,simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ))
   new_data$set_scale( matrix( rep(model_description$data$scale[1, simulated_cols], nrow(target_matrix)), byrow=T, nrow=nrow(target_matrix) ) )
   

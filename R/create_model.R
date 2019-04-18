@@ -346,7 +346,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
     allIn = match(notVariable,params)
     if (any(is.na(allIn))){
       stop(paste("Character strings in 'notVariable' do not match parameter names!","\n",
-                 "Please use the names from 'modelset$model$getParametersNames()$names'"))
+                 "Please use the names from 'getParametersNames(original_modelset)'"))
     } else{
       notVariable = allIn
     }
@@ -371,7 +371,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
         extra_parameters = total_parameters
       }
       # find the parameter which fitted separately to each model improves the performance most and if significant keep variable
-      psets=sapply(extra_parameters,refitWithVariableParameter,modelset,nb_sub_params,nb_cores,nb_samples)
+      psets=mcmapply(refitWithVariableParameter, extra_parameters, MoreArgs=list(modelset,nb_sub_params,nb_cores,nb_samples), mc.cores=nb_cores)
       bestres = min(unlist(psets["residuals",]))
       deltares = modelset$bestfit - bestres
       if (deltares > qchisq(accuracy, modelset$nb_models) ) {
@@ -747,6 +747,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
   # Parallel initialisations
   # The number of cores used depends on the ability of the detectCores function to detect them
   fitmodel_wrapper <- function(params, data, model, keep_constant=c(), optimizer) {
+    if ( class(data) != "Rcpp_Data" ) { stop("MRAmodel require a STASNet::Data object") }
     init = proc.time()[3]
     if (length(keep_constant) > 0) {
       result = model$fitmodelWithConstants(data, params, keep_constant, optimizer)
