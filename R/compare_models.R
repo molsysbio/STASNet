@@ -60,7 +60,7 @@ modelGroup <- function(models=list()) {
 #' @export
 plotResiduals <- function(model_group, main = "Model residuals") {
   barx=barplot(model_group$residuals, ylab="likelihood", main=main, col="black")
-  text(barx, 1+0.1*min(model_group$residuals), labels = sapply(model_group$residuals, function(x) ifelse(x>100000, signif(x,1), round(x))), pos = 3, srt = 90, col = "grey80", offset = 1)
+  text(barx, 1+0.1*min(model_group$residuals), labels = sapply(model_group$residuals, function(x) ifelse(abs(log10(x))>5, signif(x,1), round(x))), pos = 3, srt = 90, col = "grey80", offset = 1)
   invisible(model_group$residuals)
 }
 
@@ -85,7 +85,7 @@ plotModelScores.modelGroup <- function(model_group, ...) {
     for (ii in 1:length(model_group$models)) {
         table = rbind(table, model_group$models[[ii]]$Rscores)
     }
-    return(barplot(table, beside=T...))
+    return(barplot(table, beside=TRUE, ...))
 }
 
 #' Plot parameters
