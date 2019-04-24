@@ -162,7 +162,7 @@ class Data {
 public:
   Data &operator=(const Data &data);
   Data();
-  void useLog() { use_log_=true; }
+  void useLog() { use_log_=true; computeDataVector();}
 public:
   double_matrix unstim_data;
   double_matrix stim_data;

@@ -385,6 +385,9 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
 #' ext_list = suggestExtension(mramodel)
 #' }
 suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F, padjust_method="bonferroni"){
+  if (mc == 0) {
+      mc = detectCores() - 1
+  }
   # Clone model object to not change original model specifications
   model_description = cloneModel(original_model)
   
