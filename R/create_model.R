@@ -1283,7 +1283,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     cv_values = aggregate(cv_values, by=perturbations, mean, na.rm=T)[,-(1:ncol(perturbations))]
   } else {
     # remove measurements not different from blank
-    mean_stat[mean_stat <= 2 * blank_values] = NA
+    mean_stat = sapply(1:length(mean_stat), function(col){ xx=mean_stat[,col]; xx[xx< 1.5*blank_values[col]] = NA; xx})
     if (data_space == "log") {
       median_cv = apply(log(sd_stat) / log(mean_stat), 2, median, na.rm=T)
     } else {
@@ -1298,7 +1298,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Derive the error either from the CV in linear space or the sd of the log in log space
   if (data_space == "log") {
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-    error = matrix(exp(colMeans(log(error))), nrow=nrow(error), ncol=ncol(error), byrow=TRUE, dimnames=list(rownames(error), colnames(error)))
+    error = matrix(exp(colMeans(log(error), na.rm=TRUE)), nrow=nrow(error), ncol=ncol(error), byrow=TRUE, dimnames=list(rownames(error), colnames(error)))
     error[error < exp(MIN_CV)] = exp(MIN_CV)
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
     if ( all(is.na(error))) {
