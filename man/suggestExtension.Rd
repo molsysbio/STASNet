@@ -5,8 +5,9 @@
 \title{Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model}
 \usage{
 suggestExtension(original_model, parallel = F, mc = 1,
-  sample_range = c(10^(2:-1), 0, -10^(-1:2)), print = F,
-  padjust_method = "bonferroni")
+  sample_range = c(10^(2:-1), 0, -10^(-1:2)),
+  padjust_method = "bonferroni", print = F,
+  fname = "Additional_link_suggestion.txt")
 }
 \arguments{
 \item{original_model}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}
@@ -17,9 +18,11 @@ suggestExtension(original_model, parallel = F, mc = 1,
 
 \item{sample_range}{Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))}
 
+\item{padjust_method}{The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)}
+
 \item{print}{Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"}
 
-\item{padjust_method}{The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)}
+\item{fname}{Name of the file where the results should be printed}
 }
 \description{
 A new link found to be suitable by the modeller can then added by re-running the createModel function with the altered adjacency information.

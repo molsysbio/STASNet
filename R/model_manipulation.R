@@ -375,8 +375,9 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
 #' @param parallel Boolean number indicating whether addition is executed in a parallel fashion
 #' @param mc Number of cores that should be used for the computation
 #' @param sample_range Numeric vector containing all starting values for the new link (DEFAULT: c(10^(2:-1),0,-10^(-1:2)))
-#' @param print Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"
 #' @param padjust_method The method to use for the adjusted p-value, as defined in p.adjust. 'BY' by default which provides the FDR under general dependence assumption (conservative)
+#' @param print Boolean indicating whether the result should be printed in a text file "Additional_link_suggestion.txt"
+#' @param fname Name of the file where the results should be printed
 #' @name suggestExtension
 #' @export
 #' @seealso selectMinimalModel, createModel
@@ -384,7 +385,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
 #' @examples \dontrun{
 #' ext_list = suggestExtension(mramodel)
 #' }
-suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), print = F, padjust_method="bonferroni"){
+suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c(10^(2:-1),0,-10^(-1:2)), padjust_method="bonferroni", print = F, fname="Additional_link_suggestion.txt"){
   if (mc == 0) {
       mc = detectCores() - 1
   }
@@ -460,7 +461,7 @@ suggestExtension <- function(original_model,parallel = F, mc = 1, sample_range=c
     }
   }
   if(print)
-    write.table(extension_mat,"Additional_link_suggestion.txt",quote = F,row.names = F,sep="\t")
+    write.table(extension_mat, fname, quote = F,row.names = F,sep="\t")
   
   return(extension_mat)
   
