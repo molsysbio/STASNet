@@ -47,7 +47,7 @@ printParameters <- function(model_description, precision=2) {
 #' @param model_description An MRAmodel object
 #' @param limit An integer to force the limit of the heatmaps
 #' @param show_values Whether the values should be printed in the heatmap boxes or not.
-#' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
+#' @param graphs Define which graphs should be plotted. "accuracy" for the residual as seen by the model, "qq" for the qqnorm plot of those residuals, "diff" for the delta log data-simulation, "data" for the log-fold change computed from the data, "simulation" for the log-fold change simulated by the model, "prediction" for the log-fold change that would be predicted without the blank correction.
 #' @param selected_treatments A vector with the names of the subset of treatments that should be plotted
 #' @param selected_readouts A vector with the names of the subset of readouts that should be plotted
 #' @param name The name of the model, used as subtitle in the plot
@@ -128,6 +128,11 @@ plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values
   }
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
+  if (any(grepl("qq", graphs))) {
+      qqnorm(mismatch)
+      mis_range = max(abs(range(mismatch, na.rm=TRUE)))
+      lines(c(-mis_range, mis_range), c(-mis_range, mis_range), col="red")
+  }
   if (any(grepl("acc", graphs)))
       plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE, sub=name)
   if (any(grepl("diff", graphs)))
