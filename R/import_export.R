@@ -283,7 +283,7 @@ importModel <- function(file_name=NULL,file=NULL) {
             }
         }
     }
-    structure = STASNet:::getModelStructure(links_list)
+    structure = STASNet:::getModelStructure(links_list, nodes)
 
     if (!grepl("^P", file[lnb])) {
         stop("This mra file is not valid, the parameters lines should start with a P")

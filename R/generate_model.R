@@ -1,6 +1,5 @@
-getModelStructure <- function(links, struct_name="",names=c()) {
-  ModelStructure <- STASNet:::ModelStructure
-  modelStructure =new(ModelStructure, as.character(links[,1]),as.character(links[,2]),as.character(names), struct_name)
+getModelStructure <- function(links, names=c(), struct_name="") {
+  modelStructure =new(STASNet:::ModelStructure, as.character(links[,1]), as.character(links[,2]), as.character(names), struct_name)
   return(modelStructure);
 }
 
