@@ -1,6 +1,15 @@
 #context("General testing of STASNet")
 #### model tests ####
 
+context("Helper functions")
+
+test_that("extractStructure correctly loads all nodes", {
+    t_struct = extractStructure("test_structure.tab")
+    expect_equal_to_reference(t_struct$names, "test_structure_names.rds")
+    expect_equal_to_reference(t_struct$adjacencyMatrix, "test_structure_adj.rds")
+})
+
+
 context("Model")
 
 DATA_FILE = "test_model_no_error_midas.csv"

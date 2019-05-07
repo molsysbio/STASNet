@@ -858,9 +858,9 @@ NULL
 #' @return 'extractStructure' returns a C++ object of class 'ModelStructure'
 #' @rdname extraction
 #' @export
-extractStructure <- function(to_detect, names="", adj=FALSE) {
+extractStructure <- function(to_detect, name="", adj=FALSE) {
   model_links = to_detect
-  struct_name = paste0(names, collapse="_")
+  struct_name = paste0(name, collapse="_")
   if (is.string(model_links)) {
       # Read the file, and extract the matrix corresponding to it
       structure_file = readLines(model_links)
@@ -924,10 +924,18 @@ extractStructure <- function(to_detect, names="", adj=FALSE) {
         }
       }
     }
-    
   }
+  unconnected_nodes = c()
+  unconnected_rows = c()
+  for (rr in 1:nrow(links_list)) {
+      if (links_list[rr,2] == "NULL") {
+          unconnected_nodes = c(unconnected_nodes, links_list[rr,1])
+          unconnected_rows = c(unconnected_rows, rr)
+      }
+  }
+  links_list = links_list[-unconnected_rows,,drop=FALSE]
 
-  model_structure=getModelStructure(links_list, struct_name)
+  model_structure=getModelStructure(links_list, unconnected_nodes, struct_name)
   
   return(model_structure)
 }
