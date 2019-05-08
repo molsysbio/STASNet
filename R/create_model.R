@@ -933,7 +933,9 @@ extractStructure <- function(to_detect, name="", adj=FALSE) {
           unconnected_rows = c(unconnected_rows, rr)
       }
   }
-  links_list = links_list[-unconnected_rows,,drop=FALSE]
+  if (length(unconnected_rows) > 0) {
+      links_list = links_list[-unconnected_rows,,drop=FALSE]
+  }
 
   model_structure=getModelStructure(links_list, unconnected_nodes, struct_name)
   
@@ -1198,7 +1200,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
     if (length(perturbations)==0){
       stop("All perturbations have been removed can not continue modelling")
     }
-    if (!any(perturbations[-rm_rows,]==1)){
+    if (length(rm_rows) > 0 && !any(perturbations[-rm_rows,]==1)){
       stop("Remaining perturbations only occur in combination with removed perturbations, please reconsider perturbation scheme")
     }
   }
