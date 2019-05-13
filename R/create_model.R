@@ -153,17 +153,7 @@ createModel <- function(model_links, basal_file, data.stimulation, data.variatio
   }
 
   if (perform_plots) { # Best residuals to check the convergence of the fitting procedure
-    if ( all(is.na(residuals)) ) {
-        warning("All residuals are NAs! (no residual plot possible)")
-    } else {
-        plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
-        lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
-        if (length(order_resid) >= 100) {
-            hundred_best = residuals[order_resid[1:100]]
-            plot(1:100, hundred_best, main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2, ylim=c(hundred_best[1], hundred_best[100]+1))
-            lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
-        }
-    }
+      residuals_plot(residuals)
   }
   
   range_var <- function(vv) { rr=range(vv); return( (rr[2]-rr[1])/max(abs(rr)) ) }
@@ -290,12 +280,7 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
     message(paste0(trim_num(sort(residuals)[1:20],behind_comma = 4), collapse=" "))
   }
   if (perform_plots) {
-    if ( all(is.na(residuals)) ) {
-        warning("All residuals are NAs! (no residual plot possible)")
-    } else {
-      plot(1:length(order_resid), sort(c(old_topres,residuals[order_resid[-c(1:length(order_id))]]),decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
-      lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
-    }
+      residuals_plot(residuals)
   }
   
   bestid = order(residuals)[1]
@@ -847,7 +832,7 @@ classic_initialisation <- function(model, data, nb_samples) {
 
 #' Extraction of object from file or object
 #' @param to_detect An object to check or a string. A string is interpreted as a path to a file containing a matrix compatible with the target object. 
-#' @name extraction
+#' @rdname extraction
 NULL
 
 #' Extract a ModelStructure
@@ -1308,7 +1293,8 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
   # Derive the error either from the CV in linear space or the sd of the log in log space
   if (data_space == "log") {
     error = aggregate(data_values, by=perturbations, linear_sd_log, na.rm=TRUE)[,-(1:ncol(perturbations)),drop=FALSE]
-    error = matrix(exp(colMeans(log(error), na.rm=TRUE)), nrow=nrow(error), ncol=ncol(error), byrow=TRUE, dimnames=list(rownames(error), colnames(error)))
+    replicates_count = aggregate(cbind(matrix(1, nrow=nrow(perturbations), dimnames=list(NULL,"count")), perturbations)[1], by=perturbations, sum, na.rm=TRUE)
+    error = exp( matrix(colMeans(log(error), na.rm=TRUE), nrow=nrow(error), ncol=ncol(error), byrow=TRUE, dimnames=list(rownames(error), colnames(error))) / sqrt(matrix(rep(replicates_count$count, ncol(error)), ncol=ncol(error))) )
     error[error < exp(MIN_CV)] = exp(MIN_CV)
     error[is.na(error)] = mean(as.matrix(error), na.rm=TRUE)
     if ( all(is.na(error))) {
@@ -1481,7 +1467,7 @@ extractModelCore <- function(model_structure, basal_activity, data_filename, var
 #' @examples \dontrun{
 #' rebuildModel("model.mra", "data.csv", "data.var")
 #' }
-rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
+rebuildModel <- function(model_file, data_file="", var_file="", rearrange="no") {
   if(length(model_file)>1){
     model = importModel(file=model_file) # import R object of an read in mra file 
   }else{
@@ -1490,11 +1476,18 @@ rebuildModel <- function(model_file, data_file, var_file="", rearrange="no") {
     }
     model = importModel(model_file)
   }
-  #links = matrix(rep(model$structure$names, 2), ncol=2)
-  core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange, data_space=ifelse(model$use_log, "log", "linear"))
-  
-  model$model$setModel(core$design, core$structure, model$use_log)
-  model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$bestfit, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, model$use_log)
+  if (is.string(data_file) && data_file == "") {
+      if (!all(dim(model$data$stim_data) > 1)) {
+          stop("argument 'data_file' is missing, and no data was available in the .mra file")
+      } else {
+      model$model$setModel(model$design, model$structure, model$use_log)
+      model = MRAmodel(model$model, model$design, model$structure, model$basal, model$data, model$cv, model$parameters, model$bestfit, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, model$use_log)
+      }
+  } else {
+      core = extractModelCore(model$structure, model$basal, data_file, var_file, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, rearrange=rearrange, data_space=ifelse(model$use_log, "log", "linear"))
+      model$model$setModel(core$design, core$structure, model$use_log)
+      model = MRAmodel(model$model, core$design, core$structure, model$basal, core$data, core$cv, model$parameters, model$bestfit, model$name, model$infos, model$param_range, model$lower_values, model$upper_values, model$unused_perturbations, model$unused_readouts, model$min_cv, model$default_cv, model$use_log)
+    }
   
   return(model)
 }

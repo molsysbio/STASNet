@@ -105,6 +105,31 @@ test_that("Imported model scale is the same as the exported one", {
 test_that("Imported model unstim_data is the same as the exported one", {
     expect_equal(imported_model$data$unstim_data, model$data$unstim_data)
 })
+test_that("Import with data in the .mra file works correctly", {
+    expect_output(importModel("model.mra"), NA)
+    .GlobalEnv$data_import_model = importModel("model.mra")
+})
+test_that("Model imported with data from the .mra file parameters is the same as the exported one", {
+    expect_equal(data_import_model$parameters, model$parameters)
+})
+test_that("Model imported with data from the .mra file cv is the same as the exported one", {
+    expect_equal(data_import_model$cv, model$cv)
+})
+test_that("Model imported with data from the .mra file param_range is the same as the exported one", {
+    expect_equal(data_import_model$param_range, model$param_range)
+})
+test_that("Model imported with data from the .mra file stim_data is the same as the exported one", {
+    expect_equal(data_import_model$data$stim_data, model$data$stim_data)
+})
+test_that("Model imported with data from the .mra file error is the same as the exported one", {
+    expect_equal(data_import_model$data$error, model$data$error)
+})
+test_that("Model imported with data from the .mra file scale is the same as the exported one", {
+    expect_equal(data_import_model$data$scale, model$data$scale)
+})
+test_that("Model imported with data from the .mra file unstim_data is the same as the exported one", {
+    expect_equal(data_import_model$data$unstim_data, model$data$unstim_data)
+})
 test_that("Export works correctly with unused readouts and perturbations", {
     expect_output(exportModel(sub_model, "sub_model.mra"), NA)
 })
