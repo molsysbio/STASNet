@@ -64,6 +64,7 @@ test_that("The data are loaded correctly", {
     expect_equal_to_reference(model$data$error, "data_error.rds")
 })
 
+
 context("Score computation functions")
 
 test_that("computeFitScore works as expected", {
@@ -73,6 +74,34 @@ test_that("computeFitScore works as expected", {
 test_that("The fit score computation for MRAmodel is consistent", {
     expect_equal( computeFitScore(model)$bestfit, model$bestfit )
 })
+
+
+context("Profile likelihood")
+
+test_that("profileLikelihood works", {
+     expect_message(profileLikelihood(model, 100, 0), "evaluate")
+     .GlobalEnv$pl_data = suppressMessages( profileLikelihood(model, 1000, 0) )
+})
+test_that("Profile likelihood residuals are consistent", { # This should be consistent but it is not...
+    expect_equal_to_reference(sapply(pl_data, function(xx) {xx$residuals}), "pl_data_residuals.rds", tolerance=1e-5)
+})
+test_that("Profile likelihood value are consistent", {
+    expect_equal_to_reference(sapply(pl_data, function(xx) {xx$value}), "pl_data_value.rds", tolerance=1e-5)
+})
+test_that("Profile likelihood thresholds are consistent", {
+    expect_equal_to_reference(sapply(pl_data, function(xx) {xx$thresholds}), "pl_data_thresholds.rds", tolerance=1e-5)
+})
+test_that("Profile likelihood explored are consistent", {
+    expect_equal_to_reference(sapply(pl_data, function(xx) {xx$explored}), "pl_data_explored.rds", tolerance=1e-5)
+})
+test_that("addPLinfos works", {
+    expect_silent({model=addPLinfos(model, pl_data)})
+    .GlobalEnv$model = addPLinfos(model, pl_data)
+})
+test_that("The profile likelihood infos are correctly added to the model", {
+    expect_equal_to_reference(model$param_range, "param_range.rds")
+})
+
 
 context("Model import-export")
 
