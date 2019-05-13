@@ -96,10 +96,10 @@ test_that("Profile likelihood explored are consistent", {
 })
 test_that("addPLinfos works", {
     expect_silent({model=addPLinfos(model, pl_data)})
-    .GlobalEnv$model = addPLinfos(model, pl_data)
 })
+model = addPLinfos(model, pl_data)
 test_that("The profile likelihood infos are correctly added to the model", {
-    expect_equal_to_reference(model$param_range, "param_range.rds")
+    expect_equal_to_reference(model$param_range, "param_range.rds", tolerance=1e-5)
 })
 
 
@@ -108,11 +108,10 @@ context("Model import-export")
 test_that("Export works correctly", {
     expect_output(exportModel(model, "model.mra"), NA)
 })
-    .GlobalEnv$imported_model = importModel("model.mra")
 test_that("Import works correctly", {
     expect_output(importModel("model.mra"), NA)
-    .GlobalEnv$imported_model = importModel("model.mra")
 })
+imported_model = importModel("model.mra")
 test_that("Imported model parameters is the same as the exported one", {
     expect_equal(imported_model$parameters, model$parameters)
 })
@@ -120,7 +119,7 @@ test_that("Imported model cv is the same as the exported one", {
     expect_equal(imported_model$cv, model$cv)
 })
 test_that("Imported model param_range is the same as the exported one", {
-    expect_equal(imported_model$param_range, model$param_range)
+    expect_equal(unlist(imported_model$param_range), unlist(model$param_range))
 })
 test_that("Imported model stim_data is the same as the exported one", {
     expect_equal(imported_model$data$stim_data, model$data$stim_data)
@@ -136,8 +135,8 @@ test_that("Imported model unstim_data is the same as the exported one", {
 })
 test_that("Import with data in the .mra file works correctly", {
     expect_output(importModel("model.mra"), NA)
-    .GlobalEnv$data_import_model = importModel("model.mra")
 })
+data_import_model = importModel("model.mra")
 test_that("Model imported with data from the .mra file parameters is the same as the exported one", {
     expect_equal(data_import_model$parameters, model$parameters)
 })
@@ -145,7 +144,7 @@ test_that("Model imported with data from the .mra file cv is the same as the exp
     expect_equal(data_import_model$cv, model$cv)
 })
 test_that("Model imported with data from the .mra file param_range is the same as the exported one", {
-    expect_equal(data_import_model$param_range, model$param_range)
+    expect_equal(unlist(data_import_model$param_range), unlist(model$param_range))
 })
 test_that("Model imported with data from the .mra file stim_data is the same as the exported one", {
     expect_equal(data_import_model$data$stim_data, model$data$stim_data)
@@ -507,7 +506,7 @@ test_that("Product of direct and inverted paths is correct", {
 })
 # Note: This model does not have profile likelihood information
 test_that("getDirectPaths works", {
-    expect_equal_to_reference(getDirectPaths(model), "model_direct_path.rds", tolerance=1e-5)
+    expect_equal_to_reference(getDirectPaths(model), "model_direct_path.rds", tolerance=1e-4)
     .GlobalEnv$direct_path = getDirectPaths(model)
 })
 test_that("getDirectPaths works with node removed", {
