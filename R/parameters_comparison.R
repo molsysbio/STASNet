@@ -81,11 +81,16 @@ pl_ci_product <- function(mra_model, p1id, p2id) {
 #' Compute direct paths for a model
 #' 
 #' Compute the direct paths for a model and their confidence intervals by combining the paths containing links with negative exponents with paths containing the same link with a positive exponent.
-#' @param mra_model An MRAmodel object
+#' @param mra_model An MRAmodel or MRAmodelSet object
 #' @param non_stop_nodes A list of nodes that should not begin or end a path, usefull to compare models with different basal activities. If the node is only present as a first or last node of a path, the corresponding paths will be deleted.
-#' @return A list of lists indexed by the path name. Each sublist has fields path, value, hv and lv which represent respectively the path equation, the value of the path, the upper bound of the path and the lower bound of the path.
 #' @export
-getDirectPaths <- function(mra_model, non_stop_nodes=c()) {
+#' @rdname direct_paths
+getDirectPaths <- function(mra_model, non_stop_nodes=c()) { UseMethod("getDirectPaths", mra_model) }
+
+#' @export
+#' @rdname direct_paths
+#' @return (MRAmodel) A list of lists indexed by the path name. Each sublist has fields path, value, hv and lv which represent respectively the path equation, the value of the path, the upper bound of the path and the lower bound of the path.
+getDirectPaths.MRAmodel <- function(mra_model, non_stop_nodes=c()) {
     pnames = names(getParametersNames(mra_model))
     rev_links = list()
     paths = list()
@@ -163,11 +168,36 @@ getDirectPaths <- function(mra_model, non_stop_nodes=c()) {
     return(final_paths)
 }
 
+#' @export
+#' @rdname direct_paths
+getDirectPaths.MRAmodelSet <- function(mra_model, non_stop_nodes=c()) {
+    mg = extractSubmodels(mra_model)
+    return(getDirectPaths(mg, non_stop_nodes))
+}
+#' @export
+#' @rdname direct_paths
+#' @return (modelGroup and MRAmodelSet) A list of matrices with the direct path values and the limits of the 95% confidence interval
+getDirectPaths.modelGroup <- function(mra_model, non_stop_nodes=c()) {
+    direct_paths = list()
+    direct_paths$value = sapply(mra_model$model, function(mm){
+               sapply(getDirectPaths(mm, non_stop_nodes), function(xx){xx$value})
+              })
+    direct_paths$hv = sapply(mra_model$model, function(mm){
+               sapply(getDirectPaths(mm, non_stop_nodes), function(xx){xx$hv})
+              })
+    direct_paths$lv = sapply(mra_model$model, function(mm){
+               sapply(getDirectPaths(mm, non_stop_nodes), function(xx){xx$lv})
+              })
+    direct_paths = lapply(direct_paths, function(dp){ colnames(dp)=mra_model$names; dp})
+    return(direct_paths)
+}
+
 #' Print the direct paths with confidence interval
 #' @rdname getDirectPaths
 #' @param digits Number of digits to display for the confidence interval values
 #' @return Hidden. The direct paths
 #' @export
+#' @seealso getDirectPaths
 printDirectPaths <- function(mra_model, digits=2) {
     final_paths = getDirectPaths(mra_model)
     sapply(final_paths, function(X){ print(paste0( simplify_path_name(paste0(X$path, collapse="*")), " = ", signif(X$value, digits), " (", signif(X$lv, digits), " - ", signif(X$hv, digits), ")" )) })

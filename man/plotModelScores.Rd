@@ -2,17 +2,29 @@
 % Please edit documentation in R/compare_models.R
 \name{plotModelScores}
 \alias{plotModelScores}
+\alias{plotModelScores.modelGroup}
 \title{Plot the fitting scores of the model}
 \usage{
 plotModelScores(x, ...)
+
+\method{plotModelScores}{modelGroup}(model_group, ...)
 }
 \arguments{
 \item{x}{A Model object}
 
 \item{...}{Passed to base::barplot}
+
+\item{model_group}{A modelGroup object}
+
+\item{...}{Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements}
+}
+\value{
+See \code{\link{base::barplot}}
 }
 \description{
 Generic function to plot scores for measured nodes fitting
+
+Plot the scores for each measured node fitting as a barplot with a bar for each model for each measurement
 }
 \seealso{
 plotScores.modelGroup, plotScores.MRAmodel
@@ -20,6 +32,6 @@ plotScores.modelGroup, plotScores.MRAmodel
 Other Model plots: \code{\link{plotModelAccuracy}},
   \code{\link{plotModelGraph}},
   \code{\link{plotModelScores.MRAmodel}},
-  \code{\link{plotParameters.modelGroup}}
+  \code{\link{plotParameters}}, \code{\link{plotResiduals}}
 }
 \concept{Model plots}

@@ -15,6 +15,14 @@ Invisibly, the residuals (chi-2)
 \description{
 Display the residuals of the models as a barplot
 }
+\seealso{
+Other Model plots: \code{\link{plotModelAccuracy}},
+  \code{\link{plotModelGraph}},
+  \code{\link{plotModelScores.MRAmodel}},
+  \code{\link{plotModelScores}},
+  \code{\link{plotParameters}}
+}
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}
 }
+\concept{Model plots}

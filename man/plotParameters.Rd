@@ -2,10 +2,13 @@
 % Please edit documentation in R/compare_models.R, R/parameters_comparison.R
 \name{plotParameters}
 \alias{plotParameters}
+\alias{plotParameters.modelGroup}
 \title{Plot parameters}
 \usage{
 plotParameters(aggregated_paths, lim = 2, repar = TRUE,
   resetpar = TRUE, vertical = TRUE)
+
+plotParameters.modelGroup(model_group)
 
 plotParameters(aggregated_paths, lim = 2, repar = TRUE,
   resetpar = TRUE, vertical = TRUE)
@@ -21,6 +24,8 @@ plotParameters(aggregated_paths, lim = 2, repar = TRUE,
 
 \item{vertical}{Whether the parametres should be organised vertically (TRUE) or horizontally (FALSE)}
 
+\item{model_group}{A modelGroup object}
+
 \item{x}{A Model object}
 
 \item{...}{Plot parameters}
@@ -28,10 +33,19 @@ plotParameters(aggregated_paths, lim = 2, repar = TRUE,
 \description{
 Generic function to plot parameters
 
+Plot the parameters fitted for each model as an heatmap
+
 Plot parameters from aggregated direct paths. The margins are increased to c(10, 4, 4, 2) but can be increased more by specifying larger margins in 'par' before calling the function.
 }
 \seealso{
 plotParameters.modelGroup
 
 \code{\link{aggregateDirectPaths}}
+
+Other Model plots: \code{\link{plotModelAccuracy}},
+  \code{\link{plotModelGraph}},
+  \code{\link{plotModelScores.MRAmodel}},
+  \code{\link{plotModelScores}},
+  \code{\link{plotResiduals}}
 }
+\concept{Model plots}

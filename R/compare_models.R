@@ -57,6 +57,7 @@ modelGroup <- function(models=list()) {
 #' @param model_group Object of class modelGroup
 #' @return Invisibly, the residuals (chi-2)
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
+#' @family Model plots
 #' @export
 plotResiduals <- function(model_group, main = "Model residuals") {
   barx=barplot(model_group$residuals, ylab="likelihood", main=main, col="black")
@@ -72,6 +73,7 @@ plotResiduals <- function(model_group, main = "Model residuals") {
 #' @export
 #' @seealso plotScores.modelGroup, plotScores.MRAmodel
 #' @family Model plots
+#' @rdname plotModelScores
 plotModelScores <- function(x, ...) { UseMethod("plotModelScores", x) }
 #' Plot the measurement scores for a group of models
 #'
@@ -79,6 +81,7 @@ plotModelScores <- function(x, ...) { UseMethod("plotModelScores", x) }
 #' @param model_group A modelGroup object
 #' @param ... Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements
 #' @return See \code{\link{base::barplot}}
+#' @rdname plotModelScores
 #' @export
 plotModelScores.modelGroup <- function(model_group, ...) {
     table = c()
@@ -94,6 +97,8 @@ plotModelScores.modelGroup <- function(model_group, ...) {
 #' @param x A Model object
 #' @param ... Plot parameters
 #' @export
+#' @family Model plots
+#' @rdname plotParameters
 #' @seealso plotParameters.modelGroup
 plotParameters <- function(x, ...) { UseMethod("plotParameters", x) }
 #' Plot the parameters of the models
@@ -101,7 +106,7 @@ plotParameters <- function(x, ...) { UseMethod("plotParameters", x) }
 #' Plot the parameters fitted for each model as an heatmap
 #' @param model_group A modelGroup object
 #' @export
-#' @family Model plots
+#' @rdname plotParameters
 plotParameters.modelGroup <- function(model_group) {
     all_links = model_group$links
     param_matrix = c()

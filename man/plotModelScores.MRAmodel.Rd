@@ -19,7 +19,7 @@ of the variation in the data is explained by the model
 Other Model plots: \code{\link{plotModelAccuracy}},
   \code{\link{plotModelGraph}},
   \code{\link{plotModelScores}},
-  \code{\link{plotParameters.modelGroup}}
+  \code{\link{plotParameters}}, \code{\link{plotResiduals}}
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

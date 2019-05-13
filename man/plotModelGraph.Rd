@@ -19,7 +19,7 @@ Plot the network used in the model with the experimental design on top of it
 Other Model plots: \code{\link{plotModelAccuracy}},
   \code{\link{plotModelScores.MRAmodel}},
   \code{\link{plotModelScores}},
-  \code{\link{plotParameters.modelGroup}}
+  \code{\link{plotParameters}}, \code{\link{plotResiduals}}
 
 Other Network graph: \code{\link{plotNetworkGraph}}
 }
