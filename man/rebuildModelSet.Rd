@@ -4,8 +4,7 @@
 \alias{rebuildModelSet}
 \title{Import a saved set of models with data files to construct a modelSet object}
 \usage{
-rebuildModelSet(model_files, data_files, var_files = c(),
-  rearrange = "no")
+rebuildModelSet(model_files, data_files, var_files = c())
 }
 \arguments{
 \item{model_files}{A list of .mra files containing the information on the models, or a named list of read in mra Files with readLines}

@@ -82,18 +82,18 @@ linear_sd_log <- function(xx, na.rm=TRUE) {
 #'
 #' Plot all residuals vs rank and best residuals vs rank to assess the quality of the optimisation
 #' @param A list of residuals
-residuals_plot <- function(residuals) {
+residuals_plot <- function(residuals, model_name="default") {
     order_resid = order(residuals,na.last = T)
-    order_id = order_resid[1:min(100, length(residuals))]
+    order_id = order_resid[1:min(20, length(residuals))]
     if ( all(is.na(residuals)) ) {
         warning("All residuals are NAs! (no residual plot possible)")
     } else {
-        plot(1:length(order_resid), sort(residuals[order_resid[-c(1:length(order_id))]],decreasing = F), main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
-        lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+        plot(1:length(order_resid), residuals[order_resid], main=paste0("Best residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2)
+        lines(1:length(order_id), residuals[order_id], col="red")
         if (length(order_resid) >= 100) {
             hundred_best = residuals[order_resid[1:100]]
             plot(1:100, hundred_best, main=paste0("Best 100 residuals ", model_name), ylab="Likelihood", xlab="rank", log="y",type="l",lwd=2, ylim=c(hundred_best[1], hundred_best[100]+1))
-            lines(1:length(order_id),sort(residuals[order_id],decreasing = F),col="red")
+            lines(1:length(order_id), residuals[order_id], col="red")
         }
     }
 }

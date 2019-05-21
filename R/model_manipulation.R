@@ -51,6 +51,7 @@ printParameters <- function(model_description, precision=2) {
 #' @param selected_treatments A vector with the names of the subset of treatments that should be plotted
 #' @param selected_readouts A vector with the names of the subset of readouts that should be plotted
 #' @param name The name of the model, used as subtitle in the plot
+#' @param regroup A value in c('inhib', 'stim') which indicates if the data should be regrouped by inhibition or stimulation in the heatmap
 #' @return Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
 #' @export
 #' @seealso createModel, importModel
@@ -61,7 +62,7 @@ plotModelAccuracy <- function(x, ...) { UseMethod("plotModelAccuracy", x) }
 #' Plot model accuracy for MRAmodel
 #' @export
 #' @rdname accuracy_plot
-plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c(), name="") {
+plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "diff", "data", "simulation", "prediction"), selected_treatments = c(), selected_readouts = c(), name="", regroup="no") {
   # Calculate the mismatch
   model = model_description$model
   data = model_description$data
@@ -101,6 +102,18 @@ plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values
   colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = nodes[design$measured_nodes + 1]
   rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = treatments
 
+  if (regroup %in% c("stim", "inhib")) {
+      if (regroup == "stim") {
+          reorder = order(apply(cbind(design$stimuli, design$inhibitor), 1, paste0, collapse="_"), decreasing=TRUE)
+      } else {
+          reorder = order(apply(cbind(design$inhibitor, design$stimuli), 1, paste0, collapse="_"), decreasing=TRUE)
+      }
+      mismatch = mismatch[reorder,]
+      stim_data = stim_data[reorder,]
+      simulation = simulation[reorder,]
+      prediction = prediction[reorder,]
+  }
+
   # Subset the matrices to only have the select readouts and treatments
   if (length(selected_readouts) > 0) {
       valid_selection = c()
@@ -109,10 +122,10 @@ plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values
               valid_selection = c(valid_selection, sr)
           }
       }
-      mismatch = mismatch[,valid_selection]
-      stim_data = stim_data[,valid_selection]
-      simulation = simulation[,valid_selection]
-      prediction = prediction[,valid_selection]
+      mismatch = mismatch[,valid_selection,drop=FALSE]
+      stim_data = stim_data[,valid_selection,drop=FALSE]
+      simulation = simulation[,valid_selection,drop=FALSE]
+      prediction = prediction[,valid_selection,drop=FALSE]
   }
   if (length(selected_treatments) > 0) {
       valid_selection = c()
@@ -121,10 +134,10 @@ plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values
               valid_selection = c(valid_selection, st)
           }
       }
-      mismatch = mismatch[valid_selection,]
-      stim_data = stim_data[valid_selection,]
-      simulation = simulation[valid_selection,]
-      prediction = prediction[valid_selection,]
+      mismatch = mismatch[valid_selection,,drop=FALSE]
+      stim_data = stim_data[valid_selection,,drop=FALSE]
+      simulation = simulation[valid_selection,,drop=FALSE]
+      prediction = prediction[valid_selection,,drop=FALSE]
   }
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change

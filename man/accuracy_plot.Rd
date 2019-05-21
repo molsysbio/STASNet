@@ -11,7 +11,7 @@ plotModelAccuracy(x, ...)
 \method{plotModelAccuracy}{MRAmodel}(model_description, limit = Inf,
   show_values = TRUE, graphs = c("accuracy", "diff", "data",
   "simulation", "prediction"), selected_treatments = c(),
-  selected_readouts = c(), name = "")
+  selected_readouts = c(), name = "", regroup = "no")
 
 \method{plotModelAccuracy}{MRAmodelSet}(model_description, limit = Inf,
   show_values = TRUE, graphs = c("accuracy", "data", "simulation"),
@@ -31,6 +31,8 @@ plotModelAccuracy(x, ...)
 \item{selected_readouts}{A vector with the names of the subset of readouts that should be plotted}
 
 \item{name}{The name of the model, used as subtitle in the plot}
+
+\item{regroup}{A value in c('inhib', 'stim') which indicates if the data should be regrouped by inhibition or stimulation in the heatmap}
 }
 \value{
 Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
