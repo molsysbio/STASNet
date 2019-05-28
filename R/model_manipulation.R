@@ -605,7 +605,7 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
 #'
 #' Refit the model with a specified parameter set while keeping parameters constant
 #' @param mra_model A MRAmodel object
-#' @param parameter_set A vector of values used as parameters for the model. There must be a many values as there are parameters, or one that will be used for all parameters.
+#' @param parameter_set A vector of values used as parameters for the model. There must be as many values as there are parameters, or one that will be used for all parameters.
 #' @param vary_param A vector of index or name of the parameters to refit, the others will be kept constant. Repetitions or redundant information (index and name designating the same parameter) are removed.
 #' @param inits Number of random initialisations for the variable parameters
 #' @param nb_cores Number of processes to use for the refitting. 0 to use all cores of the machines but one.
@@ -625,7 +625,7 @@ refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, 
         stop("Incompatible 'parameter_set', wrong number of parameters in 'refitModel'")
     }
     if (length(vary_param) == 0) {
-        return(computeFitScore(mra_model, TRUE))
+        stop("No parameters to vary ('vary_param==c()') in 'refitModel', use 'computeFitScore' if you just want to recompute the model scores")
     }
     if (nb_cores == 0) {
         nb_cores = detectCores()-1
@@ -652,10 +652,11 @@ refitModel <- function(mra_model, parameter_set=c(), vary_param=c(), inits=100, 
     }
     results = parallel_initialisation(mra_model$model, mra_model$data, init_pset, nb_cores, keep_constant)
     order_id = order(results$residuals)
-    plot(1:length(order_id), results$residuals[order_id], ylab="Likelihood", xlab="rank", main=paste0("Residuals ", fit_name), log="y")
+    residuals_plot(results$residuals, fit_name)
 
     new_model = cloneModel(mra_model) 
     new_model$parameters = results$params[order_id[1],]
+    new_model$bestfit = results$residuals[order_id[1]]
     new_model$infos = c(new_model$infos, paste0("Refitted with variable parameters c(", pastecoma(vary_param), ")") )
     if (fit_name != "") { new_model$name = fit_name }
     return( computeFitScore(new_model, FALSE) )

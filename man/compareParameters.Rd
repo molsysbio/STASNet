@@ -2,9 +2,15 @@
 % Please edit documentation in R/model_set.R
 \name{compareParameters}
 \alias{compareParameters}
+\alias{compareParameters.MRAmodelSet}
+\alias{compareParameters.modelGroup}
 \title{Compare networks}
 \usage{
-compareParameters(modelset)
+compareParameters(multi_model, ...)
+
+\method{compareParameters}{MRAmodelSet}(modelset)
+
+\method{compareParameters}{modelGroup}(modelgroup)
 }
 \arguments{
 \item{modelset}{A MRAmodelSet object}
@@ -18,4 +24,6 @@ highlights the variable links by scaling to it
 }
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}
+
+Mathurin Dorel \email{dorel@horus.ens.fr}
 }

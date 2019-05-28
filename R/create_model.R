@@ -63,7 +63,7 @@ not_duplicated <- function(x){
 #' Creates and fits a parameterised model from experimental data, network structure and basal activity information.
 #'
 #' @param model_links Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected
-#' @param basal_file Path to the file indicating the nodes without basal activity. Extension .dat expected.
+#' @param basal_file Path to the file indicating the nodes with basal activity. Extension .dat expected.
 #' @param data.stimulation Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.
 ## CHECK THE IMPLEMENTATION FOR THE NO BASAL
 #' @param data.variation Path to the file containing the coefficient of variation for each measurement in MRA_MIDAS format. If it is not provided, the function uses the replicates of the data.stimulation file to determine a variance per probe (i.e antibody/DNA fragment/...). Extension .var expected.

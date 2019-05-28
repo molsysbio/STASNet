@@ -31,9 +31,13 @@ createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=100
 #' @param modelset A MRAmodelSet object
 #' @return matrix of parameters
 #' @export
+#' @rdname compareParameters
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
-compareParameters <- function(modelset) {
-  
+compareParameters <- function(multi_model, ...) { UseMethod("compareParameters", multi_model) }
+
+#' @export
+#' @rdname compareParameters
+compareParameters.MRAmodelSet <- function(modelset) {
   links=matrix(modelset$parameters,ncol=modelset$nb_models,byrow = F)
   colnames(links) <- modelset$names
   rownames(links) <- unname(sapply(modelset$model$getParametersLinks(), function(x) STASNet:::simplify_path_name(x)))
@@ -43,11 +47,30 @@ compareParameters <- function(modelset) {
   }
   
   STASNet:::plotHeatmap(mat = links,
-              main = "modelset parameters rowwise scaled to mean",
+              main = "modelSet parameters rowwise scaled to mean",
               stripOut = 0.01,
               lim = 10,
               scale_rows = T)
-  return(links)
+    invisible(links)
+}
+
+#' @export
+#' @rdname compareParameters
+#' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
+# Very naive implementation TODO compare parameter names and make them match
+compareParameters.modelGroup <- function(modelgroup) {
+    links = sapply(modelgroup$models, function(mm){ mm$parameters }) # Assumes same length
+    if (typeof(links) == "list") { stop("Different number of parameters is not supported yet") }
+
+    colnames(links) = modelgroup$names
+    rownames(links) = getParametersNames(modelgroup[[1]])
+
+    STASNet:::plotHeatmap(mat = links,
+              main = "modelGroup parameters rowwise scaled to mean",
+              stripOut = 0.01,
+              lim = 10,
+              scale_rows = T)
+    invisible(links)
 }
 
 #' Constructor for MRAmodelSet objects

@@ -14,7 +14,7 @@ createModel(model_links, basal_file, data.stimulation,
 \arguments{
 \item{model_links}{Path to the file containing the network structure, either in matrix form or in list of links form. Extension .tab expected}
 
-\item{basal_file}{Path to the file indicating the nodes without basal activity. Extension .dat expected.}
+\item{basal_file}{Path to the file indicating the nodes with basal activity. Extension .dat expected.}
 
 \item{data.stimulation}{Path to the file containing the data in MRA_MIDAS format. Extension .csv expected.}
 
