@@ -6,7 +6,7 @@
 \usage{
 addVariableParameters(original_modelset, nb_cores = 0,
   max_iterations = 0, nb_samples = 100, accuracy = 0.95,
-  method = "geneticlhs", notVariable = c())
+  method = "geneticlhs", notVariable = c(), max_variables = Inf)
 }
 \arguments{
 \item{original_modelset}{An MRAmodelSet object}
@@ -22,6 +22,8 @@ addVariableParameters(original_modelset, nb_cores = 0,
 \item{method}{Name of the LHS method to use}
 
 \item{notVariable}{Coefficients that should not be varied, either a numeric or character vector identifying the coefficients from 'modelset$model$getParametersNames()$names', defaults to 'c()'.}
+
+\item{max_variables}{Maximum number of parameters to vary}
 }
 \value{
 An updated MRAmodelSet with the new set of coefficients

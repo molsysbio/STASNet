@@ -301,11 +301,12 @@ createModelSet <- function(model_links, basal_file, csv_files, var_files=c(), nb
 #' @param accuracy Cutoff probability for the chi^2 test
 #' @param method Name of the LHS method to use
 #' @param notVariable Coefficients that should not be varied, either a numeric or character vector identifying the coefficients from 'modelset$model$getParametersNames()$names', defaults to 'c()'.
+#' @param max_variables Maximum number of parameters to vary
 #' @return An updated MRAmodelSet with the new set of coefficients
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @author Bertram Klinger \email{bertram.klinger@charite.de}
-addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs",notVariable=c()) {
+addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=0, nb_samples=100, accuracy=0.95, method="geneticlhs",notVariable=c(), max_variables=Inf) {
   # clone MRAmodelSet object to have seperate objects at hand
   modelset = cloneModel(original_modelset)
   
@@ -340,9 +341,9 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
   
   if (nr_free_params==0){
     warning("No parameters left to be set variable!")
-  } else{ 
+  } else { 
     if (max_iterations <= 0 | max_iterations > nr_free_params){
-      max_iterations = nr_free_params
+      max_iterations = min(nr_free_params, max)
     }
     
   # Extension Phase: find the parameter which fitted separately to each model improves the performance most and if significant keep variable    
