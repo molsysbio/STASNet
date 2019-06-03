@@ -791,7 +791,7 @@ parallel_initialisation <- function(model, data, samples, NB_CORES, keep_constan
     
     for (i in 1:nb_blocks) {
       seq = (block_size*(i-1)+1) : ifelse(block_size*(i+1) <= nb_samples, block_size*i, nb_samples)
-      results = get_parallel_results(model, data, parallel_sampling[seq], NB_CORES, optimizer=optimizer)
+      results = get_parallel_results(model, data, parallel_sampling[seq], NB_CORES, keep_constant, optimizer=optimizer)
       
       # Only keep the best fits
       best = order(results$residuals)[1:best_keep]

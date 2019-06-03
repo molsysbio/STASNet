@@ -63,7 +63,7 @@ compareParameters.modelGroup <- function(modelgroup) {
     if (typeof(links) == "list") { stop("Different number of parameters is not supported yet") }
 
     colnames(links) = modelgroup$names
-    rownames(links) = getParametersNames(modelgroup[[1]])
+    rownames(links) = getParametersNames(modelgroup$model[[1]])
 
     STASNet:::plotHeatmap(mat = links,
               main = "modelGroup parameters rowwise scaled to mean",
