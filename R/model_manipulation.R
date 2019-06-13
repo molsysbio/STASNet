@@ -141,46 +141,72 @@ plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values
   }
 
 # Comparison of the data and the stimulation in term of error fold change and log fold change
-  if (any(grepl("qq", graphs))) {
-      qqnorm(mismatch)
-      mis_range = max(abs(range(mismatch, na.rm=TRUE)))
-      lines(c(-mis_range, mis_range), c(-mis_range, mis_range), col="red")
-  }
-  if (any(grepl("acc", graphs)))
-      plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE, sub=name)
-  if (any(grepl("diff", graphs)))
-      plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values, sub=name)
+    lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
+                               quantile(simulation,0.05, na.rm=TRUE),
+                               quantile(stim_data,0.95, na.rm=TRUE),
+                               quantile(simulation,0.95, na.rm=TRUE)) )))
+    if (!is.infinite(limit)) { lim = limit }
+    for (entry in graphs) {
+        if (grepl("qq", entry)) {
+            qqnorm(mismatch)
+            mis_range = max(abs(range(mismatch, na.rm=TRUE)))
+            lines(c(-mis_range, mis_range), c(-mis_range, mis_range), col="red")
+        } else if (grepl("acc", entry)) {
+          plotHeatmap(mismatch,"(data - simulation) / error", show_values=show_values, lim=2, fixedRange=TRUE, sub=name)
+        } else if (grepl("diff", entry)) {
+            plotHeatmap(stim_data-simulation,"log2(data/simulation)", show_values=show_values, sub=name)
 # Log fold changes for the data and the stimulation with comparable color code
-  lim=min(10, max(abs( range(quantile(stim_data,0.05, na.rm=TRUE),
-                       quantile(simulation,0.05, na.rm=TRUE),
-                       quantile(stim_data,0.95, na.rm=TRUE),
-                       quantile(simulation,0.95, na.rm=TRUE)) )))
-  if (!is.infinite(limit)) { lim = limit }
-  if (any(grepl("data", graphs)))
-      plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values, sub=name)
-  if (any(grepl("sim", graphs)))
-      plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values, sub=name)
-  if (any(grepl("pred", graphs)))
-      plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values, sub=name)
+        } else if (grepl("data", entry)) {
+            plotHeatmap(stim_data, "Log-fold change Experimental data",lim,TRUE, show_values=show_values, sub=name)
+        } else if (grepl("sim", entry)) {
+            plotHeatmap(simulation, "Log-fold change Simulated data",lim,TRUE, show_values=show_values, sub=name)
+        } else if (grepl("pred", entry)) {
+            plotHeatmap(prediction, "Log-fold change Prediction",lim,TRUE, show_values=show_values, sub=name)
+        } else {
+            warning(paste("'", entry, "' is not a valid graph type"))
+        }
+    }
 
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
 #' Plot accuracy of all submodels of a modelset
 #' @export
+#' @param side_by_side For MRAmodelSet whether data and simulation should be plotted together for each submodel (TRUE) as opposed to all data together and all simulation together (FALSE)
 #' @rdname accuracy_plot
-plotModelAccuracy.MRAmodelSet <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "data", "simulation"), selected_treatments = c(), selected_readouts = c(), name="") {
+plotModelAccuracy.MRAmodelSet <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "data", "simulation"), selected_treatments = c(), selected_readouts = c(), name="", side_by_side=TRUE) {
     submodels = extractSubmodels(model_description)
-    if (any(grepl("acc", graphs))) {
-        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="accuracy") }
+    # Exception if data and simulation are requested, put them side by side for each submodel
+    if (side_by_side && any(grepl("data", graphs)) && any(grepl("sim", graphs))) {
+        for (subm in submodels$models) {
+            plotModelAccuracy(subm, graphs="data")
+            plotModelAccuracy(subm, graphs="simulation")
+        }
+        graphs = graphs[-grepl("data|sim", graphs)]
     }
-    if (any(grepl("diff", graphs))) {
-        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="diff") }
+    # Exception if qq-plot and accuracy are requested, put them side by side for each submodel
+    if (side_by_side && any(grepl("qq", graphs)) && any(grepl("acc", graphs))) {
+        for (subm in submodels$models) {
+            plotModelAccuracy(subm, graphs="qq")
+            plotModelAccuracy(subm, graphs="accuracy")
+        }
+        graphs = graphs[-grepl("qq|acc", graphs)]
     }
-    if (any(grepl("data", graphs))) {
-        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="data") }
-    }
-    if (any(grepl("sim", graphs))) {
-        for (subm in submodels$models) { plotModelAccuracy(subm, graphs="simulation") }
+    for (entry in graphs) {
+        if (grepl("qq", entry)) {
+            for (subm in submodels$models) { plotModelAccuracy(subm, graphs="qq") }
+        } else if (grepl("acc", entry)) {
+            for (subm in submodels$models) { plotModelAccuracy(subm, graphs="accuracy") }
+        } else if (grepl("diff", entry)) {
+            for (subm in submodels$models) { plotModelAccuracy(subm, graphs="diff") }
+        } else if (grepl("data", entry)) {
+            for (subm in submodels$models) { plotModelAccuracy(subm, graphs="data") }
+        } else if (grepl("sim", entry)) {
+            for (subm in submodels$models) { plotModelAccuracy(subm, graphs="simulation") }
+        } else if (grepl("pred", entry)) {
+            for (subm in submodels$models) { plotModelAccuracy(subm, graphs="pred") }
+        } else {
+            warning(paste("'", entry, "' is not a valid graph type"))
+        }
     }
 }
 

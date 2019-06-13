@@ -15,7 +15,8 @@ plotModelAccuracy(x, ...)
 
 \method{plotModelAccuracy}{MRAmodelSet}(model_description, limit = Inf,
   show_values = TRUE, graphs = c("accuracy", "data", "simulation"),
-  selected_treatments = c(), selected_readouts = c(), name = "")
+  selected_treatments = c(), selected_readouts = c(), name = "",
+  side_by_side = TRUE)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
@@ -33,6 +34,8 @@ plotModelAccuracy(x, ...)
 \item{name}{The name of the model, used as subtitle in the plot}
 
 \item{regroup}{A value in c('inhib', 'stim') which indicates if the data should be regrouped by inhibition or stimulation in the heatmap}
+
+\item{side_by_side}{For MRAmodelSet whether data and simulation should be plotted together for each submodel (TRUE) as opposed to all data together and all simulation together (FALSE)}
 }
 \value{
 Invisibly, a list with elements 'mismatch', 'stim_data' and 'simulation' corresponding to the values plotted.
