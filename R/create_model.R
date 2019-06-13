@@ -343,7 +343,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
     warning("No parameters left to be set variable!")
   } else { 
     if (max_iterations <= 0 | max_iterations > nr_free_params){
-      max_iterations = min(nr_free_params, max)
+      max_iterations = min(nr_free_params, max_variables)
     }
     
   # Extension Phase: find the parameter which fitted separately to each model improves the performance most and if significant keep variable    
@@ -358,7 +358,7 @@ addVariableParameters <- function(original_modelset, nb_cores=0, max_iterations=
       psets=mcmapply(refitWithVariableParameter, extra_parameters, MoreArgs=list(modelset,nb_sub_params,nb_cores,nb_samples), mc.cores=nb_cores)
       bestres = min(unlist(psets["residuals",]))
       deltares = modelset$bestfit - bestres
-      if (deltares > qchisq(accuracy, modelset$nb_models) ) {
+      if (deltares > qchisq(accuracy, modelset$nb_models-1) ) {
         res_id = which.min(unlist(psets["residuals",]))
         par_id = psets["added_var",ceiling(res_id/nb_samples)][[1]]
         new_parameters=unlist(psets["params",ceiling(res_id/nb_samples)][[1]][ifelse(res_id %% nb_samples==0,nb_samples,res_id %% nb_samples),])
