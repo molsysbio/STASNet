@@ -6,7 +6,7 @@
 #' Print the value of each path from the model, with the profile likelihood infos if they are provided.
 #' @param model_description An MRAmodel object
 #' @param precision Number of significant digits to print
-#' @return Nothing
+#' @return Invisibly the parameter values indexed by simplified path names
 #' @details The print function is 'message' and thus produces an output in stderr
 #' @export
 #' @seealso \code{\link{message}}
@@ -17,9 +17,13 @@ printParameters <- function(model_description, precision=2) {
   
   message("Parameters :")
   paths = model$getParametersLinks()
+  name_value = c()
+  simple_names = c()
   if (length(model_description$lower_values) > 0) {
     for (i in 1:length(paths)) {
       text = paste(simplify_path_name(paths[i]), "=", signif(parameters[i],precision))
+      name_value = c(name_value, parameters[i])
+      simple_names = c(simple_names, simplify_path_name(paths[i]))
       if (is.na(model_description$lower_values[i])) {
         if (is.na(model_description$upper_values[i])) {
           text = paste(text, "(non identifiable)")
@@ -34,13 +38,17 @@ printParameters <- function(model_description, precision=2) {
           text = paste(text, "-", signif(model_description$upper_values[i], precision), ")")
         }
       }
-      message(text)
+      print(text)
     }
   } else {
     for (i in 1:length(paths)) {
-      message (paste( simplify_path_name(paths[i]), ":", signif(parameters[i], precision) ))
+      print( paste( simplify_path_name(paths[i]), ":", signif(parameters[i], precision) ))
+      name_value = c(name_value, parameters[i])
+      simple_names = c(simple_names, simplify_path_name(paths[i]))
     }
   }
+  names(name_value) = simple_names
+  invisible(name_value)
 }
 
 #' Plot heatmaps of the model simulation against the data weighted by the error, as well as the log fold change for the data and the prediction

@@ -73,7 +73,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
                 aspect = "fill",
                 xlab = "",
                 ylab = "",
-                main = main,
+                main = paste0(main, "\n", sub),
                 scales = list(alternating = 2,tck = c(0,1),x = list(rot = 90, cex=2), y=list(cex=1.1)),
                 panel=panel_function, sub=sub)
   print(p) # Plot the heatmap

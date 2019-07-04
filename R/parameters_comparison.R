@@ -130,12 +130,12 @@ getDirectPaths.MRAmodel <- function(mra_model, non_stop_nodes=c()) {
     # Merge links where we want the same nodes
     non_stop_nodes = unique(non_stop_nodes)
     if (length(non_stop_nodes) > 0) {
-        merged_paths = list()
-        to_merge = grepl( paste0("->", non_stop_nodes, "$|^", non_stop_nodes, "->", collapse="|"), sapply( final_paths, function(X){STASNet:::simplify_path_name(X$path)} ) )
-        for (pid in which(!to_merge)) {
-            merged_paths[[length(merged_paths)+1]] = final_paths[[pid]]
-        }
         for (node in non_stop_nodes) {
+            merged_paths = list()
+            to_merge = grepl( paste0("->", node, "$|^", node, "->", collapse="|"), sapply( final_paths, function(X){STASNet:::simplify_path_name(X$path)} ) )
+            for (pid in which(!to_merge)) {
+                merged_paths[[length(merged_paths)+1]] = final_paths[[pid]]
+            }
             start_paths = c() # Paths that stop with the node
             stop_paths = c() # Paths that start with the node
             for (pid in which(to_merge)) {
@@ -147,21 +147,27 @@ getDirectPaths.MRAmodel <- function(mra_model, non_stop_nodes=c()) {
                     start_paths = c(start_paths, pid)
                 }
             }
-            for (p1 in stop_paths) {
-                for (p2 in start_paths) {
-                    composition = c(final_paths[[p1]]$composition, final_paths[[p2]]$composition)
-                    # We do pl based confidence interval if possible
-                    if (length(composition) == 2) {
-                        cip = pl_ci_product(mra_model, composition[1], composition[2])
-                    } else {
-                        cip = product_ci(final_paths[[p1]], final_paths[[p2]])
+            if (length(stop_paths) == 0 || length(start_paths)==0) {
+                for (pid in c(stop_paths, start_paths)) {
+                    merged_paths[[length(merged_paths)+1]] = final_paths[[pid]]
+              }
+            } else {
+                for (p1 in stop_paths) {
+                    for (p2 in start_paths) {
+                        composition = c(final_paths[[p1]]$composition, final_paths[[p2]]$composition)
+                        # We do pl based confidence interval if possible
+                        if (length(composition) == 2) {
+                            cip = pl_ci_product(mra_model, composition[1], composition[2])
+                        } else {
+                            cip = product_ci(final_paths[[p1]], final_paths[[p2]])
+                        }
+                        mul = mul_path(final_paths[[p1]]$path, final_paths[[p2]]$path)
+                        merged_paths[[length(merged_paths)+1]] = list( path=mul, composition=composition, value=cip[1], lv=cip[2], hv=cip[3] )
                     }
-                    mul = mul_path(final_paths[[p1]]$path, final_paths[[p2]]$path)
-                    merged_paths[[length(merged_paths)+1]] = list( path=mul, composition=composition, value=cip[1], lv=cip[2], hv=cip[3] )
                 }
             }
+            final_paths = merged_paths
         }
-        final_paths = merged_paths
         names(final_paths) = sapply(final_paths, function(X){ simplify_path_name(paste0(X$path, collapse="*")) })
     }
 
@@ -373,5 +379,4 @@ plotModelParameters <- function(models, non_stop_nodes=c(), lim=2) {
     plotParameters(dpaths, lim)
     invisible(dpaths)
 }
-
 

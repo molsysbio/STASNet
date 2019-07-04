@@ -26,10 +26,9 @@ createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=100
 
 #' Compare networks
 #'
-#' Compile the parameters of a model set in one matrix and plot the results.
-#' highlights the variable links by scaling to it
+#' Compile the parameters of a model set in one matrix and plot the results with highlighting of the variable links by rowwise scaling.
 #' @param modelset A MRAmodelSet object
-#' @return matrix of parameters
+#' @return Invisibly a matrix of parameters with models as column names
 #' @export
 #' @rdname compareParameters
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
