@@ -28,6 +28,7 @@ createDataSet <- function(model_links, data_list, basal_file, cores=1, inits=100
 #'
 #' Compile the parameters of a model set in one matrix and plot the results with highlighting of the variable links by rowwise scaling.
 #' @param modelset A MRAmodelSet object
+#' @param do_plot Whether the matrix of parameters should be plotted
 #' @return Invisibly a matrix of parameters with models as column names
 #' @export
 #' @rdname compareParameters
@@ -36,20 +37,21 @@ compareParameters <- function(multi_model, ...) { UseMethod("compareParameters",
 
 #' @export
 #' @rdname compareParameters
-compareParameters.MRAmodelSet <- function(modelset) {
-  links=matrix(modelset$parameters,ncol=modelset$nb_models,byrow = F)
-  colnames(links) <- modelset$names
-  rownames(links) <- unname(sapply(modelset$model$getParametersLinks(), function(x) STASNet:::simplify_path_name(x)))
+compareParameters.MRAmodelSet <- function(modelset, do_plot=TRUE) {
+    links=matrix(modelset$parameters,ncol=modelset$nb_models,byrow = F)
+    colnames(links) <- modelset$names
+    rownames(links) <- unname(sapply(modelset$model$getParametersLinks(), function(x) STASNet:::simplify_path_name(x)))
 
-  if (length(modelset$variable_parameters)==0){
-     warning("No variable links detected, please run 'addVariableParameters()' before calling this function!")
-  }
-  
-  STASNet:::plotHeatmap(mat = links,
-              main = "modelSet parameters rowwise scaled to mean",
-              stripOut = 0.01,
-              lim = 10,
-              scale_rows = T)
+    if (length(modelset$variable_parameters)==0){
+        warning("No variable links detected, please run 'addVariableParameters()' before calling this function!")
+    }
+    if (do_plot) {
+        STASNet:::plotHeatmap(mat = links,
+            main = "modelSet parameters rowwise scaled to mean",
+            stripOut = 0.01,
+            lim = 10,
+            scale_rows = T)
+    }
     invisible(links)
 }
 
@@ -57,18 +59,20 @@ compareParameters.MRAmodelSet <- function(modelset) {
 #' @rdname compareParameters
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 # Very naive implementation TODO compare parameter names and make them match
-compareParameters.modelGroup <- function(modelgroup) {
+compareParameters.modelGroup <- function(modelgroup, do_plot=TRUE) {
     links = sapply(modelgroup$models, function(mm){ mm$parameters }) # Assumes same length
     if (typeof(links) == "list") { stop("Different number of parameters is not supported yet") }
 
     colnames(links) = modelgroup$names
     rownames(links) = getParametersNames(modelgroup$model[[1]])
 
-    STASNet:::plotHeatmap(mat = links,
+    if (do_plot) {
+        STASNet:::plotHeatmap(mat = links,
               main = "modelGroup parameters rowwise scaled to mean",
               stripOut = 0.01,
               lim = 10,
               scale_rows = T)
+    }
     invisible(links)
 }
 
