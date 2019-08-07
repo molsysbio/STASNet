@@ -361,7 +361,7 @@ selectMinimalModel <- function(original_model, accuracy=0.95,verbose=F) {
       rank = new_rank
       initial_response=params[[order.res[1]]]
       #message(initial_response)
-      message(paste0("Remove link ", order.res[1], ": "
+      message(paste0("Remove link ", order.res[1], ": ",
                    model_structure$names[((links.to.test[order.res[1]]-1) %/% (dim(adj)[1])) +1], "->", # Line
                    model_structure$names[((links.to.test[order.res[1]]-1) %% (dim(adj)[1])) +1])); # Column (+1 because of the modulo and the R matrices starting by 1 instead of 0)
       
