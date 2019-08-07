@@ -12,7 +12,7 @@ printParameters(model_description, precision = 2)
 \item{precision}{Number of significant digits to print}
 }
 \value{
-Nothing
+Invisibly the parameter values indexed by simplified path names
 }
 \description{
 Print the value of each path from the model, with the profile likelihood infos if they are provided.

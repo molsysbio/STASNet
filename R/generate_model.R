@@ -3,6 +3,17 @@ getModelStructure <- function(links, names=c(), struct_name="") {
   return(modelStructure);
 }
 
+#' Generate an ExperimentalDesign object
+#'
+#' Generate an ExperimentalDesign object from the relevant input data after performing some sanity checks
+#' @param model.structure A ModelStructure object
+#' @param stim.nodes A character vector for the stimulated nodes
+#' @param inhib.nodes A character vector for the inhibited nodes
+#' @param measured.nodes A character vector listing the measured nodes
+#' @param stimuli A matrix indicating which stimulation (column) is used for each treatment (row)
+#' @param inhibitor A matrix indicating which inhibition (column) is used for each treatment (row)
+#' @param basal.activity A character vector for the nodes with basal activity
+#' @return An ExperimentalDesign object
 getExperimentalDesign <- function(model.structure, stim.nodes, inhib.nodes, measured.nodes, stimuli, inhibitor, basal.activity = c()) {
     # Consistency checks
   if ( sum(is.na(match(as.character(stim.nodes),model.structure$names))) > 0 ) {

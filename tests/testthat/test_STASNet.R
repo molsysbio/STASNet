@@ -212,6 +212,11 @@ test_that("Toy data can be generated" ,{
     colnames(.GlobalEnv$simulated_data) = gsub("^[A-Z]+:", "", colnames(.GlobalEnv$simulated_data))
 })
 
+test_that("Toy data one input work correctly", {
+    expect_silent( generateToyDesign(generateToyNetwork(1)) )
+    expect_silent( generateToyDesign(generateToyNetwork(2), ninh=1) )
+})
+
 test_that("createSimulation works properly", {
     expect_equal( res$noise_free_simulation, matrix(c(0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 10, 10, 10, 27.18281828, 27.18281828, 27.18281828, 10, 1.353352832, 10, 73.89056098, 2.82453563, 73.89056098, 10, 0.1831563888, 1.353352832, 545.9815003, 0.7978001573, 5.89499011816367), ncol=6, dimnames=list(NULL, c("TR:N1", "TR:N2i", "TR:N3i", "DV:N2", "DV:N3", "DV:N4"))), tolerance=1e-5)
     # Inhibitions only

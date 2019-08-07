@@ -2,7 +2,7 @@
 % Please edit documentation in R/toy_data_generation.R
 \name{generateToyNetwork}
 \alias{generateToyNetwork}
-\title{Generate a fake network tab file}
+\title{Generate a network topology for testing and benchmarking}
 \usage{
 generateToyNetwork(ninputs, p_link = 0.2, layers = c(3, 3),
   nfeedbacks = 0, p_layer_link = 0, fname = "")
@@ -10,9 +10,9 @@ generateToyNetwork(ninputs, p_link = 0.2, layers = c(3, 3),
 \arguments{
 \item{ninputs}{An integer, the number of inputs in the model}
 
-\item{p_link}{Number or vector of number between 0 and 1. Probability of linking of each node in a layer with each node in the upper layer.}
+\item{p_link}{Number or vector of number between 0 and 1 (length=length(layers)). Probability of linking of each node in a layer with each node in the upper layer.}
 
-\item{layers}{A vector of integers, the size of the vector is the number of layers besides the receptor layer, and the integers are the number of nodes in each layer}
+\item{layers}{A vector of integers, The length of the vector is the number of layers besides the receptor layer, and the integers are the number of nodes in each layer}
 
 \item{nfeedbacks}{An integer, the number of feedback (link from a bottom layer to an upper layer)}
 
@@ -24,7 +24,7 @@ generateToyNetwork(ninputs, p_link = 0.2, layers = c(3, 3),
 A 2-columns matrix representing the network as an adjacency list
 }
 \description{
-Generate a fake network tab file
+Generate a network topology for testing and benchmarking
 }
 \seealso{
 Other toy data generation: \code{\link{addLayerLinks}},

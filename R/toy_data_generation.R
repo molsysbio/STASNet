@@ -1,11 +1,11 @@
 ############################ fake_data_generation.R ################################
 # Generate fake data for fake models for testing
 
-#' Generate a fake network tab file
+#' Generate a network topology for testing and benchmarking
 #'
 #' @param ninputs An integer, the number of inputs in the model
-#' @param p_link Number or vector of number between 0 and 1. Probability of linking of each node in a layer with each node in the upper layer.
-#' @param layers A vector of integers, the size of the vector is the number of layers besides the receptor layer, and the integers are the number of nodes in each layer
+#' @param p_link Number or vector of number between 0 and 1 (length=length(layers)). Probability of linking of each node in a layer with each node in the upper layer.
+#' @param layers A vector of integers, The length of the vector is the number of layers besides the receptor layer, and the integers are the number of nodes in each layer
 #' @param nfeedbacks An integer, the number of feedback (link from a bottom layer to an upper layer)
 #' @param p_layer_link Number or vector of number. Probability of two nodes in a layer being directly linked
 #' @param fname A filename where the adjacency list should be saved, "" for no saving.
@@ -86,10 +86,10 @@ addLayerLinks <- function(links, lup, ldown, p_link=0.2, connect_bottom = TRUE) 
 
 #' Generate an experimental design for a toy network
 #'
-#' Generate an experimental design for a toy network, with all stimulus applied, some nodes inhibited and some nodes measured
+#' Generate an experimental design for a toy network, with all stimulus applied, some nodes inhibited and some nodes measured chosen randomly.
 #' @param network A 2-columns matrix. The toy network as an adjacency list
-#' @param nmes Number of measured nodes
-#' @param ninh Number of inhibited nodes
+#' @param nmes Number of measured nodes (chosen randomly)
+#' @param ninh Number of inhibited nodes (chosen randomly)
 #' @param stim_combo Number of simultaneous stimulations
 #' @param inhib_combo Number of simultaneous inhibitions
 #' @return An experimental design object
@@ -114,8 +114,8 @@ generateToyDesign <- function(network, nmes=4, ninh=2, stim_combo=1, inhib_combo
 
     perturbations = getCombinationMatrix( c(stimulated, paste0(inhibited, "i")), inhib_combo, stim_combo )
     inh_nodes = grepl("i$", colnames(perturbations))
-    inhibitions = perturbations[,inh_nodes]
-    stimulations = perturbations[,!inh_nodes]
+    inhibitions = perturbations[,inh_nodes,drop=FALSE]
+    stimulations = perturbations[,!inh_nodes,drop=FALSE]
 
     design = getExperimentalDesign(structure, stimulated, inhibited, measured, stimulations, inhibitions, nodes)
     return(design)

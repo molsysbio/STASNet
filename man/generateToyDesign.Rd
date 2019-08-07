@@ -10,9 +10,9 @@ generateToyDesign(network, nmes = 4, ninh = 2, stim_combo = 1,
 \arguments{
 \item{network}{A 2-columns matrix. The toy network as an adjacency list}
 
-\item{nmes}{Number of measured nodes}
+\item{nmes}{Number of measured nodes (chosen randomly)}
 
-\item{ninh}{Number of inhibited nodes}
+\item{ninh}{Number of inhibited nodes (chosen randomly)}
 
 \item{stim_combo}{Number of simultaneous stimulations}
 
@@ -22,7 +22,7 @@ generateToyDesign(network, nmes = 4, ninh = 2, stim_combo = 1,
 An experimental design object
 }
 \description{
-Generate an experimental design for a toy network, with all stimulus applied, some nodes inhibited and some nodes measured
+Generate an experimental design for a toy network, with all stimulus applied, some nodes inhibited and some nodes measured chosen randomly.
 }
 \seealso{
 \code{\link{getCombinationMatrix}}, \code{\link{generateToyNetwork}}

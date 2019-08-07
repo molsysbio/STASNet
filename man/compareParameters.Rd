@@ -8,19 +8,20 @@
 \usage{
 compareParameters(multi_model, ...)
 
-\method{compareParameters}{MRAmodelSet}(modelset)
+\method{compareParameters}{MRAmodelSet}(modelset, do_plot = TRUE)
 
-\method{compareParameters}{modelGroup}(modelgroup)
+\method{compareParameters}{modelGroup}(modelgroup, do_plot = TRUE)
 }
 \arguments{
 \item{modelset}{A MRAmodelSet object}
+
+\item{do_plot}{Whether the matrix of parameters should be plotted}
 }
 \value{
-matrix of parameters
+Invisibly a matrix of parameters with models as column names
 }
 \description{
-Compile the parameters of a model set in one matrix and plot the results.
-highlights the variable links by scaling to it
+Compile the parameters of a model set in one matrix and plot the results with highlighting of the variable links by rowwise scaling.
 }
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}
