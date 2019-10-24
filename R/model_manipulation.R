@@ -178,8 +178,8 @@ plotModelAccuracy.MRAmodel <- function(model_description, limit=Inf, show_values
   invisible(list(mismatch=mismatch, stim_data=stim_data, simulation=simulation))
 }
 #' Plot accuracy of all submodels of a modelset
-#' @export
 #' @param side_by_side For MRAmodelSet whether data and simulation should be plotted together for each submodel (TRUE) as opposed to all data together and all simulation together (FALSE)
+#' @export
 #' @rdname accuracy_plot
 plotModelAccuracy.MRAmodelSet <- function(model_description, limit=Inf, show_values=TRUE, graphs=c("accuracy", "data", "simulation"), selected_treatments = c(), selected_readouts = c(), name="", side_by_side=TRUE) {
     submodels = extractSubmodels(model_description)
@@ -221,11 +221,17 @@ plotModelAccuracy.MRAmodelSet <- function(model_description, limit=Inf, show_val
 #' Compute the error of the model
 #'
 #' @param mra_model An MRAmodel object
-#' @return A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
-getModelError <- function(mra_model) {
-    simulation = simulateModel(mra_model)
+#' @return (getModelMismatch) A list with the simulation, the mismatch between the simulation and the data, and the residual of the fit
+#' @export
+#' @rdname get_model_helpers
+getModelMismatch <- function(mra_model) {
+    simulation = simulateModel(mra_model)$bestfit
     mismatch = (mra_model$data$stim_data - simulation) / (mra_model$data$error*sqrt(2))
     residual = sum(mismatch^2, na.rm=T)
+
+    colnames(mismatch) = colnames(stim_data) = colnames(simulation) = colnames(prediction) = getModelReadouts(mra_model)
+    rownames(mismatch) = rownames(stim_data) = rownames(simulation) = rownames(prediction) = getModelPerturbations(mra_model)
+
     return(list(simulation=simulation, mismatch=mismatch, residual=residual))
 }
 
@@ -630,7 +636,7 @@ testModel <- function(mra_model, new_parameters, refit_model=FALSE) {
     tmp_model = mra_model
     tmp_model$parameters = new_parameters
     tmp_model = computeFitScore(tmp_model, refit_model)
-    tmp_model$bestfit = getModelError(tmp_model)$residual
+    tmp_model$bestfit = getModelMismatch(tmp_model)$residual
 
     return(tmp_model)
 }
@@ -706,3 +712,69 @@ fitFromModel <- function(mra_model, parameters_model, vary_param=c(), inits=100,
 
     return( refitModel(mra_model, new_pset, vary_param, inits, nb_cores, method, fit_name) )
 }
+
+#' Get the perturbations used in a model
+#'
+#' Get all names of the perturbations used in a model
+#' @export
+#' @param model_description An MRAmodel object
+#' @rdname get_model_helpers
+getModelPerturbations <- function(model_description) {
+    nodes = model_description$structure$names
+    design = model_description$design
+    treatments = c()
+    for (row in 1:nrow(model_description$data$stim_data)) {
+        stim_names = nodes[design$stim_nodes[which(design$stimuli[row,]==1)]+1]
+        inhib_names = nodes[design$inhib_nodes[which(design$inhibitor[row,]==1)]+1]
+        if (length(inhib_names) > 0) {
+          inhib_names = paste(inhib_names, "i", sep="")
+        }
+        treatments = c(treatments, paste(c(stim_names, inhib_names), collapse="+", sep="") )
+    }
+    return(treatments)
+}
+
+#' Get the readouts of a model
+#'
+#' Get the names of the readouts used in a model
+#' @export
+#' @rdname get_model_helpers
+getModelReadouts <- function(model_description) {
+    nodes = model_description$structure$names
+    return( nodes[model_description$design$measured_nodes + 1] )
+}
+
+#' Get the input data of a model
+#'
+#' Get the input data of a model as a matrix without the control condition
+#' @export
+#' @rdname get_model_helpers
+getModelStimData <- function(model_description) {
+    data = model_description$data$stim_data
+    return( matrix( data, nrow=nrow(data), dimnames=list(getModelPerturbations(model_description), getModelReadouts(model_description)) ) )
+}
+
+#' Get the input data of a model
+#'
+#' Get the  data of a model as a matrix without the control condition
+#' @export
+#' @rdname get_model_helpers
+getModelSimulationData <- function(model_description) {
+    return( getModelSingleData(model_description, "simulation") )
+}
+
+#' Get the input data of a model
+#'
+#' Get the input data of a model as a matrix without the control condition
+#' @export
+#' @rdname get_model_helpers
+getModelSingleData <- function(model_description, data_type=c("simulation", "stim_data", "unstim_data", "error")) {
+    if (length(data_type) > 1) { data_type = data_type[1] }
+    if (data_type %in% c("error", "stim_data", "unstim_data")) {
+        data = model_description$data[[data_type]]
+    } else if (data_type == "simulation") {
+        data = model_description$model$simulateWithOffset(model_description$data, model_description$parameters)$prediction
+    }
+    return( matrix( data, nrow=nrow(data), dimnames=list(getModelPerturbations(model_description), getModelReadouts(model_description)) ) )
+}
+
