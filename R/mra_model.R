@@ -172,3 +172,24 @@ generate_infos <- function(input_file, inits, best_resid, method, model_links, n
 
     return(infos)
 }
+
+#' Get the list of links
+#'
+#' Get the structure of the model network as an adjacency matrix
+#' @param mra_model An MRAmodel object.
+#' @value A data.frame with 2 columns, IN and OUT, corresponding to a directed adjacency list.
+#' @export
+getLinksList <- function(mra_model) {
+    struct = mra_model$structure
+    names = struct$names
+    adj = struct$adjacencyMatrix
+    adj_list = c()
+    for (rr in 1:nrow(adj)) {
+        for (cc in 1:ncol(adj)) {
+            if (adj[rr,cc] == 1) {
+                adj_list = rbind(adj_list, c(names[cc], names[rr]))
+            }
+        }
+    }
+    return( data.frame(IN=adj_list[,1], OUT=adj_list[,2]) )
+}
