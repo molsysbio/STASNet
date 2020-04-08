@@ -4,11 +4,21 @@
 \alias{plotNetworkGraph}
 \title{Plot a graph from an adjacency list}
 \usage{
-plotNetworkGraph(structure, expdes = "", local_values = "",
-  print_values = TRUE, scaling = 5, max_width = 3, min_width = 1)
+plotNetworkGraph(
+  structure,
+  expdes = "",
+  local_values = "",
+  print_values = FALSE,
+  scaling = 5,
+  max_width = 3,
+  min_width = 1,
+  main = "",
+  sub = "",
+  spline = ""
+)
 }
 \arguments{
-\item{structure}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by getModelStructure.}
+\item{structure}{A 2-columns matrix or a ModelStructure object. The network as an adjacency list, the first column is the upstream nodes, the second column the downstream nodes. Or a ModelStructure object as returned by extractStructure.}
 
 \item{expdes}{An ExperimentalDesign object. The measured, stimulated and inhibited nodes are highlighted if present. Signalling strengths are indicated in leftshifted edges and inhibitor strengths are denoted in red below the inhibited node.}
 
@@ -16,11 +26,15 @@ plotNetworkGraph(structure, expdes = "", local_values = "",
 
 \item{print_values}{If local_values has values, whether those values should be printed on top of the arrows in the graph.}
 
-\item{scaling}{Maximum parameter value}
+\item{scaling}{Maximum parameter value to take into account to scale the edge width.}
 
 \item{max_width}{Maximum line width to use.}
 
 \item{min_width}{Minimum line width to use.}
+
+\item{main}{Title to be written above the graph}
+
+\item{sub}{Title to be written below the graph}
 }
 \description{
 Plot a graph from an adjacency list

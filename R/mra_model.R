@@ -137,8 +137,11 @@ getMeasuredNodesNames <- function(mra_model) {
 #' @family Model plots
 #' @family Network graph
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-plotModelGraph <- function(mra_model, print_values=TRUE, scaling=5, max_width=3, min_width=1) {
-    plotNetworkGraph(mra_model$structure, mra_model$design, mra_model$model$getLocalResponseFromParameter(mra_model$parameters), print_values, scaling=5, max_width=3, min_width=1)
+plotModelGraph <- function(mra_model, print_values=TRUE, scaling=5, max_width=3, min_width=1, main="", sub="", spline="") {
+    if (main == "") {
+        main = mra_model$name
+    }
+    plotNetworkGraph(mra_model$structure, mra_model$design, list(mra_model$model$getLocalResponseFromParameter(mra_model$parameters)), print_values, scaling=5, max_width=3, min_width=1, main=main, sub=sub, spline=spline)
 }
 
 #' Return the paths corresponding to each parameter

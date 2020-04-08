@@ -4,8 +4,16 @@
 \alias{plotModelGraph}
 \title{Plot the network used in the model}
 \usage{
-plotModelGraph(mra_model, print_values = TRUE, scaling = 5,
-  max_width = 3, min_width = 1)
+plotModelGraph(
+  mra_model,
+  print_values = TRUE,
+  scaling = 5,
+  max_width = 3,
+  min_width = 1,
+  main = "",
+  sub = "",
+  spline = ""
+)
 }
 \arguments{
 \item{mra_model}{A MRAmodel object.}
