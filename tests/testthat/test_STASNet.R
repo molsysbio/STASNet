@@ -102,6 +102,54 @@ test_that("The profile likelihood infos are correctly added to the model", {
     expect_equal_to_reference(model$param_range, "param_range.rds", tolerance=1e-5) # Same problem here, but the non robustness is a problem :/
 })
 
+context("Profile likelihood import-export")
+
+test_that("checkProfiles does not crash", {
+    expect_silent(checkProfiles(pl_data))
+})
+test_that("checkProfiles raises an error on missing residuals (first profile)", {
+    error_pl = pl_data
+    error_pl[[1]]$residuals = NULL
+    expect_error(checkProfiles(error_pl), "field 'residuals' missing")
+})
+test_that("checkProfiles raises an error on missing residuals (third profile)", {
+    error_pl = pl_data
+    error_pl[[3]]$residuals = NULL
+    expect_error(checkProfiles(error_pl), "field 'residuals' missing")
+})
+test_that("checkProfiles raises an error on non matrix residuals", {
+    error_pl = pl_data
+    error_pl[[3]]$residuals = 1
+    expect_error(checkProfiles(error_pl), "matrix")
+})
+test_that("checkProfiles raises an error on incoherent profile", {
+    error_pl = pl_data
+    error_pl[[3]]$explored = error_pl[[3]]$explored[-1]
+    expect_error(checkProfiles(error_pl), "Incoherent")
+})
+test_that("exportProfiles works", {
+    expect_silent(exportProfiles(pl_data, "exported_profiles"))
+})
+test_that("importProfiles does not crash", {
+    expect_silent(importProfiles("exported_profiles"))
+})
+imported_pl = importProfiles("exported_profiles")
+test_that("importProfiles is consistent for param_range", {
+    expect_equal(imported_pl$param_range, pl_data$param_range, tolerance=1e-5)
+})
+test_that("importProfiles is consistent for explored", {
+    expect_equal(imported_pl$explored, pl_data$explored, tolerance=1e-5)
+})
+test_that("importProfiles is consistent for thresholds", {
+    expect_equal(imported_pl$thresholds, pl_data$thresholds, tolerance=1e-5)
+})
+test_that("importProfiles is consistent for value", {
+    expect_equal(imported_pl$value, pl_data$value, tolerance=1e-5)
+})
+test_that("importProfiles is consistent for residuals", {
+    expect_equal(imported_pl$residuals, pl_data$residuals, tolerance=1e-5)
+})
+
 
 context("Model import-export")
 

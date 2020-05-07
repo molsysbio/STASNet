@@ -44,6 +44,7 @@ parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
         profiles[[path]]$old_path = profiles[[path]]$path
         profiles[[path]]$path = simplify_path_name(profiles[[path]]$path)
     }
+    names(profiles) = sapply(profiles, function(pp) { pp$path })
     return(profiles)
 }
 
@@ -266,3 +267,59 @@ classify_profiles <- function (profiles) {
     return(sorted_profiles)
 }
 
+#' Save profile likelihood results in a .rds file
+#'
+#' Save profile likelihood results in a .rds file name "prefix.rds"
+#' @param profiles A profile likelihood object as produced by profileLikelihood
+#' @param prefix The prefix for the .rds file.
+#' @export
+#' @rdname profiles_sharing
+exportProfiles <- function(profiles, prefix="likelihood_profiles") {
+    if (!grepl(".rds$", prefix)) {
+        prefix = paste0(prefix, ".rds")
+    }
+    saveRDS(profiles, prefix)
+}
+
+#' Import profiles
+#'
+#' Import a .rds file and check that it corresponds to the output of a profile likelihood procedure
+#' @param fname name of the rds file containing
+#' @export
+#' @rdname profiles_sharing
+importProfiles <- function(fname) {
+    if (!grepl(".rds$", fname)) {
+        fname = paste0(fname, ".rds")
+    }
+    profiles = readRDS(fname)
+    checkProfiles(profiles)
+    return(profiles)
+}
+
+#' Check that an object is a valid profile likelihood
+#'
+#' Check that an object is a valid profile likelihood
+#' @export
+#' @rdname profiles_sharing
+checkProfiles <- function(profiles) {
+    if (!is.list(profiles)) {
+        stop("Not a profile likelihood object (not a list)")
+    }
+    lapply(seq_along(profiles), function(pid) {
+        pp = profiles[[pid]]
+        for (field in c("residuals", "explored", "lower_pointwise", "upper_pointwise", "lower_simultaneous", "upper_simultaneous", "thresholds", "path", "pathid", "value", "lower_error_index", "upper_error_index", "old_path")) {
+            if (!field %in% names(pp)) {
+                stop(paste0("Not a valid profile likelihood object (field '", field, "' missing in item ", pid, ")"))
+            }
+        }
+        if (!is.matrix(pp$residuals)) {
+            stop(paste0("Invalid profile likelihood object (residuals in item ", pid, " is not a matrix)"))
+        } else if (!is.character(pp$path)) {
+            stop(paste0("Invalid profile likelihood object (path in item ", pid, " is not a character)"))
+        } else if (!is.numeric(pp$explored)) {
+            stop(paste0("Invalid profile likelihood object (explored in item ", pid, " is not a numeric)"))
+        } else if (!length(pp$explored) == ncol(pp$residuals)) {
+            stop(paste0("Invalid profile likelihood object (Incoherent 'explored' and 'residuals' dimensions in item ", pid, ")"))
+        }
+    })
+}
