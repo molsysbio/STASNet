@@ -132,6 +132,7 @@ SEXP ModelWrapper::fitmodel_wrapper(Data data, std::vector<double> parameters, s
 
     double residual;
     double_matrix predictions;
+    assert(model->use_log == data.use_log_); // Ensure fitting space consistency
     try {
         if (optimizer == "levmar") {
             ::fitmodel(parameters, &residual, predictions, model, &data, keep_constant);

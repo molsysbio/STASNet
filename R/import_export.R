@@ -390,6 +390,7 @@ importModel <- function(file_name=NULL,file=NULL) {
 
     # Get the unstimulated data
     data = new(STASNet:::Data)
+    if (use_log) { data$use_log() }
     data$set_unstim_data( matrix(rep(unstim_data, each = nrow(stimuli)), nrow = nrow(stimuli)) )
 
     # Get the data values
@@ -430,7 +431,6 @@ importModel <- function(file_name=NULL,file=NULL) {
         colnames(cv_values) = structure$names[design$measured_nodes+1]
     }
     cv = cv_values
-# TODO import the data, and calculate the base fit
 
     model_description = MRAmodel(model, design, structure, basal, data, cv, parameters, bestfit, name, infos, param_range, lower_values, upper_values, unused_perturbations, unused_readouts, min_cv, default_cv, use_log)
     model_description$bestfitscore = bestfitscore

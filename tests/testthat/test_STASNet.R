@@ -158,6 +158,9 @@ test_that("Model imported with data from the .mra file scale is the same as the 
 test_that("Model imported with data from the .mra file unstim_data is the same as the exported one", {
     expect_equal(data_import_model$data$unstim_data, model$data$unstim_data)
 })
+test_that("Imported model refits consistently", {
+    expect_equal(computeFitScore(data_import_model, refit_model=TRUE)$bestfit, model$bestfit)
+})
 test_that("Export works correctly with unused readouts and perturbations", {
     expect_output(exportModel(sub_model, "sub_model.mra"), NA)
 })
