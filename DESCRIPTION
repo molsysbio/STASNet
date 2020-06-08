@@ -1,4 +1,4 @@
-Package: STASNet
+Package: TNBSTASNet
 Type: Package
 Title: Fit and Simulate Model from Perturbation Data
 Version: 1.0.2
@@ -21,7 +21,7 @@ Depends:
     RhpcBLASctl
 LinkingTo: Rcpp, BH
 RcppModules: ModelStructure, ExperimentalDesign
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Suggests:
     knitr,
     testthat
