@@ -252,7 +252,7 @@ plotNetworkGraph <- function(structure, expdes="", local_values="", print_values
       cc = ifelse(length(cc)!=0, cc, which(cname==eto & rname==efrom))
       neg_values=0 # counts the number of models where the link is negative, the color is orange if more than half are
       for (mid in seq_along(local_values)) {
-        evalue=STASNet:::trim_num(local_values[[mid]]$local_response[ii]) 
+        evalue=as.numeric( STASNet:::trim_num(local_values[[mid]]$local_response[ii]) )
         if (mid%%4 == 0) {
           edge_values=paste(edge_values, '
                   ')
