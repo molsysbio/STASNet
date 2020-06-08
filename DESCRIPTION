@@ -1,4 +1,4 @@
-Package: TNBSTASNet
+Package: STASNet
 Type: Package
 Title: Fit and Simulate Model from Perturbation Data
 Version: 1.0.2
