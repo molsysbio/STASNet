@@ -66,7 +66,7 @@ plotHeatmap <- function(mat,main = "",lim = Inf,fixedRange = FALSE, stripOut=0.0
                       panel.levelplot(...)
                     }
   }
-  p<- levelplot(x = t(as.matrix(m[nrow(m):1,])),
+  p<- levelplot(x = t(as.matrix(m[nrow(m):1,,drop=FALSE])),
                 col.regions = col,
                 at = breaks,
                 colorkey = list(space = "left"),

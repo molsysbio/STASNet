@@ -33,6 +33,9 @@ modelGroup <- function(models=list()) {
         links = unique(c(links, model$model$getParametersLinks()))
         names = c(names, model$name)
     }
+    if (is.list(models) && !is.null(names(models))) {
+        names = names(models)
+    }
     names(scores) = names
     names(residuals) = names
     for (ii in 1:length(links)) {
@@ -55,12 +58,14 @@ modelGroup <- function(models=list()) {
 #'
 #' Display the residuals of the models as a barplot
 #' @param model_group Object of class modelGroup
+#' @param main Title of the plot
+#' @param ... Extra parameters accepted by base::barplot
 #' @return Invisibly, the residuals (chi-2)
 #' @author Bertram Klinger \email{bertram.klinger@@charite.de}
 #' @family Model plots
 #' @export
-plotResiduals <- function(model_group, main = "Model residuals") {
-  barx=barplot(model_group$residuals, ylab="likelihood", main=main, col="black")
+plotResiduals <- function(model_group, main = "Model residuals", col="black", ...) {
+  barx=barplot(model_group$residuals, ylab="residual", main=main, col=col, ...)
   text(barx, 1+0.1*min(model_group$residuals), labels = sapply(model_group$residuals, function(x) ifelse(abs(log10(x))>5, signif(x,1), round(x))), pos = 3, srt = 90, col = "grey80", offset = 1)
   invisible(model_group$residuals)
 }
