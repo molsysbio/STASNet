@@ -156,11 +156,12 @@ exportModel <- function(model_description, file_name="mra_model", export_data=FA
 #' Import an MRAmodel object from a .mra file or from an .mra file that has been read in with readLines.
 #' @param file_name Name of the .mra file
 #' @param file R object from an .mra file that has been read in by readLines
+#' @param rename How to rename the model. If "" the name used in the .mra file is used.
 #' @return An MRAmodel object
 #' @export
 #' @seealso exportModel, rebuildModel
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-importModel <- function(file_name=NULL,file=NULL) {
+importModel <- function(file_name=NULL, file=NULL, rename="") {
 
   if (is.null(file_name)){
     if(is.null(file)){stop("no input was given either 'file_name' or 'file' required")
@@ -184,6 +185,9 @@ importModel <- function(file_name=NULL,file=NULL) {
         lnb = lnb + 1
     } else {
         name = ""
+    }
+    if (rename != "") {
+        name = rename
     }
     while (grepl("^H", file[lnb])) {
         infos = c(infos, gsub("^H[A-Z]?( |\t)", "", file[lnb]))
