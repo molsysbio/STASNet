@@ -167,15 +167,20 @@ addPLinfos <- function(model_description, profiles) {
 #' @param profiles A list of the likelihood profiles of the parameters of the model
 #' @param data_name Name for the output pdf file
 #' @param folder Path to the folder for the output pdf file (must end with /)
+#' @param parameters_id IDs of the parameters for which to plot the likelihood profile
+# @param secondary_parameters IDs of the parameters for which the variation profile should be plotted
 #' @return Nothing
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 #' @seealso \code{\link{profileLikelihood}}
-niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE) {
+niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE, parameters_id=c()) {
+    if (length(parameters_id) == 0) {
+        parameters_id = seq_along(profiles)
+    }
     # Remove residuals bigger than the simultaneous threshold for the plot to prevent an extension of the y axis
-    for (pmain in 1:length(profiles)) {
+    for (pmain in parameters_id) {
         # Scale the other parameters profiles
-        for (pid in (1:length(profiles))[-pmain]) {
+        for (pid in seq_along(profiles)[-pmain]) {
             profiles[[pmain]]$residuals[pid,] = profiles[[pmain]]$residuals[pid,] / max(abs(profiles[[pmain]]$residuals[pid,]))
         }
     }
@@ -184,7 +189,7 @@ niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE
     i_profiles = sorted_profiles[[1]]
     ni_profiles = sorted_profiles[[2]]
 
-# Non identifiables
+    # Non identifiables
     nbni = length(sorted_profiles$niid)
     message(paste(nbni, "non identifiable paths"))
     # Compute the dimension, minimal size if there are not enough non identifiables
@@ -198,7 +203,7 @@ niplotPL <- function(profiles, data_name="default", folder="./", file_plots=TRUE
     }
     eplot(c(0, 1), c(0, 1))
     legend( 0, 1, sapply(profiles, function(X){X$path}), col=colors[1:length(profiles)], lty=styles[1:length(profiles)], ncol=1 , bty = "n")
-    for (plid in 1:length(profiles)) {
+    for (plid in parameters_id) {
         profile = profiles[[plid]]
         th_diff = profile$thresholds[2]-profile$thresholds[1]
         identifiable = plid %in% sorted_profiles$iid
@@ -251,7 +256,7 @@ classify_profiles <- function (profiles) {
     i_index = c()
     ni_index = c()
 
-    for (plid in 1:length(profiles)) {
+    for (plid in seq_along(profiles)) {
         lprofile = profiles[[plid]]
         # Parameters are non identifiable if their profile likelihood does not reach the low threshold on both sides of the minimum 
         if (lprofile$lower_pointwise && lprofile$upper_pointwise) {
