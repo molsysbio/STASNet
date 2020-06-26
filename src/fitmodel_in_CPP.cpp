@@ -375,14 +375,15 @@ void profile_likelihood(const Data &data,
   const double param_value,
   const Model *model,
   pl_analysis &thresholds,
-  const unsigned int total_steps = 10000) {
+  const unsigned int total_steps = 10000
+  ) {
 
     double residual;
     double_matrix prediction;
 
     // Initial fit
     std::vector<double> parameters = bestfit;
-    fitmodel(parameters, &residual, prediction, model, &data);
+    fitmodel(parameters, &residual, prediction, model, &data, keep_constant);
     //    double previous_residual = residual;
 
     // Add the values of the thresholds

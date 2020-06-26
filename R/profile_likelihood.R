@@ -9,7 +9,7 @@
 #' @return Returns a list of the profile for each parameters
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
+profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1, const_params=c()) {
     # Get the information from the model description
     model = model_description$model
     model_structure = model_description$structure
@@ -19,7 +19,7 @@ profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
     init_residual = model_description$bestfit
     message(paste(length(init_params), " paths to evaluate"))
 
-    profiles = parallelPL(model, data, init_params, nb_points, nb_cores)
+    profiles = parallelPL(model, data, init_params, nb_points, nb_cores, const_params)
 
     # Print results
     message(paste("Residual =", init_residual))
@@ -30,12 +30,15 @@ profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1) {
 }
 
 # Parallelise the profile likelihood
-parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1) {
+parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1, const_params=c()) {
     if (NB_CORES == 0) {
         NB_CORES = detectCores()-1
     }
 
-    profiles = mclapply(seq(length(init_params)), function(path, model, data, init_params) { profile = model$profileLikelihood(data, init_params, path, nb_points) ; message(paste0("Parameter ", path, "/", length(init_params), " decided")) ; return(profile) }, model, data, init_params, mc.cores=NB_CORES )
+    profiles = mclapply(seq(length(init_params)), function(path, model, data, init_params, const_params) {
+        profile = model$profileLikelihood(data, init_params, path, nb_points, const_params) ; message(paste0("Parameter ", path, "/", length(init_params), " decided")) ; return(profile)
+    }, model, data, init_params, const_params, mc.cores=NB_CORES )
+
     for (path in 1:length(init_params)) {
         # Residuals bigger than the simultaneous threshold are useless and would extend y axis, hidding the information
         # TODO : Integrate in the plot, not here

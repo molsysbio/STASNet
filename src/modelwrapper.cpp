@@ -198,12 +198,15 @@ SEXP ModelWrapper::annealingFit(Data data, std::vector<double> parameters, std::
 }
 
 // Computes the profile likelihood of one parameter and the functionnal relationships of the others with this parameter
-SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> parameters, size_t target, const unsigned int total_steps = 10000) {
+SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> parameters, size_t target, const unsigned int total_steps, const std::vector<size_t> dont_vary) {
     if ( parameters.size() != model->nr_of_parameters() ) 
         throw std::invalid_argument("length of parameter vector invalid");
 
     double param_value = parameters[target-1];
     std::vector<size_t> keep_constant(1, target-1); // -1 for R users
+    for (int ii=0 ; ii < dont_vary.size() ; ii++) {
+        keep_constant.push_back(dont_vary[ii]);
+    }
     std::vector< std::vector<double> > residual_track;
     std::vector<double> explored;
     pl_analysis thresholds;

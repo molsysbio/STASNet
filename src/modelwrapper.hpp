@@ -50,7 +50,7 @@ public:
   SEXP simulate(Data *data, std::vector<double> parameters);
   SEXP simulateWithOffset(Data *data, std::vector<double> parameters);
   SEXP getLocalResponse( std::vector<double> p );
-  SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps);
+  SEXP profileLikelihood(Data data, std::vector<double> parameters, size_t target, const unsigned int total_steps=1000, const std::vector<size_t> dont_vary=std::vector<size_t>());
 
   std::vector<double> getParameterFromLocalResponse( const double_matrix &response, const std::vector<double> inhib);
 
