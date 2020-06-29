@@ -85,6 +85,10 @@ test_that("profileLikelihood works", {
 test_that("Profile likelihood residuals are consistent", { # This is not consistent because of slight variation in the model fit, variations >1e-5 (>1e-2 even) in residuals are observed, even though all differences in explored are <1e-5
     expect_equal_to_reference(sapply(pl_data, function(xx) {xx$residuals}), "pl_data_residuals.rds", tolerance=1e-1)
 })
+test_that("profileLikelihood works with other fixed parameters", {
+     expect_message(profileLikelihood(model, 100, 0), "evaluate")
+     fixed_pl = suppressMessages( profileLikelihood(model, 1000, 0, const_params=1:2) )
+})
 test_that("Profile likelihood value are consistent", {
     expect_equal_to_reference(sapply(pl_data, function(xx) {xx$value}), "pl_data_value.rds", tolerance=1e-5)
 })

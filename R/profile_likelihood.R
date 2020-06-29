@@ -9,7 +9,7 @@
 #' @return Returns a list of the profile for each parameters
 #' @export
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
-profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1, const_params=c()) {
+profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1, const_params=numeric()) {
     # Get the information from the model description
     model = model_description$model
     model_structure = model_description$structure
@@ -30,7 +30,7 @@ profileLikelihood <- function(model_description, nb_points=10000, nb_cores=1, co
 }
 
 # Parallelise the profile likelihood
-parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1, const_params=c()) {
+parallelPL <- function(model, data, init_params, nb_points, NB_CORES=1, const_params=numeric(0)) {
     if (NB_CORES == 0) {
         NB_CORES = detectCores()-1
     }

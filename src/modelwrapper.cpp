@@ -205,7 +205,7 @@ SEXP ModelWrapper::profileLikelihood(const Data data, const std::vector<double> 
     double param_value = parameters[target-1];
     std::vector<size_t> keep_constant(1, target-1); // -1 for R users
     for (int ii=0 ; ii < dont_vary.size() ; ii++) {
-        keep_constant.push_back(dont_vary[ii]);
+        keep_constant.push_back(dont_vary[ii]-1);
     }
     std::vector< std::vector<double> > residual_track;
     std::vector<double> explored;
