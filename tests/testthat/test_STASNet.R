@@ -316,6 +316,7 @@ context("Model reduction")
 test_that("Model gets reduced correctly", {
     expect_message(reduceModel(model))
     red_model = reduceModel(model)
+    .GlobalEnv$red_model = reduceModel(model)
 })
 
 context("Score computations functions")
@@ -586,3 +587,19 @@ test_that("plotModelParameters works", {
     expect_silent( plotModelParameters(model) )
 })
 
+context("modelGroup testing")
+
+test_that("modelGroup with identical models", {
+    expect_silent( modelGroup(list("m1"=model, "m2"=model)) )
+    .GlobalEnv$sim_group = modelGroup(list("m1"=model, "m2"=model))
+})
+test_that("modelGroup with different parameter lengths", {
+    expect_silent( modelGroup(list("orig"=model, "red"=red_model)) )
+    .GlobalEnv$mix_group = modelGroup(list("orig"=model, "red"=red_model))
+})
+test_that("compareParameters with same parameter lengths", {
+    expect_silent( compareParameters(sim_group) )
+})
+test_that("compareParameters with different parameter lengths", {
+    expect_silent( compareParameters(mix_group) )
+})

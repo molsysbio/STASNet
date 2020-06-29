@@ -60,14 +60,16 @@ compareParameters.MRAmodelSet <- function(modelset, do_plot=TRUE) {
 #' @author Mathurin Dorel \email{dorel@@horus.ens.fr}
 # Very naive implementation TODO compare parameter names and make them match
 compareParameters.modelGroup <- function(modelgroup, do_plot=TRUE) {
-    links = sapply(modelgroup$models, function(mm){ mm$parameters }) # Assumes same length
-    if (typeof(links) == "list") { stop("Different number of parameters is not supported yet") }
-
-    colnames(links) = modelgroup$names
-    rownames(links) = getParametersNames(modelgroup$model[[1]])
+    links = lapply(modelgroup$models, getParametersValues)
+    all_names = unique(names(unlist(links)))
+    links_matrix = matrix(NA, ncol=length(links), nrow=length(all_names), dimnames=list(all_names, NULL))
+    for (ll in seq_along(links)) {
+        links_matrix[names(links[[ll]]), ll] = links[[ll]]
+    }
+    colnames(links_matrix) = modelgroup$names
 
     if (do_plot) {
-        STASNet:::plotHeatmap(mat = links,
+        STASNet:::plotHeatmap(mat = links_matrix,
               main = "modelGroup parameters rowwise scaled to mean",
               stripOut = 0.01,
               lim = 10,

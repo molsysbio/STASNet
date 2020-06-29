@@ -153,6 +153,18 @@ getParametersNames <- function(mra_model) {
     return(sapply(mra_model$model$getParametersLinks(), simplify_path_name))
 }
 
+#' Get the annotated parameters.
+#'
+#' Get the parameter values.
+#' @param mra_model An MRAmodel object.
+#' @return A vector containing the values of the parameters, with the simplified path names as name.
+#' @export
+getParametersValues <- function(mra_model) {
+    params = mra_model$parameters
+    names(params) = getParametersNames(mra_model)
+    return(params)
+}
+
 #' Build infos vector from the parameters used to build the model and 
 #' @param fit_info A vector of strings with additionnal informations
 generate_infos <- function(input_file, inits, best_resid, method, model_links, name, fit_info=NULL) {
