@@ -4,8 +4,15 @@
 \alias{generate_infos}
 \title{Build infos vector from the parameters used to build the model and}
 \usage{
-generate_infos(input_file, inits, best_resid, method, model_links, name,
-  fit_info = NULL)
+generate_infos(
+  input_file,
+  inits,
+  best_resid,
+  method,
+  model_links,
+  name,
+  fit_info = NULL
+)
 }
 \arguments{
 \item{fit_info}{A vector of strings with additionnal informations}

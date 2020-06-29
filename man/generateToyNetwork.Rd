@@ -4,8 +4,14 @@
 \alias{generateToyNetwork}
 \title{Generate a network topology for testing and benchmarking}
 \usage{
-generateToyNetwork(ninputs, p_link = 0.2, layers = c(3, 3),
-  nfeedbacks = 0, p_layer_link = 0, fname = "")
+generateToyNetwork(
+  ninputs,
+  p_link = 0.2,
+  layers = c(3, 3),
+  nfeedbacks = 0,
+  p_layer_link = 0,
+  fname = ""
+)
 }
 \arguments{
 \item{ninputs}{An integer, the number of inputs in the model}
@@ -27,8 +33,9 @@ A 2-columns matrix representing the network as an adjacency list
 Generate a network topology for testing and benchmarking
 }
 \seealso{
-Other toy data generation: \code{\link{addLayerLinks}},
-  \code{\link{createSimulation}},
-  \code{\link{generateToyDesign}}
+Other toy data generation: 
+\code{\link{addLayerLinks}()},
+\code{\link{createSimulation}()},
+\code{\link{generateToyDesign}()}
 }
 \concept{toy data generation}

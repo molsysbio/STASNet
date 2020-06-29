@@ -4,8 +4,14 @@
 \alias{createSimulation}
 \title{Create simulated data}
 \usage{
-createSimulation(input_network, perturbations = "", measured = "",
-  inhibitions = 0.5, noise = 0, replicates = 3)
+createSimulation(
+  input_network,
+  perturbations = "",
+  measured = "",
+  inhibitions = 0.5,
+  noise = 0,
+  replicates = 3
+)
 }
 \arguments{
 \item{input_network}{The input network. A 2 or 3 columns matrix representing an adjacency list, or an adjacency matrix. Alternatively, the name of a csv file where such matrix is writen (without headers for an adjacency list, with the nodes names in the first line for an adjacency matrix). In case of a 2 columns adjacency list, the values of all links is assumed to be 1, if 3 columns, the 3rd columns is used as coefficient.}
@@ -26,9 +32,10 @@ Simulate data with noise from a network and a perturbation scheme
 \seealso{
 \code{\link{simulateModel}}
 
-Other toy data generation: \code{\link{addLayerLinks}},
-  \code{\link{generateToyDesign}},
-  \code{\link{generateToyNetwork}}
+Other toy data generation: 
+\code{\link{addLayerLinks}()},
+\code{\link{generateToyDesign}()},
+\code{\link{generateToyNetwork}()}
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

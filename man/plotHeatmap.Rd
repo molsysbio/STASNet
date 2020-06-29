@@ -4,10 +4,19 @@
 \alias{plotHeatmap}
 \title{Plot a customized heatmap with a symmetrical scale that is not stretched by extreme values}
 \usage{
-plotHeatmap(mat, main = "", lim = Inf, fixedRange = FALSE,
-  stripOut = 0.05, col = colorRampPalette(c("deepskyblue", "white",
-  "red1")), textCol = "gray10", sig_numbers = 2, show_values = TRUE,
-  scale_rows = FALSE, sub = "")
+plotHeatmap(
+  mat,
+  main = "",
+  lim = Inf,
+  fixedRange = FALSE,
+  stripOut = 0.05,
+  col = colorRampPalette(c("deepskyblue", "white", "red1")),
+  textCol = "gray10",
+  sig_numbers = 2,
+  show_values = TRUE,
+  scale_rows = FALSE,
+  sub = ""
+)
 }
 \arguments{
 \item{mat}{a numeric matrix that should be plotted}

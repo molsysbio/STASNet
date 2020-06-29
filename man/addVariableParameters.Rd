@@ -4,9 +4,16 @@
 \alias{addVariableParameters}
 \title{Search for and relax fixed coefficients of an MRAmodelSet to fit individual data sets significantly better}
 \usage{
-addVariableParameters(original_modelset, nb_cores = 0,
-  max_iterations = 0, nb_samples = 100, accuracy = 0.95,
-  method = "geneticlhs", notVariable = c(), max_variables = Inf)
+addVariableParameters(
+  original_modelset,
+  nb_cores = 0,
+  max_iterations = 0,
+  nb_samples = 100,
+  accuracy = 0.95,
+  method = "geneticlhs",
+  notVariable = c(),
+  max_variables = Inf
+)
 }
 \arguments{
 \item{original_modelset}{An MRAmodelSet object}

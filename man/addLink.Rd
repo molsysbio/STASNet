@@ -4,9 +4,20 @@
 \alias{addLink}
 \title{add Link routine}
 \usage{
-addLink(new_link, adj, rank, init_residual, model, initial_response,
-  expdes, data, model_structure, sample_range, variable_links = c(),
-  verbose = F)
+addLink(
+  new_link,
+  adj,
+  rank,
+  init_residual,
+  model,
+  initial_response,
+  expdes,
+  data,
+  model_structure,
+  sample_range,
+  variable_links = c(),
+  verbose = F
+)
 }
 \arguments{
 \item{new_link}{Integer link whose addition is to be tested}

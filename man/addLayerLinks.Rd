@@ -21,8 +21,9 @@ addLayerLinks(links, lup, ldown, p_link = 0.2, connect_bottom = TRUE)
 Generate a list of links between two layers with a probability of link between two nodes of p_link, with possibly at least one link to each node of the bottom layer
 }
 \seealso{
-Other toy data generation: \code{\link{createSimulation}},
-  \code{\link{generateToyDesign}},
-  \code{\link{generateToyNetwork}}
+Other toy data generation: 
+\code{\link{createSimulation}()},
+\code{\link{generateToyDesign}()},
+\code{\link{generateToyNetwork}()}
 }
 \concept{toy data generation}

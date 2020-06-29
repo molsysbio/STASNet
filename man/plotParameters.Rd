@@ -5,13 +5,23 @@
 \alias{plotParameters.modelGroup}
 \title{Plot parameters}
 \usage{
-plotParameters(aggregated_paths, lim = 2, repar = TRUE,
-  resetpar = TRUE, vertical = TRUE)
+plotParameters(
+  aggregated_paths,
+  lim = 2,
+  repar = TRUE,
+  resetpar = TRUE,
+  vertical = TRUE
+)
 
 plotParameters.modelGroup(model_group)
 
-plotParameters(aggregated_paths, lim = 2, repar = TRUE,
-  resetpar = TRUE, vertical = TRUE)
+plotParameters(
+  aggregated_paths,
+  lim = 2,
+  repar = TRUE,
+  resetpar = TRUE,
+  vertical = TRUE
+)
 }
 \arguments{
 \item{aggregated_paths}{Aggregated direct paths as returned by aggregateDirectPaths}
@@ -42,10 +52,11 @@ plotParameters.modelGroup
 
 \code{\link{aggregateDirectPaths}}
 
-Other Model plots: \code{\link{plotModelAccuracy}},
-  \code{\link{plotModelGraph}},
-  \code{\link{plotModelScores.MRAmodel}},
-  \code{\link{plotModelScores}},
-  \code{\link{plotResiduals}}
+Other Model plots: 
+\code{\link{plotModelAccuracy}()},
+\code{\link{plotModelGraph}()},
+\code{\link{plotModelScores.MRAmodel}()},
+\code{\link{plotModelScores}()},
+\code{\link{plotResiduals}()}
 }
 \concept{Model plots}

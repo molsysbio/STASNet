@@ -4,9 +4,16 @@
 \alias{initModel}
 \title{Perform an initialisation of the model}
 \usage{
-initModel(model, core, inits, precorrelate = TRUE,
-  method = "randomlhs", nb_cores = 1, perform_plots = FALSE,
-  optimizer = "levmar")
+initModel(
+  model,
+  core,
+  inits,
+  precorrelate = TRUE,
+  method = "randomlhs",
+  nb_cores = 1,
+  perform_plots = FALSE,
+  optimizer = "levmar"
+)
 }
 \arguments{
 \item{model}{A MRAmodel object to initialise}
@@ -32,6 +39,7 @@ A list with the initialisation results
 Possibility to use different sampling methods
 }
 \seealso{
-Other Model initialisation: \code{\link{createModel}}
+Other Model initialisation: 
+\code{\link{createModel}()}
 }
 \concept{Model initialisation}

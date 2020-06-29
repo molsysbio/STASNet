@@ -4,8 +4,7 @@
 \alias{generateToyDesign}
 \title{Generate an experimental design for a toy network}
 \usage{
-generateToyDesign(network, nmes = 4, ninh = 2, stim_combo = 1,
-  inhib_combo = 1)
+generateToyDesign(network, nmes = 4, ninh = 2, stim_combo = 1, inhib_combo = 1)
 }
 \arguments{
 \item{network}{A 2-columns matrix. The toy network as an adjacency list}
@@ -27,8 +26,9 @@ Generate an experimental design for a toy network, with all stimulus applied, so
 \seealso{
 \code{\link{getCombinationMatrix}}, \code{\link{generateToyNetwork}}
 
-Other toy data generation: \code{\link{addLayerLinks}},
-  \code{\link{createSimulation}},
-  \code{\link{generateToyNetwork}}
+Other toy data generation: 
+\code{\link{addLayerLinks}()},
+\code{\link{createSimulation}()},
+\code{\link{generateToyNetwork}()}
 }
 \concept{toy data generation}

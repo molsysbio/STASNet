@@ -4,9 +4,15 @@
 \alias{plotModelSimulation}
 \title{Plot the predictions by the model}
 \usage{
-plotModelSimulation(model_description, targets = "all",
-  readouts = "all", inhibition_effect = NA, log_axis = TRUE,
-  with_data = FALSE, compare = list())
+plotModelSimulation(
+  model_description,
+  targets = "all",
+  readouts = "all",
+  inhibition_effect = NA,
+  log_axis = TRUE,
+  with_data = FALSE,
+  compare = list()
+)
 }
 \arguments{
 \item{model_description}{A MRAmodel object that describes the model to be fitted}

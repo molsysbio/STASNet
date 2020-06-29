@@ -4,10 +4,15 @@
 \alias{suggestExtension}
 \title{Tries to locally add one link each and returns a list of links ordered by their chi-squared differences to the original model}
 \usage{
-suggestExtension(original_model, parallel = F, mc = 1,
+suggestExtension(
+  original_model,
+  parallel = F,
+  mc = 1,
   sample_range = c(10^(2:-1), 0, -10^(-1:2)),
-  padjust_method = "bonferroni", print = F,
-  fname = "Additional_link_suggestion.txt")
+  padjust_method = "bonferroni",
+  print = F,
+  fname = "Additional_link_suggestion.txt"
+)
 }
 \arguments{
 \item{original_model}{MRAmodel or MRAmodelSet object describing the model and its best fit, containing the data}

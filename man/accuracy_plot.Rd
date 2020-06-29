@@ -8,15 +8,27 @@
 \usage{
 plotModelAccuracy(x, ...)
 
-\method{plotModelAccuracy}{MRAmodel}(model_description, limit = Inf,
-  show_values = TRUE, graphs = c("accuracy", "diff", "data",
-  "simulation", "prediction"), selected_treatments = c(),
-  selected_readouts = c(), name = "", regroup = "no")
+\method{plotModelAccuracy}{MRAmodel}(
+  model_description,
+  limit = Inf,
+  show_values = TRUE,
+  graphs = c("accuracy", "diff", "data", "simulation", "prediction"),
+  selected_treatments = c(),
+  selected_readouts = c(),
+  name = "",
+  regroup = "no"
+)
 
-\method{plotModelAccuracy}{MRAmodelSet}(model_description, limit = Inf,
-  show_values = TRUE, graphs = c("accuracy", "data", "simulation"),
-  selected_treatments = c(), selected_readouts = c(), name = "",
-  side_by_side = TRUE)
+\method{plotModelAccuracy}{MRAmodelSet}(
+  model_description,
+  limit = Inf,
+  show_values = TRUE,
+  graphs = c("accuracy", "data", "simulation"),
+  selected_treatments = c(),
+  selected_readouts = c(),
+  name = "",
+  side_by_side = TRUE
+)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
@@ -50,10 +62,12 @@ Plot accuracy of all submodels of a modelset
 \seealso{
 createModel, importModel
 
-Other Model plots: \code{\link{plotModelGraph}},
-  \code{\link{plotModelScores.MRAmodel}},
-  \code{\link{plotModelScores}},
-  \code{\link{plotParameters}}, \code{\link{plotResiduals}}
+Other Model plots: 
+\code{\link{plotModelGraph}()},
+\code{\link{plotModelScores.MRAmodel}()},
+\code{\link{plotModelScores}()},
+\code{\link{plotParameters}()},
+\code{\link{plotResiduals}()}
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

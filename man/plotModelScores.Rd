@@ -12,11 +12,9 @@ plotModelScores(x, ...)
 \arguments{
 \item{x}{A Model object}
 
-\item{...}{Passed to base::barplot}
+\item{...}{Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements}
 
 \item{model_group}{A modelGroup object}
-
-\item{...}{Passed to base::barplot with a matrix of dimension nr_of_models * nr_of_measurements}
 }
 \value{
 See \code{\link{base::barplot}}
@@ -29,9 +27,11 @@ Plot the scores for each measured node fitting as a barplot with a bar for each 
 \seealso{
 plotScores.modelGroup, plotScores.MRAmodel
 
-Other Model plots: \code{\link{plotModelAccuracy}},
-  \code{\link{plotModelGraph}},
-  \code{\link{plotModelScores.MRAmodel}},
-  \code{\link{plotParameters}}, \code{\link{plotResiduals}}
+Other Model plots: 
+\code{\link{plotModelAccuracy}()},
+\code{\link{plotModelGraph}()},
+\code{\link{plotModelScores.MRAmodel}()},
+\code{\link{plotParameters}()},
+\code{\link{plotResiduals}()}
 }
 \concept{Model plots}

@@ -16,10 +16,12 @@ Plot the scores of the fit for each antibody, which is how much
 of the variation in the data is explained by the model
 }
 \seealso{
-Other Model plots: \code{\link{plotModelAccuracy}},
-  \code{\link{plotModelGraph}},
-  \code{\link{plotModelScores}},
-  \code{\link{plotParameters}}, \code{\link{plotResiduals}}
+Other Model plots: 
+\code{\link{plotModelAccuracy}()},
+\code{\link{plotModelGraph}()},
+\code{\link{plotModelScores}()},
+\code{\link{plotParameters}()},
+\code{\link{plotResiduals}()}
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

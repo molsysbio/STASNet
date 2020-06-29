@@ -4,7 +4,12 @@
 \alias{profileLikelihood}
 \title{Computes the profile likelihood and the parameter relationships of each parameter in the model}
 \usage{
-profileLikelihood(model_description, nb_points = 10000, nb_cores = 1)
+profileLikelihood(
+  model_description,
+  nb_points = 10000,
+  nb_cores = 1,
+  const_params = numeric()
+)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}

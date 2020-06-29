@@ -4,8 +4,12 @@
 \alias{getCombinationMatrix}
 \title{Create a perturbation matrix}
 \usage{
-getCombinationMatrix(perturbations, inhib_combo = 2, stim_combo = 1,
-  byStim = T)
+getCombinationMatrix(
+  perturbations,
+  inhib_combo = 2,
+  stim_combo = 1,
+  byStim = T
+)
 }
 \arguments{
 \item{perturbations}{A vector with the name of the perturbation, either NODE for a stimulation a node, or NODEi for its inhibition}
@@ -23,8 +27,9 @@ A perturbation matrix with the names of the nodes as columnnames
 Create the perturbation matrix for a set of perturbations, building all n-combinations of stimulators with all m-combinations of inhibitors. Add the cases with only stimulations and only inhibitions.
 }
 \seealso{
-Other simulation: \code{\link{plotSimulation}},
-  \code{\link{simulateModel}}
+Other simulation: 
+\code{\link{plotSimulation}()},
+\code{\link{simulateModel}()}
 }
 \author{
 Mathurin Dorel \email{dorel@horus.ens.fr}

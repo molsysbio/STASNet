@@ -4,12 +4,14 @@
 \alias{importModel}
 \title{Import model from a file}
 \usage{
-importModel(file_name = NULL, file = NULL)
+importModel(file_name = NULL, file = NULL, rename = "")
 }
 \arguments{
 \item{file_name}{Name of the .mra file}
 
 \item{file}{R object from an .mra file that has been read in by readLines}
+
+\item{rename}{How to rename the model. If "" the name used in the .mra file is used.}
 }
 \value{
 An MRAmodel object

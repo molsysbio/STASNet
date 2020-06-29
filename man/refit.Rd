@@ -4,8 +4,15 @@
 \alias{fitFromModel}
 \title{Fit a model using the parameter set from another model}
 \usage{
-fitFromModel(mra_model, parameters_model, vary_param = c(),
-  inits = 100, nb_cores = 1, method = "randomlhs", fit_name = "")
+fitFromModel(
+  mra_model,
+  parameters_model,
+  vary_param = c(),
+  inits = 100,
+  nb_cores = 1,
+  method = "randomlhs",
+  fit_name = ""
+)
 }
 \description{
 Fit a model using the parameter set from another model

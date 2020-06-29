@@ -6,9 +6,15 @@
 One plot per measured node
 Plot with error bars if available, and give absolute value}
 \usage{
-plotSimulation(prediction, log_axis = FALSE, with_data = TRUE,
-  data_color = cbbPalette[1], sim_colors = cbbPalette[-1],
-  compare = list(), strict = TRUE)
+plotSimulation(
+  prediction,
+  log_axis = FALSE,
+  with_data = TRUE,
+  data_color = cbbPalette[1],
+  sim_colors = cbbPalette[-1],
+  compare = list(),
+  strict = TRUE
+)
 }
 \arguments{
 \item{prediction}{A list of the model predictions as produced by \link{simulateModel}}
@@ -36,8 +42,9 @@ Plot with error bars if available, and give absolute value
 \seealso{
 getCombinationMatrix, simulateModel
 
-Other simulation: \code{\link{getCombinationMatrix}},
-  \code{\link{simulateModel}}
+Other simulation: 
+\code{\link{getCombinationMatrix}()},
+\code{\link{simulateModel}()}
 }
 \author{
 Mathurin Dorel \email{mathurin.dorel@charite.de}

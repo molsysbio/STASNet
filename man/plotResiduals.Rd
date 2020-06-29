@@ -4,10 +4,14 @@
 \alias{plotResiduals}
 \title{Plot the residual of each model in the group}
 \usage{
-plotResiduals(model_group, main = "Model residuals")
+plotResiduals(model_group, main = "Model residuals", col = "black", ...)
 }
 \arguments{
 \item{model_group}{Object of class modelGroup}
+
+\item{main}{Title of the plot}
+
+\item{...}{Extra parameters accepted by base::barplot}
 }
 \value{
 Invisibly, the residuals (chi-2)
@@ -16,11 +20,12 @@ Invisibly, the residuals (chi-2)
 Display the residuals of the models as a barplot
 }
 \seealso{
-Other Model plots: \code{\link{plotModelAccuracy}},
-  \code{\link{plotModelGraph}},
-  \code{\link{plotModelScores.MRAmodel}},
-  \code{\link{plotModelScores}},
-  \code{\link{plotParameters}}
+Other Model plots: 
+\code{\link{plotModelAccuracy}()},
+\code{\link{plotModelGraph}()},
+\code{\link{plotModelScores.MRAmodel}()},
+\code{\link{plotModelScores}()},
+\code{\link{plotParameters}()}
 }
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}

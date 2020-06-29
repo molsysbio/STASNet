@@ -43,7 +43,8 @@ Plot a graph from an adjacency list
 The width of the lines is set in ['min_width','max_width'] according to the 'scaling' parameter, with 0 corresponding to 'min_width' and >='scaling' to 'max_width'.
 }
 \seealso{
-Other Network graph: \code{\link{plotModelGraph}}
+Other Network graph: 
+\code{\link{plotModelGraph}()}
 }
 \author{
 Bertram Klinger \email{bertram.klinger@charite.de}

@@ -5,8 +5,13 @@
 \title{Get the target simulations in a MIDAS design-like or list format
 Simulate a model for a specified set of perturbation}
 \usage{
-simulateModel(model_description, targets = "all", readouts = "all",
-  inhibition_effect = NA, with_offset = TRUE)
+simulateModel(
+  model_description,
+  targets = "all",
+  readouts = "all",
+  inhibition_effect = NA,
+  with_offset = TRUE
+)
 }
 \arguments{
 \item{model_description}{A MRAmodel object that describes the model to be fitted}
@@ -28,7 +33,8 @@ Get the target simulations in a MIDAS design-like or list format
 Simulate a model for a specified set of perturbation
 }
 \seealso{
-Other simulation: \code{\link{getCombinationMatrix}},
-  \code{\link{plotSimulation}}
+Other simulation: 
+\code{\link{getCombinationMatrix}()},
+\code{\link{plotSimulation}()}
 }
 \concept{simulation}

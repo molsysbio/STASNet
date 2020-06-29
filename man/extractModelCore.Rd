@@ -4,9 +4,17 @@
 \alias{extractModelCore}
 \title{Extracts the data, the experimental design and the structure from the input files}
 \usage{
-extractModelCore(model_structure, basal_activity, data_filename,
-  var_filename = "", dont_perturb = c(), dont_read = c(),
-  MIN_CV = 0.1, DEFAULT_CV = 0.3, data_space = "log")
+extractModelCore(
+  model_structure,
+  basal_activity,
+  data_filename,
+  var_filename = "",
+  dont_perturb = c(),
+  dont_read = c(),
+  MIN_CV = 0.1,
+  DEFAULT_CV = 0.3,
+  data_space = "log"
+)
 }
 \arguments{
 \item{model_structure}{Matrix of links [node1, node2]}

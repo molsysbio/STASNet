@@ -4,8 +4,14 @@
 \alias{refitWithFixedParameter}
 \title{Refit modelset by iterative lumping of variable parameters into a single parameter}
 \usage{
-refitWithFixedParameter(var_par, modelset, nb_sub_params, nb_cores = 0,
-  nb_samples = 5, method = "geneticlhs")
+refitWithFixedParameter(
+  var_par,
+  modelset,
+  nb_sub_params,
+  nb_cores = 0,
+  nb_samples = 5,
+  method = "geneticlhs"
+)
 }
 \arguments{
 \item{var_par}{ID of the variable parameters to test}

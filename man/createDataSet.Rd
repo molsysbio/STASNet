@@ -4,8 +4,15 @@
 \alias{createDataSet}
 \title{Import multiple files to create a group of models}
 \usage{
-createDataSet(model_links, data_list, basal_file, cores = 1,
-  inits = 1000, init_distribution = F, method = "default")
+createDataSet(
+  model_links,
+  data_list,
+  basal_file,
+  cores = 1,
+  inits = 1000,
+  init_distribution = F,
+  method = "default"
+)
 }
 \arguments{
 \item{model_links}{An adjacency matrix}

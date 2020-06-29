@@ -22,7 +22,7 @@ Invisibly the aggregated direct paths
 Plot the parameters for a model or a list of models
 }
 \examples{
-\\donotrun{ plotModelParameters }
+\donotrun{ plotModelParameters }
 }
 \seealso{
 \code{\link{plotParameters}}, \code{\link{getDirectPaths}}, \code{\link{aggregateDirectPaths}}

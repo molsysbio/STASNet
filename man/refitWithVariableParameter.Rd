@@ -4,8 +4,15 @@
 \alias{refitWithVariableParameter}
 \title{Refit modelset by iterative relaxation of single parameters}
 \usage{
-refitWithVariableParameter(var_par, modelset, nb_sub_params,
-  nb_cores = 0, nb_samples = 5, method = "geneticlhs", reverse = F)
+refitWithVariableParameter(
+  var_par,
+  modelset,
+  nb_sub_params,
+  nb_cores = 0,
+  nb_samples = 5,
+  method = "geneticlhs",
+  reverse = F
+)
 }
 \arguments{
 \item{var_par}{ID of the variable parameter to test}

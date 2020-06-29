@@ -4,8 +4,7 @@
 \alias{exportModel}
 \title{Exports the model in a file}
 \usage{
-exportModel(model_description, file_name = "mra_model",
-  export_data = FALSE)
+exportModel(model_description, file_name = "mra_model", export_data = FALSE)
 }
 \arguments{
 \item{model_description}{An MRAmodel object}
