@@ -91,6 +91,6 @@ define_breaks <- function(m,lim = Inf,fixedRange = FALSE) {
       if (is.infinite(lim) || is.nan(lim) || is.na(lim)) {
           stop("'lim' is invalid, cannot generate breaks within a fixed range")
       }
-      return(seq(-1.1*(lim)*ifelse(min(m,na.rm=T)<0,1,0),1.1*lim*ifelse(max(m,na.rm=T)>0,1,0),length.out=22))
+      return(seq(-1.1*lim, 1.1*lim, length.out=22))
   }
 }
